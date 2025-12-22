@@ -417,7 +417,7 @@ onMounted(() => {
                                     </p>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <div class="flex flex-wrap justify-end gap-2">
+                                    <div class="flex flex-nowrap justify-end gap-2">
                                         <RouterLink
                                             class="rounded-xl border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50"
                                             :to="{ name: 'patient-records', params: { id: patient.id } }"

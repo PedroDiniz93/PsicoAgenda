@@ -36,6 +36,9 @@ class ReportController extends Controller
         $pendingValue = (clone $pendingBuilder)->sum('price');
         $pendingCount = (clone $pendingBuilder)->count();
 
+        $totalSessions = (clone $baseQuery)->count();
+        $uniquePatients = (clone $baseQuery)->distinct('patient_id')->count('patient_id');
+
         $paidList = $this->formatAppointmentsForReport(clone $paidBuilder);
         $pendingList = $this->formatAppointmentsForReport(clone $pendingBuilder);
 
@@ -52,6 +55,11 @@ class ReportController extends Controller
         $doneCount = count($doneList);
         $canceledCount = count($canceledList);
         $missedCount = count($missedList);
+
+        $attendanceBase = $doneCount + $missedCount;
+        $attendanceRate = $attendanceBase > 0 ? $doneCount / $attendanceBase : null;
+        $avgSessionsPerPatient = $uniquePatients > 0 ? round($totalSessions / $uniquePatients, 2) : 0;
+        $avgTicketValue = $paidCount > 0 ? $paidValue / $paidCount : 0;
 
         return response()->json([
             'filters' => [
@@ -72,6 +80,13 @@ class ReportController extends Controller
                 'done' => ['count' => $doneCount],
                 'canceled' => ['count' => $canceledCount],
                 'missed' => ['count' => $missedCount],
+            ],
+            'summary' => [
+                'attendance_rate' => $attendanceRate,
+                'avg_sessions_per_patient' => $avgSessionsPerPatient,
+                'avg_ticket' => $this->formatMoney($avgTicketValue),
+                'total_sessions' => $totalSessions,
+                'unique_patients' => $uniquePatients,
             ],
             'lists' => [
                 'paid' => $paidList,

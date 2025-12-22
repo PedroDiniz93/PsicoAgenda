@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import axios from 'axios';
+import { formatMoney } from '../utils/formatters';
 
 const exportPatientsLoading = ref(false);
 const exportPatientsError = ref('');
@@ -47,16 +48,10 @@ const patientStatusBadgeClasses = {
     closed: 'bg-slate-200 text-slate-600',
 };
 
-const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-});
-
 const exportHasSelection = computed(() => exportSelection.selected.length > 0);
 const exportReady = computed(
     () => exportHasSelection.value && exportTypeSelection.value.length > 0
 );
-const formatMoney = (value) => currencyFormatter.format(Number(value ?? 0));
 const sessionFeeLabel = (type) => sessionFeeTypeLabels[type] ?? 'Não definido';
 
 const fetchExportPatients = async () => {

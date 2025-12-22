@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute, RouterLink } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
+import { useAppointmentReports } from '../composables/useAppointmentReports';
 
 const router = useRouter();
 const route = useRoute();
@@ -17,14 +18,8 @@ const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.
 
 const tabs = [
     { id: 'overview', label: 'Visão geral' },
-    { id: 'reports', label: 'Relatórios' },
     { id: 'profile', label: 'Perfil' },
     { id: 'settings', label: 'Configurações' },
-];
-
-const reportSections = [
-    { id: 'payments', label: 'Pagamentos' },
-    { id: 'statuses', label: 'Status e ocorrências' },
 ];
 
 const statusListSections = [
@@ -33,22 +28,7 @@ const statusListSections = [
     { key: 'missed', label: 'Faltas', empty: 'Sem faltas no período.' },
 ];
 
-const statusLabels = {
-    scheduled: 'Agendado',
-    done: 'Concluído',
-    missed: 'Falta',
-    canceled: 'Cancelado',
-};
-
-const statusBadgeClasses = {
-    scheduled: 'bg-slate-100 text-slate-700',
-    done: 'bg-emerald-100 text-emerald-800',
-    missed: 'bg-orange-100 text-orange-800',
-    canceled: 'bg-rose-100 text-rose-800',
-};
-
 const activeTab = ref('overview');
-const activeReportSection = ref('payments');
 const profileForm = reactive({
     name: '',
     email: '',
@@ -100,74 +80,21 @@ const reminderMessage = ref('');
 const reminderMessageType = ref('success');
 const reminderSaving = ref(false);
 
-const appointmentReport = reactive({
-    payments: {
-        paid: { appointments: 0, value: '0.00' },
-        pending: { appointments: 0, value: '0.00' },
-    },
-    appointments: {
-        done: 0,
-        canceled: 0,
-        missed: 0,
-    },
-    lists: {
-        paid: [],
-        pending: [],
-        done: [],
-        canceled: [],
-        missed: [],
-    },
-});
+const {
+    appointmentReport,
+    reportFilters,
+    appliedReportFilters,
+    reportError,
+    reportLoading,
+    hasReportFiltersFilled,
+    reportFiltersInfo,
+    fetchAppointmentReport,
+    clearReportFilters,
+    healthCards,
+    statusLabel,
+    statusBadgeClass,
+} = useAppointmentReports();
 
-const reportFilters = reactive({ from: '', to: '' });
-const appliedReportFilters = reactive({ from: '', to: '' });
-const reportError = ref('');
-const reportLoading = ref(false);
-
-const hasReportFiltersFilled = computed(() => Boolean(reportFilters.from || reportFilters.to));
-const reportFiltersInfo = computed(() => {
-    if (appliedReportFilters.from && appliedReportFilters.to) {
-        return `Período aplicado: ${appliedReportFilters.from} até ${appliedReportFilters.to}.`;
-    }
-    if (appliedReportFilters.from) {
-        return `Filtrando a partir de ${appliedReportFilters.from}.`;
-    }
-    if (appliedReportFilters.to) {
-        return `Filtrando até ${appliedReportFilters.to}.`;
-    }
-    return 'Sem filtros de data aplicados.';
-});
-
-const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-});
-
-const formatMoney = (value) => currencyFormatter.format(Number(value ?? 0));
-
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-});
-
-const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-});
-
-const formatDateTime = (value) => {
-    if (!value) return '—';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return '—';
-    }
-    return `${dateFormatter.format(parsed)} às ${timeFormatter.format(parsed)}`;
-};
-
-
-const statusLabel = (status) => statusLabels[status] ?? status;
-const statusBadgeClass = (status) => statusBadgeClasses[status] ?? 'bg-slate-100 text-slate-700';
 
 const handleLogout = async () => {
     await auth.logout();
@@ -392,33 +319,6 @@ const applyAppointmentReport = (payload = {}) => {
     appointmentReport.lists.missed = lists?.missed ?? [];
 };
 
-const fetchAppointmentReport = async () => {
-    reportLoading.value = true;
-    reportError.value = '';
-
-    const params = {};
-    if (reportFilters.from) params.from = reportFilters.from;
-    if (reportFilters.to) params.to = reportFilters.to;
-
-    try {
-        const { data } = await axios.get('/api/reports/appointments', { params });
-        applyAppointmentReport(data ?? {});
-        appliedReportFilters.from = data?.filters?.from ?? params.from ?? '';
-        appliedReportFilters.to = data?.filters?.to ?? params.to ?? '';
-    } catch (error) {
-        reportError.value =
-            error?.response?.data?.message ?? 'Não foi possível carregar os relatórios de agendamentos.';
-    } finally {
-        reportLoading.value = false;
-    }
-};
-
-const clearReportFilters = () => {
-    reportFilters.from = '';
-    reportFilters.to = '';
-    fetchAppointmentReport();
-};
-
 hydrateFromAuth();
 onMounted(() => {
     fetchProfile();
@@ -460,10 +360,16 @@ onMounted(() => {
                 >
                     {{ tab.label }}
                 </button>
+                <RouterLink
+                    :to="{ name: 'reports' }"
+                    class="rounded-xl border border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700"
+                >
+                    Relatórios
+                </RouterLink>
             </nav>
         </div>
 
-        <section v-if="activeTab === 'overview'" class="rounded-2xl bg-white p-6 shadow">
+        <section v-if="activeTab === 'overview'" class="space-y-8 rounded-2xl bg-white p-6 shadow">
             <div class="grid gap-4 md:grid-cols-3">
                 <RouterLink
                     :to="{ name: 'patients' }"
@@ -510,267 +416,6 @@ onMounted(() => {
                         </svg>
                     </div>
                 </RouterLink>
-            </div>
-        </section>
-
-        <section v-else-if="activeTab === 'reports'" class="rounded-2xl bg-white p-6 shadow">
-            <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h2 class="text-2xl font-semibold text-slate-900">Relatórios financeiros</h2>
-                    <p class="text-sm text-slate-500">{{ reportFiltersInfo }}</p>
-                </div>
-                <form class="flex flex-col gap-3 sm:flex-row sm:items-end" @submit.prevent="fetchAppointmentReport">
-                    <label class="flex flex-1 flex-col text-sm font-medium text-slate-600">
-                        <span>De</span>
-                        <input
-                            v-model="reportFilters.from"
-                            class="mt-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            type="date"
-                        />
-                    </label>
-                    <label class="flex flex-1 flex-col text-sm font-medium text-slate-600">
-                        <span>Até</span>
-                        <input
-                            v-model="reportFilters.to"
-                            class="mt-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            type="date"
-                        />
-                    </label>
-                    <div class="flex gap-2">
-                        <button
-                            :disabled="reportLoading"
-                            class="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                            type="submit"
-                        >
-                            {{ reportLoading ? 'Atualizando...' : 'Atualizar' }}
-                        </button>
-                        <button
-                            v-if="hasReportFiltersFilled"
-                            :disabled="reportLoading"
-                            class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                            type="button"
-                            @click="clearReportFilters"
-                        >
-                            Limpar
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p class="mt-2 text-2xl font-semibold text-slate-900">{{ reportLoading ? '—' : reportFiltersInfo }}</p>
-                <p v-if="reportError" class="mt-3 text-sm text-rose-600">{{ reportError }}</p>
-                <p v-else-if="reportLoading" class="mt-3 text-sm text-slate-500">Carregando relatório...</p>
-            </div>
-
-            <div class="mt-6 rounded-2xl border border-slate-100 p-2">
-                <nav class="flex flex-wrap gap-2" aria-label="Seções do relatório">
-                    <button
-                        v-for="section in reportSections"
-                        :key="section.id"
-                        class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition"
-                        :class="
-                            activeReportSection === section.id
-                                ? 'bg-blue-600 text-white shadow shadow-blue-600/30'
-                                : 'text-slate-500 hover:bg-slate-50'
-                        "
-                        type="button"
-                        @click="activeReportSection = section.id"
-                    >
-                        {{ section.label }}
-                    </button>
-                </nav>
-            </div>
-
-            <div v-if="activeReportSection === 'payments'" class="mt-6 space-y-6">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="rounded-2xl bg-emerald-50 p-5 text-emerald-900 shadow-inner">
-                        <p class="text-xs font-semibold uppercase tracking-wide">Pagos no período</p>
-                        <p class="text-3xl font-extrabold">{{ formatMoney(appointmentReport.payments.paid.value) }}</p>
-                        <p class="text-sm">{{ appointmentReport.payments.paid.appointments }} atendimentos</p>
-                    </div>
-                    <div class="rounded-2xl bg-amber-50 p-5 text-amber-900 shadow-inner">
-                        <p class="text-xs font-semibold uppercase tracking-wide">Pendentes</p>
-                        <p class="text-3xl font-extrabold">{{ formatMoney(appointmentReport.payments.pending.value) }}</p>
-                        <p class="text-sm">{{ appointmentReport.payments.pending.appointments }} atendimentos</p>
-                    </div>
-                </div>
-
-                <div class="grid gap-6 lg:grid-cols-2">
-                    <div class="rounded-2xl border border-slate-100 p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-600">Clientes que pagaram</p>
-                                <p class="text-xs text-slate-500">
-                                    {{ appointmentReport.payments.paid.appointments }} atendimentos registrados
-                                </p>
-                            </div>
-                            <p class="text-lg font-semibold text-emerald-600">
-                                {{ formatMoney(appointmentReport.payments.paid.value) }}
-                            </p>
-                        </div>
-                        <div v-if="appointmentReport.lists.paid.length" class="mt-4 overflow-x-auto">
-                            <table class="min-w-full text-left text-sm">
-                                <thead class="text-xs uppercase text-slate-500">
-                                    <tr>
-                                        <th class="pb-2 pr-4 font-semibold">Paciente</th>
-                                        <th class="pb-2 pr-4 font-semibold">Início</th>
-                                        <th class="pb-2 pr-4 font-semibold">Valor</th>
-                                        <th class="pb-2 font-semibold">Pago em</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="item in appointmentReport.lists.paid.slice(0, 10)"
-                                        :key="`paid-${item.id}`"
-                                        class="border-t border-slate-100"
-                                    >
-                                        <td class="py-2 pr-4">
-                                            <p class="font-semibold text-slate-900">
-                                                {{ item.patient?.name ?? 'Paciente sem nome' }}
-                                            </p>
-                                            <p class="text-xs text-slate-500">#{{ item.id }}</p>
-                                        </td>
-                                        <td class="py-2 pr-4 text-slate-600">
-                                            {{ formatDateTime(item.start_at) }}
-                                        </td>
-                                        <td class="py-2 pr-4 font-semibold text-slate-900">
-                                            {{ formatMoney(item.price) }}
-                                        </td>
-                                        <td class="py-2 text-slate-600">{{ formatDateTime(item.paid_at) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <p v-if="appointmentReport.lists.paid.length > 10" class="mt-3 text-xs text-slate-500">
-                                Mostrando os 10 pagamentos mais recentes.
-                            </p>
-                        </div>
-                        <p v-else class="mt-4 text-sm text-slate-500">Nenhum pagamento registrado nesse período.</p>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-100 p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-600">Clientes com pendência</p>
-                                <p class="text-xs text-slate-500">
-                                    {{ appointmentReport.payments.pending.appointments }} atendimentos aguardando pagamento
-                                </p>
-                            </div>
-                            <p class="text-lg font-semibold text-amber-600">
-                                {{ formatMoney(appointmentReport.payments.pending.value) }}
-                            </p>
-                        </div>
-                        <div v-if="appointmentReport.lists.pending.length" class="mt-4 overflow-x-auto">
-                            <table class="min-w-full text-left text-sm">
-                                <thead class="text-xs uppercase text-slate-500">
-                                    <tr>
-                                        <th class="pb-2 pr-4 font-semibold">Paciente</th>
-                                        <th class="pb-2 pr-4 font-semibold">Início</th>
-                                        <th class="pb-2 pr-4 font-semibold">Valor</th>
-                                        <th class="pb-2 font-semibold">Situação</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="item in appointmentReport.lists.pending.slice(0, 10)"
-                                        :key="`pending-${item.id}`"
-                                        class="border-t border-slate-100"
-                                    >
-                                        <td class="py-2 pr-4">
-                                            <p class="font-semibold text-slate-900">
-                                                {{ item.patient?.name ?? 'Paciente sem nome' }}
-                                            </p>
-                                            <p class="text-xs text-slate-500">#{{ item.id }}</p>
-                                        </td>
-                                        <td class="py-2 pr-4 text-slate-600">
-                                            {{ formatDateTime(item.start_at) }}
-                                        </td>
-                                        <td class="py-2 pr-4 font-semibold text-slate-900">
-                                            {{ formatMoney(item.price) }}
-                                        </td>
-                                        <td class="py-2">
-                                            <span
-                                                class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                                                :class="statusBadgeClass(item.status)"
-                                            >
-                                                {{ statusLabel(item.status) }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <p v-if="appointmentReport.lists.pending.length > 10" class="mt-3 text-xs text-slate-500">
-                                Mostrando os 10 itens mais recentes.
-                            </p>
-                        </div>
-                        <p v-else class="mt-4 text-sm text-slate-500">Sem pendências financeiras nesse período.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div v-else-if="activeReportSection === 'statuses'" class="mt-6 space-y-6">
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <div class="rounded-2xl border border-blue-100 p-4 text-center text-blue-900">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-blue-600">Concluídos</p>
-                        <p class="text-4xl font-extrabold">{{ appointmentReport.appointments.done }}</p>
-                        <p class="text-xs text-blue-500">total no período</p>
-                    </div>
-                    <div class="rounded-2xl border border-rose-100 p-4 text-center text-rose-900">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-rose-600">Cancelados</p>
-                        <p class="text-4xl font-extrabold">{{ appointmentReport.appointments.canceled }}</p>
-                        <p class="text-xs text-rose-500">total no período</p>
-                    </div>
-                    <div class="rounded-2xl border border-orange-100 p-4 text-center text-orange-900">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-orange-600">Faltas</p>
-                        <p class="text-4xl font-extrabold">{{ appointmentReport.appointments.missed }}</p>
-                        <p class="text-xs text-orange-500">total no período</p>
-                    </div>
-                </div>
-
-                <div class="rounded-2xl border border-slate-100 p-6">
-                    <p class="text-sm font-semibold text-slate-600">Registros por status</p>
-                    <div class="mt-4 grid gap-4 md:grid-cols-3">
-                        <div
-                            v-for="section in statusListSections"
-                            :key="section.key"
-                            class="rounded-2xl border border-slate-100 p-4"
-                        >
-                            <div class="mb-3 flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-700">{{ section.label }}</p>
-                                    <p class="text-xs text-slate-500">
-                                        {{ appointmentReport.lists[section.key].length }} atendimentos
-                                    </p>
-                                </div>
-                                <span class="text-lg font-bold text-slate-400">
-                                    {{ appointmentReport.appointments[section.key] ?? 0 }}
-                                </span>
-                            </div>
-                            <div
-                                v-if="appointmentReport.lists[section.key]?.length"
-                                class="space-y-3 text-sm text-slate-600"
-                            >
-                                <div
-                                    v-for="item in appointmentReport.lists[section.key].slice(0, 4)"
-                                    :key="`status-${section.key}-${item.id}`"
-                                    class="rounded-xl border border-slate-100 px-3 py-2"
-                                >
-                                    <p class="font-semibold text-slate-900">
-                                        {{ item.patient?.name ?? 'Paciente sem nome' }}
-                                    </p>
-                                    <p class="text-xs text-slate-500">{{ formatDateTime(item.start_at) }}</p>
-                                </div>
-                                <p
-                                    v-if="appointmentReport.lists[section.key].length > 4"
-                                    class="text-xs text-slate-500"
-                                >
-                                    Mostrando os 4 registros mais recentes.
-                                </p>
-                            </div>
-                            <p v-else class="text-sm text-slate-500">{{ section.empty }}</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </section>
 

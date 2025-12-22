@@ -835,8 +835,8 @@ onBeforeUnmount(() => {
                                     </div>
 
                                     <div class="relative h-full">
-                                        <div class="pointer-events-none absolute inset-y-0 left-1 z-30 w-px bg-slate-200/70"></div>
-                                        <div class="pointer-events-none absolute inset-y-0 right-1 z-30 w-px bg-slate-200/70"></div>
+                                        <div class="pointer-events-none absolute inset-y-0 left-1 z-10 w-px bg-slate-200/70"></div>
+                                        <div class="pointer-events-none absolute inset-y-0 right-1 z-10 w-px bg-slate-200/70"></div>
                                         <div
                                             v-if="currentTimeIndicator && currentTimeIndicator.date === day.date"
                                             class="pointer-events-none absolute inset-x-2 z-10 flex items-center gap-2 text-[10px] font-semibold text-red-500"

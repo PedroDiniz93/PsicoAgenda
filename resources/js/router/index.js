@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 const LoginView = () => import('../views/LoginView.vue');
 const HomeView = () => import('../views/HomeView.vue');
+const ReportsView = () => import('../views/ReportsView.vue');
 const PatientsView = () => import('../views/PatientsView.vue');
 const ScheduleView = () => import('../views/ScheduleView.vue');
 const PatientRecordView = () => import('../views/PatientRecordView.vue');
@@ -47,6 +48,12 @@ const router = createRouter({
             name: 'exports',
             component: ExportsView,
             meta: { requiresAuth: true, title: 'Exportação' },
+        },
+        {
+            path: '/reports',
+            name: 'reports',
+            component: ReportsView,
+            meta: { requiresAuth: true, title: 'Relatórios' },
         },
     ],
 });
