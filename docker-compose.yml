@@ -1,0 +1,18 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: psico_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: psico_agenda
+      MYSQL_USER: psico_user
+      MYSQL_PASSWORD: magento2
+      MYSQL_ROOT_PASSWORD: magento2
+    ports:
+      - "3307:3306"
+    volumes:
+      - psico_mysql_data:/var/lib/mysql
+
+volumes:
+  psico_mysql_data:
+
