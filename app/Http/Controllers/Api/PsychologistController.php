@@ -65,10 +65,6 @@ class PsychologistController extends Controller
             $psychologist->email_confirm_enabled = (bool) $data['email_confirm_enabled'];
         }
 
-        if (array_key_exists('sms_confirm_enabled', $data)) {
-            $psychologist->sms_confirm_enabled = (bool) $data['sms_confirm_enabled'];
-        }
-
         $psychologist->save();
 
         return response()->json([

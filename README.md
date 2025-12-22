@@ -25,12 +25,11 @@ Configure o endpoint `POST {{APP_URL}}/api/webhook/whatsapp` no painel do WhatsA
 - processa mensagens recebidas e, ao detectar respostas de confirmação (ex.: “confirmado”, “sim”), marca o agendamento mais recente daquele paciente como `done`.
 - garanta que `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` e `WHATSAPP_VERIFY_TOKEN` estejam preenchidos no `.env`.
 
-## Lembretes por WhatsApp, e-mail e SMS
+## Lembretes por WhatsApp e e-mail
 
 - O campo “Dias antes” controla a janela usada para todos os canais.
 - Ative/desative cada canal na aba Configurações.
 - E-mail usa a configuração padrão do Laravel (`MAIL_MAILER` etc.).
-- Para SMS configure `SMS_ENDPOINT`, `SMS_TOKEN` e `SMS_FROM` (o `SmsService` envia uma requisição `POST` simples; adapte se usar outro provedor).
 
 ## About Laravel
 

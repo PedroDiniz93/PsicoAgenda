@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Mail\AppointmentReminderMail;
 use App\Models\Appointment;
 use App\Models\Psychologist;
-use App\Services\SmsService;
 use App\Services\WhatsAppService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -16,11 +15,10 @@ class SendWhatsAppConfirmations extends Command
 {
     protected $signature = 'whatsapp:send-confirmations';
 
-    protected $description = 'Envia lembretes automáticos de sessões (WhatsApp/E-mail/SMS).';
+    protected $description = 'Envia lembretes automáticos de sessões (WhatsApp/E-mail).';
 
     public function __construct(
-        private readonly WhatsAppService $whatsAppService,
-        private readonly SmsService $smsService
+        private readonly WhatsAppService $whatsAppService
     ) {
         parent::__construct();
     }
@@ -30,8 +28,7 @@ class SendWhatsAppConfirmations extends Command
         $psychologists = Psychologist::query()
             ->where(function ($query) {
                 $query->where('whatsapp_confirm_enabled', true)
-                    ->orWhere('email_confirm_enabled', true)
-                    ->orWhere('sms_confirm_enabled', true);
+                    ->orWhere('email_confirm_enabled', true);
             })
             ->get();
 
@@ -46,7 +43,6 @@ class SendWhatsAppConfirmations extends Command
         $totals = [
             'whatsapp' => 0,
             'email' => 0,
-            'sms' => 0,
         ];
 
         foreach ($psychologists as $psychologist) {
@@ -100,20 +96,6 @@ class SendWhatsAppConfirmations extends Command
                     Log::info('Lembrete enviado por e-mail', ['appointment_id' => $appointment->id]);
                 }
 
-                if (
-                    $psychologist->sms_confirm_enabled
-                    && !$appointment->sms_reminder_sent_at
-                    && ($formattedPhone = $this->formatPhoneNumber($appointment->patient?->phone))
-                ) {
-                    $smsMessage = $this->buildSmsMessage($appointment);
-                    if ($this->smsService->send($formattedPhone, $smsMessage)) {
-                        $appointment->sms_reminder_sent_at = now();
-                        $totals['sms']++;
-                        $updated = true;
-                        Log::info('Lembrete enviado por SMS', ['appointment_id' => $appointment->id]);
-                    }
-                }
-
                 if (!$updated) {
                     continue;
                 }
@@ -123,10 +105,9 @@ class SendWhatsAppConfirmations extends Command
         }
 
         $finalMessage = sprintf(
-            'Lembretes enviados - WhatsApp: %d | E-mail: %d | SMS: %d',
+            'Lembretes enviados - WhatsApp: %d | E-mail: %d',
             $totals['whatsapp'],
-            $totals['email'],
-            $totals['sms']
+            $totals['email']
         );
         $this->info($finalMessage);
         Log::info($finalMessage);
@@ -134,47 +115,4 @@ class SendWhatsAppConfirmations extends Command
         return self::SUCCESS;
     }
 
-    private function formatPhoneNumber(?string $raw): ?string
-    {
-        if (!$raw) {
-            return null;
-        }
-
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (!$digits) {
-            return null;
-        }
-
-        $digits = ltrim($digits, '0');
-
-        if (str_starts_with($digits, '55') && strlen($digits) >= 12) {
-            return '+' . $digits;
-        }
-
-        if (strlen($digits) >= 10) {
-            return '+55' . $digits;
-        }
-
-        return null;
-    }
-
-    private function buildSmsMessage(Appointment $appointment): string
-    {
-        $patientName = $appointment->patient?->name ?? 'Paciente';
-        $psychologistName = $appointment->psychologist?->name ?? config('app.name');
-        $timezone = $appointment->psychologist?->timezone ?? config('app.timezone');
-
-        $startAt = $appointment->start_at instanceof Carbon
-            ? $appointment->start_at->copy()
-            : Carbon::parse($appointment->start_at);
-        $startAt->setTimezone($timezone);
-
-        return sprintf(
-            'Olá %s! Lembrete: sessão com %s em %s às %s. Caso precise reagendar, nos avise.',
-            $patientName,
-            $psychologistName,
-            $startAt->format('d/m/Y'),
-            $startAt->format('H:i')
-        );
-    }
 }

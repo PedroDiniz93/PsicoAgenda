@@ -465,13 +465,13 @@ onMounted(() => {
         </header>
 
         <section class="rounded-2xl bg-white p-6 shadow">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+                <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-slate-500">Agenda</p>
                     <h1 class="text-2xl font-semibold text-slate-900 capitalize">{{ scheduleDayLabel }}</h1>
                     <p class="text-sm text-slate-500">Visualize e organize os atendimentos do dia.</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 lg:flex-none">
                     <button
                         class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                         type="button"
@@ -493,7 +493,7 @@ onMounted(() => {
                         Próximo dia
                     </button>
                 </div>
-                <div class="ms-auto">
+                <div class="lg:ms-auto">
                     <button
                         class="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
                         type="button"

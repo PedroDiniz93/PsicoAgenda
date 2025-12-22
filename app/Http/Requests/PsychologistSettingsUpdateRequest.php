@@ -18,7 +18,6 @@ class PsychologistSettingsUpdateRequest extends FormRequest
             'whatsapp_confirm_enabled' => ['sometimes', 'boolean'],
             'whatsapp_confirm_days_before' => ['sometimes', 'integer', 'min:0', 'max:30'],
             'email_confirm_enabled' => ['sometimes', 'boolean'],
-            'sms_confirm_enabled' => ['sometimes', 'boolean'],
         ];
     }
 }

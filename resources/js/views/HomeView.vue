@@ -95,7 +95,6 @@ const reminderSettings = reactive({
     daysBefore: 1,
     whatsappEnabled: false,
     emailEnabled: false,
-    smsEnabled: false,
 });
 const reminderMessage = ref('');
 const reminderMessageType = ref('success');
@@ -196,7 +195,6 @@ const setReminderSettings = (psychologist = {}) => {
     reminderSettings.daysBefore = Number.isNaN(days) ? 1 : days;
     reminderSettings.whatsappEnabled = Boolean(psychologist?.whatsapp_confirm_enabled);
     reminderSettings.emailEnabled = Boolean(psychologist?.email_confirm_enabled);
-    reminderSettings.smsEnabled = Boolean(psychologist?.sms_confirm_enabled);
 };
 
 const clearProfileErrors = () => {
@@ -318,7 +316,6 @@ const submitReminderSettings = async () => {
             whatsapp_confirm_enabled: Boolean(reminderSettings.whatsappEnabled),
             whatsapp_confirm_days_before: sanitizedDays,
             email_confirm_enabled: Boolean(reminderSettings.emailEnabled),
-            sms_confirm_enabled: Boolean(reminderSettings.smsEnabled),
         });
         const psychologist = data?.psychologist ?? data ?? {};
         setReminderSettings(psychologist);
@@ -995,7 +992,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-3">
+                    <div class="grid gap-4 md:grid-cols-2">
                         <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-semibold text-slate-600">
                             WhatsApp
                             <input v-model="reminderSettings.whatsappEnabled" class="size-5 rounded border-slate-300" type="checkbox" />
@@ -1003,10 +1000,6 @@ onMounted(() => {
                         <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-semibold text-slate-600">
                             E-mail
                             <input v-model="reminderSettings.emailEnabled" class="size-5 rounded border-slate-300" type="checkbox" />
-                        </label>
-                        <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-semibold text-slate-600">
-                            SMS
-                            <input v-model="reminderSettings.smsEnabled" class="size-5 rounded border-slate-300" type="checkbox" />
                         </label>
                     </div>
 
