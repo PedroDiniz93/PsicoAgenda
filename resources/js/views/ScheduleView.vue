@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
@@ -95,12 +95,14 @@ const authPsychologist = computed(() => authUser.value.psychologist ?? {});
 
 const sessionDuration = ref(authPsychologist.value.session_duration ?? 50);
 
+const dividerColor = 'rgba(148, 163, 184, 0.35)';
+
 const calendarConfig = {
     startHour: 7,
     endHour: 22,
     slotMinutes: 30,
-    slotHeight: 40,
-    minAppointmentHeight: 80,
+    slotHeight: 50,
+    minAppointmentHeight: 100,
 };
 
 const calendarTotalMinutes = (calendarConfig.endHour - calendarConfig.startHour) * 60;
@@ -112,6 +114,8 @@ const scheduleLoading = ref(false);
 const scheduleError = ref('');
 const appointments = ref([]);
 const autoFillEndEnabled = ref(true);
+const nowTick = ref(Date.now());
+let nowInterval = null;
 
 const appointmentModalOpen = ref(false);
 const appointmentSubmitting = ref(false);
@@ -183,13 +187,16 @@ const appointmentActionLoading = reactive({ id: null, action: '' });
 
 const defaultSessionMinutes = computed(() => Number(sessionDuration.value) || 50);
 
+const todayString = computed(() => formatDate(new Date(nowTick.value)));
+
 const weekDays = computed(() => {
     const start = new Date(`${scheduleDate.value}T00:00:00`);
     return Array.from({ length: 7 }).map((_, index) => {
         const day = new Date(start);
         day.setDate(day.getDate() + index);
+        const iso = formatDate(day);
         return {
-            date: formatDate(day),
+            date: iso,
             label: new Intl.DateTimeFormat('pt-BR', {
                 weekday: 'long',
                 day: '2-digit',
@@ -200,6 +207,9 @@ const weekDays = computed(() => {
                 day: '2-digit',
                 month: '2-digit',
             }).format(day),
+            dayNumber: String(day.getDate()).padStart(2, '0'),
+            monthShort: new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(day),
+            isToday: iso === todayString.value,
         };
     });
 });
@@ -237,8 +247,8 @@ const calendarTimeLabels = computed(() => {
     }
     return labels;
 });
-const calendarSlotLines = computed(() =>
-    Array.from({ length: calendarTotalSlots + 1 }, (_, index) => index * calendarConfig.slotHeight)
+const calendarHourLines = computed(() =>
+    Array.from({ length: calendarConfig.endHour - calendarConfig.startHour + 1 }, (_, index) => index * calendarConfig.slotHeight * 2)
 );
 
 const calendarDayAppointments = computed(() => {
@@ -270,6 +280,8 @@ const calendarDayAppointments = computed(() => {
             const badgeClass =
                 appointmentStatusBadgeClasses[isRecurring ? 'recurrence' : statusKey] ??
                 'border-slate-200 bg-slate-100 text-slate-600';
+            const typeLabel =
+                appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ?? 'Sessão';
 
             return {
                 appointment,
@@ -279,6 +291,7 @@ const calendarDayAppointments = computed(() => {
                 statusKey,
                 badgeLabel,
                 badgeClass,
+                typeLabel,
             };
         });
 
@@ -286,6 +299,29 @@ const calendarDayAppointments = computed(() => {
     });
 
     return columns;
+});
+
+const currentTimeIndicator = computed(() => {
+    const indicatorDate = todayString.value;
+    if (!weekDays.value.some((day) => day.date === indicatorDate)) {
+        return null;
+    }
+
+    const now = new Date(nowTick.value);
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const dayStart = calendarConfig.startHour * 60;
+    const dayEnd = calendarConfig.endHour * 60;
+
+    if (minutes < dayStart || minutes > dayEnd) {
+        return null;
+    }
+
+    const offset = ((minutes - dayStart) / calendarConfig.slotMinutes) * calendarConfig.slotHeight;
+
+    return {
+        date: indicatorDate,
+        offset,
+    };
 });
 const appointmentModalTitle = computed(() => (editingAppointment.value ? 'Editar agendamento' : 'Novo agendamento'));
 const appointmentSubmitLabel = computed(() => (editingAppointment.value ? 'Salvar alterações' : 'Agendar'));
@@ -643,6 +679,16 @@ watch(
 onMounted(() => {
     fetchProfile();
     fetchAppointments();
+    nowInterval = setInterval(() => {
+        nowTick.value = Date.now();
+    }, 60000);
+});
+
+onBeforeUnmount(() => {
+    if (nowInterval) {
+        clearInterval(nowInterval);
+        nowInterval = null;
+    }
 });
 </script>
 
@@ -739,9 +785,26 @@ onMounted(() => {
                     <div class="overflow-x-auto">
                         <div class="min-w-[1200px] rounded-2xl border border-slate-100">
                             <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <div class="px-2 py-3">Horário</div>
-                                <div v-for="day in weekDays" :key="day.date" class="px-4 py-3 text-center">
-                                    <p class="text-sm font-semibold text-slate-800 capitalize">{{ day.label }}</p>
+                                <div class="px-2 py-3 text-center">Horário</div>
+                                <div
+                                    v-for="day in weekDays"
+                                    :key="day.date"
+                                    class="px-4 py-3 text-center transition"
+                                    :class="day.isToday ? 'bg-blue-50/40 rounded-t-2xl text-blue-600' : ''"
+                                >
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        {{ day.shortLabel }}
+                                    </p>
+                                    <p class="text-lg font-semibold text-slate-900">
+                                        {{ day.dayNumber }}
+                                    </p>
+                                    <p class="text-xs text-slate-400">{{ day.monthShort }}</p>
+                                    <span
+                                        v-if="day.isToday"
+                                        class="mt-1 inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                                    >
+                                        Hoje
+                                    </span>
                                 </div>
                             </div>
                             <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
@@ -758,28 +821,39 @@ onMounted(() => {
                                 <div
                                     v-for="day in weekDays"
                                     :key="day.date"
-                                    class="relative border-l border-slate-100 bg-white hover:bg-slate-50/30"
+                                    class="relative border-l border-slate-100 transition"
+                                    :class="day.isToday ? 'bg-blue-50/20' : 'bg-white hover:bg-slate-50/30'"
                                     :style="{ height: `${calendarColumnHeight}px` }"
                                 >
                                     <div class="absolute inset-0 pointer-events-none">
                                         <div
-                                            v-for="(line, index) in calendarSlotLines"
+                                            v-for="(line, index) in calendarHourLines"
                                             :key="index"
-                                            class="absolute inset-x-0 border-t border-slate-100"
-                                            :style="{ top: `${line}px` }"
+                                            class="absolute inset-x-0 border-t"
+                                            :style="{ top: `${line}px`, borderColor: dividerColor }"
                                         ></div>
                                     </div>
 
                                     <div class="relative h-full">
+                                        <div class="pointer-events-none absolute inset-y-0 left-1 z-30 w-px bg-slate-200/70"></div>
+                                        <div class="pointer-events-none absolute inset-y-0 right-1 z-30 w-px bg-slate-200/70"></div>
+                                        <div
+                                            v-if="currentTimeIndicator && currentTimeIndicator.date === day.date"
+                                            class="pointer-events-none absolute inset-x-2 z-10 flex items-center gap-2 text-[10px] font-semibold text-red-500"
+                                            :style="{ top: `${currentTimeIndicator.offset}px` }"
+                                        >
+                                            <div class="h-px flex-1 bg-red-400"></div>
+                                            <span class="rounded-full bg-red-500/10 px-2 py-0.5">Agora</span>
+                                        </div>
                                         <div
                                             v-for="item in calendarDayAppointments[day.date] ?? []"
                                             :key="item.appointment.id"
-                                            class="group absolute w-[92%] cursor-pointer rounded-xl border border-slate-200 bg-blue-50/90 px-3 py-2 text-left text-xs text-slate-700 shadow hover:border-blue-300 hover:bg-blue-100 focus:outline-none overflow-hidden"
-                                            :class="{ 'bg-purple-50/90 text-purple-900 border-purple-200': item.appointment.recurrence_id }"
+                                            class="group absolute z-20 w-[94%] cursor-pointer rounded-2xl border border-slate-200 bg-blue-50/90 px-3 py-2 text-left text-xs text-slate-700 shadow hover:border-blue-300 hover:bg-blue-100 focus:outline-none overflow-hidden"
+                                            :class="{ 'bg-purple-50 text-purple-900 border-purple-200': item.appointment.recurrence_id }"
                                             :style="{
                                                 top: `${item.top}px`,
                                                 height: `${item.height}px`,
-                                                left: `${item.offset}px`,
+                                                left: '3%',
                                             }"
                                             role="button"
                                             tabindex="0"
@@ -793,6 +867,9 @@ onMounted(() => {
                                                     </p>
                                                     <p class="text-sm font-semibold text-slate-800 group-[.bg-purple-50\\/90]:text-purple-900 truncate">
                                                         {{ item.appointment.patient?.name ?? 'Paciente removido' }}
+                                                    </p>
+                                                    <p class="text-[10px] uppercase tracking-wide text-slate-400 group-[.bg-purple-50\\/90]:text-purple-600">
+                                                        {{ item.typeLabel }}
                                                     </p>
                                                 </div>
                                                 <span
