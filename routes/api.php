@@ -29,23 +29,29 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/patients', [PatientController::class, 'index']);
     Route::post('/patients', [PatientController::class, 'store']);
-    Route::get('/patients/{id}', [PatientController::class, 'show']);
-    Route::get('/patients/{id}/export', [PatientController::class, 'export']);
     Route::post('/patients/export', [PatientController::class, 'bulkExport']);
-    Route::put('/patients/{id}', [PatientController::class, 'update']);
-    Route::delete('/patients/{id}', [PatientController::class, 'destroy']);
+    Route::get('/patients/inactivity-alerts', [PatientController::class, 'inactivityAlerts']);
+    Route::post('/patients/inactivity-alerts/acknowledge', [PatientController::class, 'acknowledgeInactivityAlerts']);
+    Route::get('/patients/{id}', [PatientController::class, 'show'])->whereNumber('id');
+    Route::get('/patients/{id}/export', [PatientController::class, 'export'])->whereNumber('id');
+    Route::put('/patients/{id}', [PatientController::class, 'update'])->whereNumber('id');
+    Route::delete('/patients/{id}', [PatientController::class, 'destroy'])->whereNumber('id');
 
-    Route::get('/patients/{patient}/records', [PatientRecordController::class, 'index']);
-    Route::post('/patients/{patient}/records', [PatientRecordController::class, 'store']);
-    Route::put('/patients/{patient}/records/{record}', [PatientRecordController::class, 'update']);
-    Route::delete('/patients/{patient}/records/{record}', [PatientRecordController::class, 'destroy']);
+    Route::get('/patients/{patient}/records', [PatientRecordController::class, 'index'])->whereNumber('patient');
+    Route::post('/patients/{patient}/records', [PatientRecordController::class, 'store'])->whereNumber('patient');
+    Route::put('/patients/{patient}/records/{record}', [PatientRecordController::class, 'update'])
+        ->whereNumber('patient')
+        ->whereNumber('record');
+    Route::delete('/patients/{patient}/records/{record}', [PatientRecordController::class, 'destroy'])
+        ->whereNumber('patient')
+        ->whereNumber('record');
 
     Route::get('/appointments', [AppointmentController::class, 'index']);
     Route::post('/appointments', [AppointmentController::class, 'store']);
-    Route::put('/appointments/{id}', [AppointmentController::class, 'update']);
-    Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel']);
-    Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone']);
-    Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed']);
+    Route::put('/appointments/{id}', [AppointmentController::class, 'update'])->whereNumber('id');
+    Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->whereNumber('id');
+    Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone'])->whereNumber('id');
+    Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed'])->whereNumber('id');
 
     Route::get('/reports/appointments', [ReportController::class, 'appointments']);
 });

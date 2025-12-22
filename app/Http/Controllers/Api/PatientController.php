@@ -7,6 +7,7 @@ use App\Http\Requests\PatientStoreRequest;
 use App\Http\Requests\PatientUpdateRequest;
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Models\PatientAlert;
 use App\Models\PatientRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
@@ -117,6 +118,73 @@ class PatientController extends Controller
         $patient->update(['status' => 'closed']);
 
         return response()->json(['ok' => true]);
+    }
+
+    public function inactivityAlerts(Request $request)
+    {
+        $psychologistId = $this->psychologistId($request);
+
+        $alerts = PatientAlert::query()
+            ->with(['patient' => function ($query) {
+                $query->select('id', 'name', 'status', 'email', 'phone');
+            }])
+            ->where('psychologist_id', $psychologistId)
+            ->where('type', 'patient-inactivity')
+            ->orderByDesc('triggered_at')
+            ->get();
+
+        $patients = $alerts->map(function (PatientAlert $alert) {
+            $payload = $alert->payload ?? [];
+            $daysSince = $payload['days_since_last_appointment'] ?? null;
+
+            if (is_numeric($daysSince)) {
+                $daysSince = (int) round((float) $daysSince);
+            } else {
+                $daysSince = null;
+            }
+
+            return [
+                'id' => $alert->patient_id,
+                'name' => $alert->patient?->name,
+                'status' => $alert->patient?->status,
+                'email' => $alert->patient?->email,
+                'phone' => $alert->patient?->phone,
+                'last_appointment_at' => $payload['last_appointment_at'] ?? null,
+                'reference_date' => $payload['reference_date'] ?? null,
+                'days_since_last_appointment' => $daysSince,
+            ];
+        });
+
+        $threshold = (int) ($alerts->first()?->payload['threshold_days'] ?? 15);
+
+        $hasUnread = $alerts->contains(function (PatientAlert $alert) {
+            return $alert->resolved_at === null;
+        });
+
+        return response()->json([
+            'threshold_days' => $threshold,
+            'count' => $patients->count(),
+            'patients' => $patients,
+            'has_unread' => $hasUnread,
+        ]);
+    }
+
+    public function acknowledgeInactivityAlerts(Request $request)
+    {
+        $psychologistId = $this->psychologistId($request);
+
+        $acknowledged = PatientAlert::query()
+            ->where('psychologist_id', $psychologistId)
+            ->where('type', 'patient-inactivity')
+            ->whereNull('resolved_at')
+            ->update([
+                'resolved_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'acknowledged' => (int) $acknowledged,
+        ]);
     }
 
     public function export(Request $request, int $id): StreamedResponse
