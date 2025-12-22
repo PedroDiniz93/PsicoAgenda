@@ -7,6 +7,15 @@ import { useAuthStore } from '../stores/auth';
 const router = useRouter();
 const auth = useAuthStore();
 
+const getWeekStart = (date) => {
+    const cloned = new Date(date);
+    const day = cloned.getDay(); // 0 (Sun) - 6 (Sat)
+    const diff = (day + 6) % 7; // convert to Monday-based index
+    cloned.setHours(0, 0, 0, 0);
+    cloned.setDate(cloned.getDate() - diff);
+    return cloned;
+};
+
 const formatDate = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
@@ -57,6 +66,15 @@ const addDays = (base, offset) => {
     return formatDate(date);
 };
 
+const normalizeWeekDate = (value) => {
+    if (!value) return formatDate(getWeekStart(new Date()));
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+        return formatDate(getWeekStart(new Date()));
+    }
+    return formatDate(getWeekStart(parsed));
+};
+
 const addMinutesToLocalInput = (value, minutes) => {
     if (!value) return '';
     const date = new Date(value);
@@ -77,7 +95,19 @@ const authPsychologist = computed(() => authUser.value.psychologist ?? {});
 
 const sessionDuration = ref(authPsychologist.value.session_duration ?? 50);
 
-const scheduleDate = ref(formatDate(new Date()));
+const calendarConfig = {
+    startHour: 7,
+    endHour: 22,
+    slotMinutes: 30,
+    slotHeight: 40,
+    minAppointmentHeight: 80,
+};
+
+const calendarTotalMinutes = (calendarConfig.endHour - calendarConfig.startHour) * 60;
+const calendarTotalSlots = calendarTotalMinutes / calendarConfig.slotMinutes;
+const hourLabelHeight = (60 / calendarConfig.slotMinutes) * calendarConfig.slotHeight;
+
+const scheduleDate = ref(formatDate(getWeekStart(new Date())));
 const scheduleLoading = ref(false);
 const scheduleError = ref('');
 const appointments = ref([]);
@@ -131,6 +161,14 @@ const appointmentStatusStyles = {
     canceled: 'bg-slate-100 text-slate-500',
 };
 
+const appointmentStatusBadgeClasses = {
+    recurrence: 'border-purple-200 bg-purple-100 text-purple-700',
+    scheduled: 'border-blue-200 bg-blue-50 text-blue-700',
+    done: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    missed: 'border-amber-200 bg-amber-50 text-amber-700',
+    canceled: 'border-slate-200 bg-slate-100 text-slate-500',
+};
+
 const appointmentTypeOptions = [
     { value: 'online', label: 'Online' },
     { value: 'in_person', label: 'Presencial' },
@@ -144,8 +182,111 @@ let patientSearchTimeout = null;
 const appointmentActionLoading = reactive({ id: null, action: '' });
 
 const defaultSessionMinutes = computed(() => Number(sessionDuration.value) || 50);
-const scheduleDayLabel = computed(() => formatDateLabel(scheduleDate.value));
+
+const weekDays = computed(() => {
+    const start = new Date(`${scheduleDate.value}T00:00:00`);
+    return Array.from({ length: 7 }).map((_, index) => {
+        const day = new Date(start);
+        day.setDate(day.getDate() + index);
+        return {
+            date: formatDate(day),
+            label: new Intl.DateTimeFormat('pt-BR', {
+                weekday: 'long',
+                day: '2-digit',
+                month: 'short',
+            }).format(day),
+            shortLabel: new Intl.DateTimeFormat('pt-BR', {
+                weekday: 'short',
+                day: '2-digit',
+                month: '2-digit',
+            }).format(day),
+        };
+    });
+});
+
+const scheduleWeekLabel = computed(() => {
+    const start = new Date(`${scheduleDate.value}T00:00:00`);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' });
+    return `${formatter.format(start)} – ${formatter.format(end)}`;
+});
+
+const appointmentsByDay = computed(() => {
+    const grouped = Object.fromEntries(weekDays.value.map((day) => [day.date, []]));
+    appointments.value.forEach((appointment) => {
+        const start = new Date(appointment.start_at ?? appointment.startAt);
+        if (Number.isNaN(start.getTime())) {
+            return;
+        }
+        const dateKey = formatDate(start);
+        if (grouped[dateKey]) {
+            grouped[dateKey].push(appointment);
+        }
+    });
+    return grouped;
+});
+
 const appointmentsEmpty = computed(() => appointments.value.length === 0);
+const calendarColumnHeight = computed(() => calendarTotalSlots * calendarConfig.slotHeight);
+const calendarTimeLabels = computed(() => {
+    const labels = [];
+    for (let hour = calendarConfig.startHour; hour < calendarConfig.endHour; hour += 1) {
+        const label = `${String(hour).padStart(2, '0')}:00`;
+        labels.push(label);
+    }
+    return labels;
+});
+const calendarSlotLines = computed(() =>
+    Array.from({ length: calendarTotalSlots + 1 }, (_, index) => index * calendarConfig.slotHeight)
+);
+
+const calendarDayAppointments = computed(() => {
+    const columns = {};
+    const slotHeight = calendarConfig.slotHeight;
+
+    weekDays.value.forEach((day) => {
+        const items = (appointmentsByDay.value[day.date] ?? []).map((appointment, index) => {
+            const start = new Date(appointment.start_at ?? appointment.startAt);
+            const end = new Date(appointment.end_at ?? appointment.endAt);
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                return null;
+            }
+
+            const startMinutes = start.getHours() * 60 + start.getMinutes();
+            const endMinutes = end.getHours() * 60 + end.getMinutes();
+            const minutesFromStart = Math.max(0, startMinutes - calendarConfig.startHour * 60);
+            const durationMinutes = Math.max(15, endMinutes - startMinutes);
+
+            const top = (minutesFromStart / calendarConfig.slotMinutes) * slotHeight;
+            const rawHeight = (durationMinutes / calendarConfig.slotMinutes) * slotHeight;
+            const height = Math.max(calendarConfig.minAppointmentHeight, rawHeight);
+
+            const statusKey = appointment.status ?? 'scheduled';
+            const statusLabel =
+                appointmentStatusOptions.find((option) => option.value === statusKey)?.label ?? 'Status';
+            const isRecurring = Boolean(appointment.recurrence_id) && statusKey === 'scheduled';
+            const badgeLabel = isRecurring ? 'Recorrente' : statusLabel;
+            const badgeClass =
+                appointmentStatusBadgeClasses[isRecurring ? 'recurrence' : statusKey] ??
+                'border-slate-200 bg-slate-100 text-slate-600';
+
+            return {
+                appointment,
+                top,
+                height,
+                offset: 0,
+                statusKey,
+                badgeLabel,
+                badgeClass,
+            };
+        });
+
+        columns[day.date] = items.filter(Boolean);
+    });
+
+    return columns;
+});
 const appointmentModalTitle = computed(() => (editingAppointment.value ? 'Editar agendamento' : 'Novo agendamento'));
 const appointmentSubmitLabel = computed(() => (editingAppointment.value ? 'Salvar alterações' : 'Agendar'));
 const editingRecurringAppointment = computed(() => Boolean(editingAppointment.value?.recurrence_id));
@@ -290,7 +431,7 @@ const fetchAppointments = async () => {
     scheduleError.value = '';
 
     try {
-        const params = { from: scheduleDate.value, to: scheduleDate.value };
+        const params = { from: scheduleDate.value, to: addDays(scheduleDate.value, 6) };
         const { data } = await axios.get('/api/appointments', { params });
         appointments.value = Array.isArray(data) ? data : [];
     } catch (error) {
@@ -302,11 +443,17 @@ const fetchAppointments = async () => {
 };
 
 const handleScheduleDateChange = () => {
+    scheduleDate.value = normalizeWeekDate(scheduleDate.value);
     fetchAppointments();
 };
 
-const changeScheduleDay = (offset) => {
-    scheduleDate.value = addDays(scheduleDate.value, offset);
+const changeWeek = (offset) => {
+    scheduleDate.value = addDays(scheduleDate.value, offset * 7);
+    fetchAppointments();
+};
+
+const goToToday = () => {
+    scheduleDate.value = formatDate(getWeekStart(new Date()));
     fetchAppointments();
 };
 
@@ -500,7 +647,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen max-w-5xl px-4 py-10">
+    <div class="mx-auto min-h-screen max-w-7xl px-6 py-10">
         <header class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white px-6 py-4 shadow">
             <div>
                 <p class="text-sm font-medium text-slate-500">Agenda</p>
@@ -523,17 +670,24 @@ onMounted(() => {
         <section class="rounded-2xl bg-white p-6 shadow">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-500">Agenda</p>
-                    <h1 class="text-2xl font-semibold text-slate-900 capitalize">{{ scheduleDayLabel }}</h1>
-                    <p class="text-sm text-slate-500">Visualize e organize os atendimentos do dia.</p>
+                    <p class="text-sm font-medium text-slate-500">Semana selecionada</p>
+                    <h1 class="text-2xl font-semibold text-slate-900 capitalize">{{ scheduleWeekLabel }}</h1>
+                    <p class="text-sm text-slate-500">Visualize e organize os atendimentos da semana.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 lg:flex-none">
                     <button
                         class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                         type="button"
-                        @click="changeScheduleDay(-1)"
+                        @click="changeWeek(-1)"
                     >
-                        Dia anterior
+                        Semana anterior
+                    </button>
+                    <button
+                        class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        type="button"
+                        @click="goToToday"
+                    >
+                        Esta semana
                     </button>
                     <input
                         v-model="scheduleDate"
@@ -544,9 +698,9 @@ onMounted(() => {
                     <button
                         class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                         type="button"
-                        @click="changeScheduleDay(1)"
+                        @click="changeWeek(1)"
                     >
-                        Próximo dia
+                        Próxima semana
                     </button>
                 </div>
                 <div class="lg:ms-auto">
@@ -581,120 +735,96 @@ onMounted(() => {
                     Carregando agenda...
                 </div>
 
-                <div v-else-if="appointmentsEmpty" class="rounded-2xl border border-dashed border-slate-200 px-6 py-16 text-center text-sm text-slate-500">
-                    Nenhum agendamento para este dia.
-                    <div class="mt-4">
-                        <button
-                            class="inline-flex items-center rounded-xl border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
-                            type="button"
-                            @click="openCreateAppointment"
-                        >
-                            Agendar atendimento
-                        </button>
-                    </div>
-                </div>
-
-                <ul v-else class="space-y-4">
-                    <li
-                        v-for="appointment in appointments"
-                        :key="appointment.id"
-                        class="rounded-2xl border border-slate-100 p-4 shadow-sm hover:border-blue-100"
-                    >
-                        <div class="flex flex-wrap items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-500">
-                                    {{ formatTimeLabel(appointment.start_at) }} - {{ formatTimeLabel(appointment.end_at) }}
-                                </p>
-                                <p class="text-lg font-semibold text-slate-900">
-                                    {{ appointment.patient?.name ?? 'Paciente removido' }}
-                                </p>
-                                <p class="text-sm text-slate-500">
-                                    {{
-                                        appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ??
-                                        'Tipo não informado'
-                                    }}
-                                </p>
-                                <div v-if="appointment.recurrence_id" class="mt-2">
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
-                                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="1.8"
-                                                d="M4 4v6h6M20 20v-6h-6M20 8A8 8 0 0 0 4 8m0 8a8 8 0 0 0 16 0"
-                                            />
-                                        </svg>
-                                        Recorrente
-                                    </span>
+                <div v-else>
+                    <div class="overflow-x-auto">
+                        <div class="min-w-[1200px] rounded-2xl border border-slate-100">
+                            <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <div class="px-2 py-3">Horário</div>
+                                <div v-for="day in weekDays" :key="day.date" class="px-4 py-3 text-center">
+                                    <p class="text-sm font-semibold text-slate-800 capitalize">{{ day.label }}</p>
                                 </div>
-                                <p v-if="appointment.meeting_url" class="mt-1">
-                                    <a
-                                        :href="appointment.meeting_url"
-                                        class="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10v11h11" />
-                                        </svg>
-                                        Abrir link da sessão
-                                    </a>
-                                </p>
-                                <p v-if="formatCurrency(appointment.price)" class="text-sm text-slate-500">
-                                    {{ formatCurrency(appointment.price) }}
-                                </p>
                             </div>
-                            <div class="text-right">
-                                <span
-                                    class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                                    :class="appointmentStatusStyles[appointment.status] ?? 'bg-slate-100 text-slate-600'"
+                            <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
+                                <div class="border-r border-slate-100 bg-white">
+                                    <div
+                                        v-for="label in calendarTimeLabels"
+                                        :key="label"
+                                        class="flex items-start justify-end px-2 text-xs text-slate-400"
+                                        :style="{ height: `${hourLabelHeight}px` }"
+                                    >
+                                        <span class="-mt-2">{{ label }}</span>
+                                    </div>
+                                </div>
+                                <div
+                                    v-for="day in weekDays"
+                                    :key="day.date"
+                                    class="relative border-l border-slate-100 bg-white hover:bg-slate-50/30"
+                                    :style="{ height: `${calendarColumnHeight}px` }"
                                 >
-                                    {{
-                                        appointmentStatusOptions.find((option) => option.value === appointment.status)?.label ??
-                                        'Status'
-                                    }}
-                                </span>
-                                <div class="mt-3 flex flex-wrap justify-end gap-2 text-xs font-semibold">
-                                    <button
-                                        class="rounded-xl border border-slate-200 px-3 py-1 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                                        type="button"
-                                        @click="openEditAppointment(appointment)"
-                                    >
-                                        Editar
-                                    </button>
-                                    <button
-                                        v-if="appointment.status !== 'done' && appointment.status !== 'canceled'"
-                                        class="rounded-xl border border-emerald-200 px-3 py-1 text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                        type="button"
-                                        :disabled="appointmentActionLoading.id === appointment.id && appointmentActionLoading.action === 'done'"
-                                        @click="performAppointmentAction(appointment, 'done')"
-                                    >
-                                        Concluir
-                                    </button>
-                                    <button
-                                        v-if="appointment.status === 'scheduled'"
-                                        class="rounded-xl border border-amber-200 px-3 py-1 text-amber-700 transition hover:border-amber-300 hover:text-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                        type="button"
-                                        :disabled="appointmentActionLoading.id === appointment.id && appointmentActionLoading.action === 'missed'"
-                                        @click="performAppointmentAction(appointment, 'missed')"
-                                    >
-                                        Faltou
-                                    </button>
-                                    <button
-                                        v-if="appointment.status !== 'canceled'"
-                                        class="rounded-xl border border-red-200 px-3 py-1 text-red-600 transition hover:border-red-300 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                        type="button"
-                                        :disabled="appointmentActionLoading.id === appointment.id && appointmentActionLoading.action === 'cancel'"
-                                        @click="performAppointmentAction(appointment, 'cancel')"
-                                    >
-                                        Cancelar
-                                    </button>
+                                    <div class="absolute inset-0 pointer-events-none">
+                                        <div
+                                            v-for="(line, index) in calendarSlotLines"
+                                            :key="index"
+                                            class="absolute inset-x-0 border-t border-slate-100"
+                                            :style="{ top: `${line}px` }"
+                                        ></div>
+                                    </div>
+
+                                    <div class="relative h-full">
+                                        <div
+                                            v-for="item in calendarDayAppointments[day.date] ?? []"
+                                            :key="item.appointment.id"
+                                            class="group absolute w-[92%] cursor-pointer rounded-xl border border-slate-200 bg-blue-50/90 px-3 py-2 text-left text-xs text-slate-700 shadow hover:border-blue-300 hover:bg-blue-100 focus:outline-none overflow-hidden"
+                                            :class="{ 'bg-purple-50/90 text-purple-900 border-purple-200': item.appointment.recurrence_id }"
+                                            :style="{
+                                                top: `${item.top}px`,
+                                                height: `${item.height}px`,
+                                                left: `${item.offset}px`,
+                                            }"
+                                            role="button"
+                                            tabindex="0"
+                                            @click.stop="openEditAppointment(item.appointment)"
+                                            @keydown.enter.prevent="openEditAppointment(item.appointment)"
+                                        >
+                                            <div class="flex h-full flex-col justify-between overflow-hidden">
+                                                <div class="space-y-1">
+                                                    <p class="text-[11px] font-semibold text-slate-500 group-[.bg-purple-50\\/90]:text-purple-700">
+                                                        {{ formatTimeLabel(item.appointment.start_at) }} - {{ formatTimeLabel(item.appointment.end_at) }}
+                                                    </p>
+                                                    <p class="text-sm font-semibold text-slate-800 group-[.bg-purple-50\\/90]:text-purple-900 truncate">
+                                                        {{ item.appointment.patient?.name ?? 'Paciente removido' }}
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    class="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                                                    :class="item.badgeClass"
+                                                >
+                                                    <span class="truncate">{{ item.badgeLabel }}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </li>
-                </ul>
+                    </div>
+
+                    <div
+                        v-if="appointmentsEmpty"
+                        class="mt-4 rounded-2xl border border-dashed border-slate-200 px-6 py-6 text-center text-sm text-slate-500"
+                    >
+                        Nenhum agendamento encontrado para esta semana.
+                        <div class="mt-4">
+                            <button
+                                class="inline-flex items-center rounded-xl border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                                type="button"
+                                @click="openCreateAppointment"
+                            >
+                                Agendar atendimento
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
