@@ -10,6 +10,24 @@ const exportSelection = reactive({
     selectAll: false,
 });
 const exportSubmitting = ref(false);
+const exportTypeOptions = [
+    {
+        value: 'patients',
+        label: 'Pacientes',
+        description: 'Dados cadastrais como nome, contato e plano.',
+    },
+    {
+        value: 'appointments',
+        label: 'Agendamentos',
+        description: 'Histórico dos atendimentos realizados ou planejados.',
+    },
+    {
+        value: 'records',
+        label: 'Prontuários',
+        description: 'Anotações clínicas registradas por paciente.',
+    },
+];
+const exportTypeSelection = ref(exportTypeOptions.map((option) => option.value));
 
 const sessionFeeTypeLabels = {
     session: 'Por sessão',
@@ -35,6 +53,9 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 const exportHasSelection = computed(() => exportSelection.selected.length > 0);
+const exportReady = computed(
+    () => exportHasSelection.value && exportTypeSelection.value.length > 0
+);
 const formatMoney = (value) => currencyFormatter.format(Number(value ?? 0));
 const sessionFeeLabel = (type) => sessionFeeTypeLabels[type] ?? 'Não definido';
 
@@ -119,19 +140,23 @@ const downloadBlobResponse = (response, fallbackName) => {
 
 const submitExport = async () => {
     if (!exportHasSelection.value || exportSubmitting.value) return;
+    if (!exportTypeSelection.value.length) {
+        window.alert('Selecione ao menos um tipo de informação para exportar.');
+        return;
+    }
     exportSubmitting.value = true;
 
     try {
         const ids = [...exportSelection.selected];
         const response = await axios.post(
             '/api/patients/export',
-            { patient_ids: ids },
+            { patient_ids: ids, types: [...exportTypeSelection.value] },
             { responseType: 'blob' }
         );
 
         downloadBlobResponse(
             response,
-            `exportacao-pacientes-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`
+            `exportacao-pacientes-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
         );
     } catch (error) {
         window.alert(
@@ -151,7 +176,7 @@ onMounted(fetchExportPatients);
             <div>
                 <h2 class="text-2xl font-semibold text-slate-900">Exportação de pacientes</h2>
                 <p class="text-sm text-slate-500">
-                    Gere um CSV completo com dados do paciente, agendamentos e registros clínicos.
+                    Gere arquivos separados com dados de pacientes, agendamentos e prontuários.
                 </p>
             </div>
             <div class="flex flex-wrap gap-3">
@@ -166,12 +191,37 @@ onMounted(fetchExportPatients);
                 <button
                     class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                     type="button"
-                    :disabled="!exportHasSelection || exportSubmitting || exportPatientsLoading"
+                    :disabled="!exportReady || exportSubmitting || exportPatientsLoading"
                     @click="submitExport"
                 >
                     {{ exportSubmitting ? 'Gerando arquivo...' : 'Exportar CSV' }}
                 </button>
             </div>
+        </div>
+
+        <div class="mb-6 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+            <p class="mb-3 text-sm font-semibold text-slate-800">Tipos de informação</p>
+            <div class="flex flex-col gap-2 lg:flex-row">
+                <label
+                    v-for="option in exportTypeOptions"
+                    :key="option.value"
+                    class="flex flex-1 items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm transition hover:border-slate-300"
+                >
+                    <input
+                        class="mt-1 size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        v-model="exportTypeSelection"
+                        type="checkbox"
+                        :value="option.value"
+                    />
+                    <span>
+                        <span class="block font-semibold text-slate-900">{{ option.label }}</span>
+                        <span class="text-xs text-slate-500">{{ option.description }}</span>
+                    </span>
+                </label>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">
+                Os dados selecionados serão entregues em um arquivo .zip com um CSV por tipo.
+            </p>
         </div>
 
         <div class="rounded-2xl border border-slate-100">

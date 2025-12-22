@@ -11,9 +11,22 @@ use App\Models\PatientRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipArchive;
 
 class PatientController extends Controller
 {
+    private const EXPORT_TYPES = [
+        'patients' => [
+            'filename' => 'pacientes.csv',
+        ],
+        'appointments' => [
+            'filename' => 'agendamentos.csv',
+        ],
+        'records' => [
+            'filename' => 'prontuarios.csv',
+        ],
+    ];
+
     private function psychologistId(Request $request): int
     {
         $user = $request->user()->loadMissing('psychologist');
@@ -127,6 +140,7 @@ class PatientController extends Controller
     {
         $psychologistId = $this->psychologistId($request);
         $ids = $request->input('patient_ids', []);
+        $types = $this->resolveExportTypes($request);
 
         abort_if(empty($ids), 422, 'Selecione pelo menos um paciente para exportar.');
 
@@ -140,17 +154,32 @@ class PatientController extends Controller
 
         abort_if($patients->isEmpty(), 404, 'Nenhum paciente encontrado para exportação.');
 
-        $rows = [];
+        $rowsByType = [];
+        foreach ($types as $type) {
+            $rowsByType[$type] = [];
+        }
 
         foreach ($patients as $patient) {
-            foreach ($this->buildPatientExportRows($patient) as $row) {
-                $rows[] = $row;
+            $patientRows = $this->buildPatientExportRowsByType($patient);
+
+            foreach ($types as $type) {
+                foreach ($patientRows[$type] ?? [] as $row) {
+                    $rowsByType[$type][] = $row;
+                }
             }
         }
 
-        $fileName = sprintf('exportacao-pacientes-%s.csv', now()->format('Ymd_His'));
+        $files = [];
+        foreach ($types as $type) {
+            $files[$this->exportTypeFileName($type)] = $this->renderCsvContent(
+                $rowsByType[$type],
+                $this->csvHeadersForType($type)
+            );
+        }
 
-        return $this->streamCsv($rows, $fileName);
+        $fileName = sprintf('exportacao-pacientes-%s.zip', now()->format('Ymd_His'));
+
+        return $this->streamZip($files, $fileName);
     }
 
     /**
@@ -158,17 +187,39 @@ class PatientController extends Controller
      */
     private function buildPatientExportRows(Patient $patient): array
     {
-        $exportedAt = now()->toIso8601String();
+        $groupedRows = $this->buildPatientExportRowsByType($patient);
         $rows = [];
 
-        $rows[] = $this->patientRow($patient, $exportedAt);
+        foreach ($groupedRows as $group) {
+            foreach ($group as $row) {
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, array<int, array<string, string|int|float|null>>>
+     */
+    private function buildPatientExportRowsByType(Patient $patient): array
+    {
+        $exportedAt = now()->toIso8601String();
+
+        $rows = [
+            'patients' => [
+                $this->patientRow($patient, $exportedAt),
+            ],
+            'appointments' => [],
+            'records' => [],
+        ];
 
         foreach ($patient->appointments as $appointment) {
-            $rows[] = $this->appointmentRow($patient, $appointment, $exportedAt);
+            $rows['appointments'][] = $this->appointmentRow($patient, $appointment, $exportedAt);
         }
 
         foreach ($patient->records as $record) {
-            $rows[] = $this->recordRow($patient, $record, $exportedAt);
+            $rows['records'][] = $this->recordRow($patient, $record, $exportedAt);
         }
 
         return $rows;
@@ -315,28 +366,146 @@ class PatientController extends Controller
 
     private function streamCsv(array $rows, string $fileName): StreamedResponse
     {
-        $headers = $this->csvHeaders();
-
-        return Response::streamDownload(function () use ($rows, $headers) {
+        return Response::streamDownload(function () use ($rows) {
             $handle = fopen('php://output', 'w');
-
-            // Excel-friendly BOM
-            fwrite($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            fputcsv($handle, $headers, ';');
-
-            foreach ($rows as $row) {
-                $line = [];
-                foreach ($headers as $column) {
-                    $line[] = $row[$column] ?? '';
-                }
-
-                fputcsv($handle, $line, ';');
-            }
-
+            $this->writeCsvToHandle($handle, $rows);
             fclose($handle);
         }, $fileName, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    private function renderCsvContent(array $rows, ?array $headers = null): string
+    {
+        $handle = fopen('php://temp', 'r+');
+        $this->writeCsvToHandle($handle, $rows, $headers);
+        rewind($handle);
+        $content = stream_get_contents($handle) ?: '';
+        fclose($handle);
+
+        return $content;
+    }
+
+    private function writeCsvToHandle($handle, array $rows, ?array $headers = null): void
+    {
+        $headers = $headers ?? $this->csvHeaders();
+
+        // Excel-friendly BOM
+        fwrite($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+        fputcsv($handle, $headers, ';');
+
+        foreach ($rows as $row) {
+            $line = [];
+            foreach ($headers as $column) {
+                $line[] = $row[$column] ?? '';
+            }
+
+            fputcsv($handle, $line, ';');
+        }
+    }
+
+    private function streamZip(array $files, string $fileName): StreamedResponse
+    {
+        return Response::streamDownload(function () use ($files) {
+            $temporaryPath = tempnam(sys_get_temp_dir(), 'psicoagenda-export-');
+
+            if ($temporaryPath === false) {
+                throw new \RuntimeException('Não foi possível preparar o arquivo para exportação.');
+            }
+
+            $zip = new ZipArchive();
+            $status = $zip->open($temporaryPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+            if ($status !== true) {
+                throw new \RuntimeException('Não foi possível gerar o arquivo compactado de exportação.');
+            }
+
+            foreach ($files as $name => $content) {
+                $zip->addFromString($name, $content);
+            }
+
+            $zip->close();
+
+            $stream = fopen($temporaryPath, 'rb');
+
+            if ($stream === false) {
+                @unlink($temporaryPath);
+                throw new \RuntimeException('Não foi possível transmitir o arquivo de exportação.');
+            }
+
+            fpassthru($stream);
+            fclose($stream);
+            @unlink($temporaryPath);
+        }, $fileName, [
+            'Content-Type' => 'application/zip',
+        ]);
+    }
+
+    private function resolveExportTypes(Request $request): array
+    {
+        $availableTypes = array_keys(self::EXPORT_TYPES);
+
+        if (!$request->has('types')) {
+            return $availableTypes;
+        }
+
+        $incoming = $request->input('types');
+        $incoming = is_array($incoming) ? $incoming : [];
+
+        $selected = [];
+        foreach ($incoming as $type) {
+            $type = strtolower((string) $type);
+
+            if (in_array($type, $availableTypes, true) && !in_array($type, $selected, true)) {
+                $selected[] = $type;
+            }
+        }
+
+        abort_if(empty($selected), 422, 'Selecione pelo menos um tipo de informação para exportar.');
+
+        return $selected;
+    }
+
+    private function exportTypeFileName(string $type): string
+    {
+        return self::EXPORT_TYPES[$type]['filename'] ?? sprintf('%s.csv', $type);
+    }
+
+    private function csvHeadersForType(string $type): array
+    {
+        $patientColumns = [
+            'paciente_nome',
+            'paciente_email',
+            'paciente_telefone',
+            'paciente_status',
+            'paciente_observacoes',
+            'plano_tipo',
+            'plano_valor',
+        ];
+
+        return match ($type) {
+            'patients' => array_merge(['tipo_registro'], $patientColumns),
+            'appointments' => array_merge(
+                ['tipo_registro'],
+                $patientColumns,
+                [
+                    'atendimento_id',
+                    'atendimento_inicio',
+                    'atendimento_fim',
+                    'atendimento_status',
+                    'atendimento_modalidade',
+                    'atendimento_valor',
+                    'atendimento_link',
+                    'atendimento_observacoes',
+                ]
+            ),
+            'records' => array_merge(
+                ['tipo_registro'],
+                $patientColumns,
+                ['registro_id', 'registro_titulo', 'registro_anotacoes', 'registro_data']
+            ),
+            default => $this->csvHeaders(),
+        };
     }
 }
