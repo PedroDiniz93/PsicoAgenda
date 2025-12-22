@@ -105,7 +105,15 @@ const appointmentErrors = reactive({
     type: '',
     price: '',
     paidAt: '',
+    repeatUntil: '',
 });
+
+const recurrenceForm = reactive({
+    enabled: false,
+    until: '',
+});
+
+const recurrenceActionLoading = ref(false);
 
 const appointmentMessage = ref('');
 
@@ -140,6 +148,13 @@ const scheduleDayLabel = computed(() => formatDateLabel(scheduleDate.value));
 const appointmentsEmpty = computed(() => appointments.value.length === 0);
 const appointmentModalTitle = computed(() => (editingAppointment.value ? 'Editar agendamento' : 'Novo agendamento'));
 const appointmentSubmitLabel = computed(() => (editingAppointment.value ? 'Salvar alterações' : 'Agendar'));
+const editingRecurringAppointment = computed(() => Boolean(editingAppointment.value?.recurrence_id));
+const recurrenceControlsEnabled = computed(() => !editingAppointment.value);
+const appointmentStartDateOnly = computed(() => {
+    if (!appointmentForm.startAt) return scheduleDate.value;
+    const [date] = appointmentForm.startAt.split('T');
+    return date || scheduleDate.value;
+});
 const selectedPatient = computed(() =>
     patientOptions.value.find((patient) => String(patient.id) === String(appointmentForm.patientId))
 );
@@ -180,6 +195,8 @@ const resetAppointmentForm = () => {
     appointmentForm.type = 'online';
     appointmentForm.price = '';
     appointmentForm.paidAt = '';
+    recurrenceForm.enabled = false;
+    recurrenceForm.until = '';
     appointmentMessage.value = '';
     clearAppointmentErrors();
 };
@@ -208,6 +225,8 @@ const openEditAppointment = (appointment) => {
     appointmentForm.type = appointment.type ?? 'online';
     appointmentForm.price = appointment.price ?? '';
     appointmentForm.paidAt = toLocalInputValue(appointment.paid_at);
+    recurrenceForm.enabled = false;
+    recurrenceForm.until = '';
     appointmentMessage.value = '';
     clearAppointmentErrors();
     appointmentModalOpen.value = true;
@@ -262,6 +281,8 @@ const closeAppointmentModal = () => {
     appointmentModalOpen.value = false;
     editingAppointment.value = null;
     autoFillEndEnabled.value = true;
+    recurrenceForm.enabled = false;
+    recurrenceForm.until = '';
 };
 
 const fetchAppointments = async () => {
@@ -289,15 +310,24 @@ const changeScheduleDay = (offset) => {
     fetchAppointments();
 };
 
-const sanitizeAppointmentPayload = () => ({
-    patient_id: appointmentForm.patientId ? Number(appointmentForm.patientId) : null,
-    start_at: fromLocalInputToIso(appointmentForm.startAt),
-    end_at: fromLocalInputToIso(appointmentForm.endAt),
-    status: appointmentForm.status,
-    type: appointmentForm.type || null,
-    price: appointmentForm.price ? Number(appointmentForm.price) : null,
-    paid_at: fromLocalInputToIso(appointmentForm.paidAt),
-});
+const sanitizeAppointmentPayload = () => {
+    const payload = {
+        patient_id: appointmentForm.patientId ? Number(appointmentForm.patientId) : null,
+        start_at: fromLocalInputToIso(appointmentForm.startAt),
+        end_at: fromLocalInputToIso(appointmentForm.endAt),
+        status: appointmentForm.status,
+        type: appointmentForm.type || null,
+        price: appointmentForm.price ? Number(appointmentForm.price) : null,
+        paid_at: fromLocalInputToIso(appointmentForm.paidAt),
+    };
+
+    if (recurrenceForm.enabled && !editingAppointment.value) {
+        payload.repeat_weekly = true;
+        payload.repeat_until = recurrenceForm.until || null;
+    }
+
+    return payload;
+};
 
 const submitAppointment = async () => {
     clearAppointmentErrors();
@@ -333,6 +363,9 @@ const submitAppointment = async () => {
                     hasFieldErrors = true;
                 } else if (field === 'end_at') {
                     appointmentErrors.endAt = messages[0];
+                    hasFieldErrors = true;
+                } else if (field === 'repeat_until') {
+                    appointmentErrors.repeatUntil = messages[0];
                     hasFieldErrors = true;
                 } else if (field in appointmentErrors) {
                     appointmentErrors[field] = messages[0];
@@ -413,6 +446,29 @@ const performAppointmentAction = async (appointment, action) => {
     } finally {
         appointmentActionLoading.id = null;
         appointmentActionLoading.action = '';
+    }
+};
+
+const stopRecurringSeries = async () => {
+    if (!editingAppointment.value?.recurrence_id) return;
+    const confirmed = window.confirm('Deseja encerrar esta recorrência? Novos agendamentos não serão gerados.');
+    if (!confirmed) return;
+
+    recurrenceActionLoading.value = true;
+    appointmentMessage.value = '';
+
+    try {
+        await axios.delete(`/api/recurring-appointments/${editingAppointment.value.recurrence_id}`);
+        appointmentMessage.value = 'Recorrência encerrada. Novos agendamentos não serão criados.';
+        if (editingAppointment.value) {
+            editingAppointment.value.recurrence_id = null;
+            editingAppointment.value.recurrence = null;
+        }
+        await fetchAppointments();
+    } catch (error) {
+        appointmentMessage.value = error?.response?.data?.message ?? 'Não foi possível encerrar a recorrência.';
+    } finally {
+        recurrenceActionLoading.value = false;
     }
 };
 
@@ -558,6 +614,19 @@ onMounted(() => {
                                         'Tipo não informado'
                                     }}
                                 </p>
+                                <div v-if="appointment.recurrence_id" class="mt-2">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+                                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M4 4v6h6M20 20v-6h-6M20 8A8 8 0 0 0 4 8m0 8a8 8 0 0 0 16 0"
+                                            />
+                                        </svg>
+                                        Recorrente
+                                    </span>
+                                </div>
                                 <p v-if="appointment.meeting_url" class="mt-1">
                                     <a
                                         :href="appointment.meeting_url"
@@ -681,6 +750,66 @@ onMounted(() => {
                         </div>
                         <p v-if="appointmentErrors.patientId" class="mt-1 text-xs text-red-600">{{ appointmentErrors.patientId }}</p>
                         <p v-if="patientOptionsLoading" class="mt-1 text-xs text-slate-500">Carregando pacientes...</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">Repetir semanalmente</p>
+                                <p class="text-xs text-slate-500">Cria automaticamente este horário nas próximas semanas.</p>
+                            </div>
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                <input
+                                    v-model="recurrenceForm.enabled"
+                                    :disabled="!recurrenceControlsEnabled"
+                                    class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                                    type="checkbox"
+                                />
+                                <span>{{ recurrenceControlsEnabled ? 'Ativar' : 'Disponível ao criar' }}</span>
+                            </label>
+                        </div>
+
+                        <p
+                            v-if="!recurrenceControlsEnabled && !editingRecurringAppointment"
+                            class="mt-2 text-xs text-slate-500"
+                        >
+                            Para configurar uma recorrência, crie um novo agendamento com o horário desejado.
+                        </p>
+
+                        <div
+                            v-if="recurrenceForm.enabled && recurrenceControlsEnabled"
+                            class="mt-4 grid gap-4 md:max-w-md md:grid-cols-2"
+                        >
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700" for="recurrence-until">Repetir até</label>
+                                <input
+                                    id="recurrence-until"
+                                    v-model="recurrenceForm.until"
+                                    class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    type="date"
+                                    :min="appointmentStartDateOnly"
+                                />
+                                <p v-if="appointmentErrors.repeatUntil" class="mt-1 text-xs text-red-600">
+                                    {{ appointmentErrors.repeatUntil }}
+                                </p>
+                                <p class="mt-1 text-xs text-slate-500">Deixe em branco para manter sem data final.</p>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="editingRecurringAppointment"
+                            class="mt-4 rounded-2xl border border-purple-200 bg-purple-50/70 p-4 text-sm text-purple-900"
+                        >
+                            <p>Este agendamento faz parte de uma recorrência semanal.</p>
+                            <button
+                                class="mt-3 inline-flex items-center justify-center rounded-xl border border-purple-200 px-4 py-2 text-xs font-semibold text-purple-800 transition hover:border-purple-300 hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                type="button"
+                                :disabled="recurrenceActionLoading"
+                                @click="stopRecurringSeries"
+                            >
+                                {{ recurrenceActionLoading ? 'Encerrando...' : 'Encerrar recorrência' }}
+                            </button>
+                        </div>
                     </div>
 
                     <div class="grid gap-5 md:grid-cols-2">

@@ -7,30 +7,39 @@ use App\Http\Requests\AppointmentStoreRequest;
 use App\Http\Requests\AppointmentUpdateRequest;
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Models\Psychologist;
+use App\Models\RecurringAppointment;
 use App\Services\GoogleCalendarService;
+use App\Services\RecurringAppointmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class AppointmentController extends Controller
 {
     public function __construct(
-        private readonly GoogleCalendarService $googleCalendarService
+        private readonly GoogleCalendarService $googleCalendarService,
+        private readonly RecurringAppointmentService $recurringAppointmentService
     ) {
     }
 
-    private function psychologistId(Request $request): int
+    private function psychologist(Request $request): Psychologist
     {
         $user = $request->user()->loadMissing('psychologist');
 
-        $psychologistId = $user->psychologist?->id;
+        $psychologist = $user->psychologist;
 
         abort_if(
-            !$psychologistId,
+            !$psychologist,
             403,
             'Usuário autenticado não possui um perfil de psicólogo.'
         );
 
-        return (int) $psychologistId;
+        return $psychologist;
+    }
+
+    private function psychologistId(Request $request): int
+    {
+        return (int) $this->psychologist($request)->id;
     }
 
     private function ensureValidRange(Carbon $start, Carbon $end): void
@@ -61,7 +70,7 @@ class AppointmentController extends Controller
         $psychologistId = $this->psychologistId($request);
 
         $query = Appointment::where('psychologist_id', $psychologistId)
-            ->with('patient')
+            ->with(['patient', 'recurrence'])
             ->orderBy('start_at');
 
         if ($request->filled('from')) {
@@ -79,10 +88,14 @@ class AppointmentController extends Controller
 
     public function store(AppointmentStoreRequest $request)
     {
-        $psychologistId = $this->psychologistId($request);
+        $psychologist = $this->psychologist($request);
+        $psychologistId = $psychologist->id;
         $data = $request->validated();
 
         $patient = $this->findOwnedPatient($data['patient_id'], $psychologistId);
+        $repeatWeekly = (bool) ($data['repeat_weekly'] ?? false);
+        $repeatUntil = $data['repeat_until'] ?? null;
+        unset($data['repeat_weekly'], $data['repeat_until']);
 
         $start = Carbon::parse($data['start_at']);
         $end = Carbon::parse($data['end_at']);
@@ -97,9 +110,13 @@ class AppointmentController extends Controller
             ...$data,
         ]);
 
+        if ($repeatWeekly) {
+            $this->createWeeklyRecurrence($appointment, $psychologist, $patient, $repeatUntil);
+        }
+
         $this->googleCalendarService->syncAppointment($appointment);
 
-        return response()->json($appointment->load('patient'), 201);
+        return response()->json($appointment->load('patient', 'recurrence'), 201);
     }
 
     public function update(AppointmentUpdateRequest $request, int $id)
@@ -134,7 +151,7 @@ class AppointmentController extends Controller
 
         $this->googleCalendarService->syncAppointment($appointment);
 
-        return response()->json($appointment->refresh()->load('patient'));
+        return response()->json($appointment->refresh()->load('patient', 'recurrence'));
     }
 
     public function cancel(Request $request, int $id)
@@ -144,7 +161,7 @@ class AppointmentController extends Controller
 
         $this->googleCalendarService->deleteAppointment($appointment);
 
-        return response()->json($appointment->refresh()->load('patient'));
+        return response()->json($appointment->refresh()->load('patient', 'recurrence'));
     }
 
     public function markDone(Request $request, int $id)
@@ -154,7 +171,7 @@ class AppointmentController extends Controller
 
         $this->googleCalendarService->syncAppointment($appointment);
 
-        return response()->json($appointment->refresh()->load('patient'));
+        return response()->json($appointment->refresh()->load('patient', 'recurrence'));
     }
 
     public function markMissed(Request $request, int $id)
@@ -164,7 +181,49 @@ class AppointmentController extends Controller
 
         $this->googleCalendarService->syncAppointment($appointment);
 
-        return response()->json($appointment->refresh()->load('patient'));
+        return response()->json($appointment->refresh()->load('patient', 'recurrence'));
+    }
+
+    private function createWeeklyRecurrence(Appointment $appointment, Psychologist $psychologist, Patient $patient, ?string $repeatUntil = null): void
+    {
+        $timezone = $psychologist->timezone ?? config('app.timezone');
+        $startLocal = $appointment->start_at->copy()->setTimezone($timezone);
+        $endLocal = $appointment->end_at->copy()->setTimezone($timezone);
+        $duration = max(1, $startLocal->diffInMinutes($endLocal));
+
+        $untilDate = null;
+        if ($repeatUntil) {
+            try {
+                $untilDate = Carbon::parse($repeatUntil, $timezone)->startOfDay();
+            } catch (\Throwable) {
+                abort(422, 'A data final da recorrência é inválida.');
+            }
+        }
+
+        if ($untilDate && $untilDate->lt($startLocal->copy()->startOfDay())) {
+            abort(422, 'A data final da recorrência deve ser igual ou posterior à primeira sessão.');
+        }
+
+        $recurrence = RecurringAppointment::create([
+            'psychologist_id' => $psychologist->id,
+            'patient_id' => $patient->id,
+            'weekday' => (int) $startLocal->dayOfWeek,
+            'start_time' => $startLocal->format('H:i:s'),
+            'session_duration' => $duration,
+            'type' => $appointment->type ?? 'online',
+            'price' => $appointment->price,
+            'start_date' => $startLocal->toDateString(),
+            'end_date' => $untilDate?->toDateString(),
+            'timezone' => $timezone,
+            'status' => 'active',
+        ]);
+
+        $appointment->update([
+            'recurrence_id' => $recurrence->id,
+            'occurrence_date' => $startLocal->toDateString(),
+        ]);
+
+        $this->recurringAppointmentService->generateUpcomingOccurrences($recurrence);
     }
 
     private function findOwnedAppointment(Request $request, int $id): Appointment

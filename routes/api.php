@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\PsychologistController;
 use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\PatientRecordController;
+use App\Http\Controllers\Api\RecurringAppointmentController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 
@@ -52,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed'])->whereNumber('id');
+    Route::delete('/recurring-appointments/{id}', [RecurringAppointmentController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/reports/appointments', [ReportController::class, 'appointments']);
 });

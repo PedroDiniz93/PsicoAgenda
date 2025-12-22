@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('alerts:generate-inactivity')->dailyAt('07:00');
 Schedule::command('whatsapp:send-confirmations')->dailyAt('08:00');
+Schedule::command('appointments:sync-recurring')->dailyAt('03:00');

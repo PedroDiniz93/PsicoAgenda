@@ -15,7 +15,13 @@ Para que as confirmações automáticas via WhatsApp sejam disparadas todos os d
 * * * * * php /caminho/para/o/projeto/artisan schedule:run >> /dev/null 2>&1
 ```
 
-O comando `schedule:run` chama internamente o `php artisan whatsapp:send-confirmations` todos os dias às 08h (conforme definido em `routes/console.php`). Em ambientes locais você também pode disparar manualmente rodando `php artisan whatsapp:send-confirmations`.
+O comando `schedule:run` chama internamente:
+
+- `php artisan whatsapp:send-confirmations` todos os dias às 08h;
+- `php artisan alerts:generate-inactivity` todos os dias às 07h;
+- `php artisan appointments:sync-recurring` todos os dias às 03h para manter os agendamentos recorrentes atualizados.
+
+Em ambientes locais você também pode disparar qualquer um deles manualmente.
 
 ## Webhook do WhatsApp
 

@@ -21,6 +21,8 @@ class AppointmentStoreRequest extends FormRequest
             'type' => ['nullable', 'in:online,in_person'],
             'price' => ['nullable', 'numeric'],
             'paid_at' => ['nullable', 'date'],
+            'repeat_weekly' => ['sometimes', 'boolean'],
+            'repeat_until' => ['nullable', 'date'],
         ];
     }
 
@@ -34,6 +36,7 @@ class AppointmentStoreRequest extends FormRequest
             'end_at.after' => 'O horário de término deve ser posterior ao horário inicial.',
             'patient_id.required' => 'Selecione um paciente.',
             'patient_id.exists' => 'Paciente inválido.',
+            'repeat_until.date' => 'A data final da recorrência é inválida.',
         ];
     }
 }

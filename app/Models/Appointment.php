@@ -12,6 +12,7 @@ class Appointment extends Model
         'patient_id',
         'start_at',
         'end_at',
+        'occurrence_date',
         'status',
         'type',
         'price',
@@ -23,6 +24,7 @@ class Appointment extends Model
         'sms_reminder_sent_at',
         'meeting_url',
         'meeting_provider',
+        'recurrence_id',
     ];
 
     protected $casts = [
@@ -33,6 +35,7 @@ class Appointment extends Model
         'email_reminder_sent_at' => 'datetime',
         'sms_reminder_sent_at' => 'datetime',
         'price' => 'decimal:2',
+        'occurrence_date' => 'date',
     ];
 
     public function psychologist(): BelongsTo
@@ -43,5 +46,10 @@ class Appointment extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function recurrence(): BelongsTo
+    {
+        return $this->belongsTo(RecurringAppointment::class, 'recurrence_id');
     }
 }
