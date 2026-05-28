@@ -11,6 +11,7 @@ const exportSelection = reactive({
     selectAll: false,
 });
 const exportSubmitting = ref(false);
+const patientNameFilter = ref('');
 const exportTypeOptions = [
     {
         value: 'patients',
@@ -53,6 +54,21 @@ const exportReady = computed(
     () => exportHasSelection.value && exportTypeSelection.value.length > 0
 );
 const sessionFeeLabel = (type) => sessionFeeTypeLabels[type] ?? 'Não definido';
+const normalizedPatientNameFilter = computed(() => patientNameFilter.value.trim().toLowerCase());
+const filteredExportPatients = computed(() => {
+    if (!normalizedPatientNameFilter.value) return exportPatients.value;
+
+    return exportPatients.value.filter((patient) =>
+        String(patient.name ?? '').toLowerCase().includes(normalizedPatientNameFilter.value)
+    );
+});
+const filteredPatientIds = computed(() => filteredExportPatients.value.map((patient) => patient.id));
+const filteredSelectedCount = computed(() =>
+    filteredPatientIds.value.filter((id) => exportSelection.selected.includes(id)).length
+);
+const visiblePatientsSelected = computed(
+    () => filteredPatientIds.value.length > 0 && filteredSelectedCount.value === filteredPatientIds.value.length
+);
 
 const fetchExportPatients = async () => {
     exportPatientsLoading.value = true;
@@ -73,25 +89,23 @@ const fetchExportPatients = async () => {
 };
 
 const toggleExportSelectAll = () => {
-    exportSelection.selectAll = !exportSelection.selectAll;
-    if (exportSelection.selectAll) {
-        exportSelection.selected = exportPatients.value.map((patient) => patient.id);
+    if (!filteredPatientIds.value.length) return;
+
+    if (!visiblePatientsSelected.value) {
+        exportSelection.selected = Array.from(
+            new Set([...exportSelection.selected, ...filteredPatientIds.value])
+        );
     } else {
-        exportSelection.selected = [];
+        exportSelection.selected = exportSelection.selected.filter(
+            (id) => !filteredPatientIds.value.includes(id)
+        );
     }
 };
 
 watch(
-    () => exportSelection.selected,
+    [() => exportSelection.selected, filteredPatientIds],
     () => {
-        if (
-            exportSelection.selected.length === exportPatients.value.length &&
-            exportPatients.value.length > 0
-        ) {
-            exportSelection.selectAll = true;
-        } else {
-            exportSelection.selectAll = false;
-        }
+        exportSelection.selectAll = visiblePatientsSelected.value;
     },
     { deep: true }
 );
@@ -166,80 +180,130 @@ onMounted(fetchExportPatients);
 </script>
 
 <template>
-    <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow">
-        <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <h2 class="text-2xl font-semibold text-slate-900">Exportação de pacientes</h2>
-                <p class="text-sm text-slate-500">
-                    Gere arquivos separados com dados de pacientes, agendamentos e prontuários.
+    <div class="space-y-5">
+        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-cyan-700">Arquivos CSV</p>
+                    <h2 class="mt-1 text-xl font-semibold text-slate-950">Dados para exportação</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Escolha as informações que devem entrar no arquivo e selecione os pacientes na grid.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button
+                        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        :disabled="exportPatientsLoading"
+                        @click="fetchExportPatients"
+                    >
+                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8A7.5 7.5 0 0 0 6.2 4.8L4 7m16 10-2.2 2.2A7.5 7.5 0 0 1 4 16" />
+                        </svg>
+                        {{ exportPatientsLoading ? 'Carregando...' : 'Recarregar' }}
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-2 rounded-lg bg-cyan-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-cyan-300"
+                        type="button"
+                        :disabled="!exportReady || exportSubmitting || exportPatientsLoading"
+                        @click="submitExport"
+                    >
+                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                        </svg>
+                        {{ exportSubmitting ? 'Gerando...' : 'Exportar CSV' }}
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h3 class="text-base font-semibold text-slate-950">Tipos de informação</h3>
+                    <p class="text-sm text-slate-500">
+                        O download será entregue em .zip com um CSV por tipo selecionado.
+                    </p>
+                </div>
+                <p class="text-sm font-semibold text-slate-600">
+                    {{ exportTypeSelection.length }} de {{ exportTypeOptions.length }} selecionados
                 </p>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <button
-                    class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                    type="button"
-                    :disabled="exportPatientsLoading"
-                    @click="fetchExportPatients"
-                >
-                    {{ exportPatientsLoading ? 'Carregando...' : 'Recarregar lista' }}
-                </button>
-                <button
-                    class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                    type="button"
-                    :disabled="!exportReady || exportSubmitting || exportPatientsLoading"
-                    @click="submitExport"
-                >
-                    {{ exportSubmitting ? 'Gerando arquivo...' : 'Exportar CSV' }}
-                </button>
-            </div>
-        </div>
-
-        <div class="mb-6 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-            <p class="mb-3 text-sm font-semibold text-slate-800">Tipos de informação</p>
-            <div class="flex flex-col gap-2 lg:flex-row">
+            <div class="grid gap-3 lg:grid-cols-3">
                 <label
                     v-for="option in exportTypeOptions"
                     :key="option.value"
-                    class="flex flex-1 items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm transition hover:border-slate-300"
+                    class="flex min-h-24 items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-sm transition"
+                    :class="exportTypeSelection.includes(option.value)
+                        ? 'border-cyan-200 bg-cyan-50 text-slate-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
                 >
                     <input
-                        class="mt-1 size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        class="mt-1 size-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600"
                         v-model="exportTypeSelection"
                         type="checkbox"
                         :value="option.value"
                     />
                     <span>
-                        <span class="block font-semibold text-slate-900">{{ option.label }}</span>
-                        <span class="text-xs text-slate-500">{{ option.description }}</span>
+                        <span class="block font-semibold text-slate-950">{{ option.label }}</span>
+                        <span class="text-xs leading-5 text-slate-500">{{ option.description }}</span>
                     </span>
                 </label>
             </div>
-            <p class="mt-3 text-xs text-slate-500">
-                Os dados selecionados serão entregues em um arquivo .zip com um CSV por tipo.
-            </p>
-        </div>
+        </section>
 
-        <div class="rounded-2xl border border-slate-100">
+        <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-950">Pacientes</h3>
+                        <p class="text-sm text-slate-500">
+                            {{ exportSelection.selected.length }} selecionado(s) de
+                            {{ exportPatients.length }} pacientes carregados.
+                        </p>
+                    </div>
+                    <label class="w-full max-w-md">
+                        <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Filtrar por nome
+                        </span>
+                        <div class="relative">
+                            <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
+                            </svg>
+                            <input
+                                v-model="patientNameFilter"
+                                class="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                                type="search"
+                                placeholder="Buscar paciente pelo nome"
+                            />
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div v-if="exportPatientsLoading" class="px-6 py-16 text-center text-sm text-slate-500">
                 Carregando pacientes para exportação...
             </div>
-            <div v-else-if="exportPatientsError" class="px-6 py-4 text-sm text-red-600">
+            <div v-else-if="exportPatientsError" class="px-6 py-4 text-sm text-rose-600">
                 {{ exportPatientsError }}
             </div>
             <div v-else>
                 <div v-if="!exportPatients.length" class="px-6 py-16 text-center text-sm text-slate-500">
                     Nenhum paciente disponível para exportação no momento.
                 </div>
+                <div v-else-if="!filteredExportPatients.length" class="px-6 py-16 text-center text-sm text-slate-500">
+                    Nenhum paciente encontrado para "{{ patientNameFilter }}".
+                </div>
                 <div v-else class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-100 text-left text-sm">
-                        <thead class="bg-slate-50 text-slate-600">
+                        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th class="px-4 py-3">
                                     <input
-                                        class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        class="size-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600"
                                         type="checkbox"
                                         :checked="exportSelection.selectAll"
-                                        aria-label="Selecionar todos os pacientes para exportar"
+                                        aria-label="Selecionar todos os pacientes filtrados para exportar"
                                         @change="toggleExportSelectAll"
                                     />
                                 </th>
@@ -251,10 +315,14 @@ onMounted(fetchExportPatients);
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-700">
-                            <tr v-for="patient in exportPatients" :key="`export-${patient.id}`">
+                            <tr
+                                v-for="patient in filteredExportPatients"
+                                :key="`export-${patient.id}`"
+                                class="transition hover:bg-slate-50"
+                            >
                                 <td class="px-4 py-3 align-top">
                                     <input
-                                        class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        class="size-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600"
                                         v-model="exportSelection.selected"
                                         :value="patient.id"
                                         type="checkbox"
@@ -262,7 +330,7 @@ onMounted(fetchExportPatients);
                                     />
                                 </td>
                                 <td class="px-4 py-3 align-top">
-                                    <p class="font-semibold text-slate-900">
+                                    <p class="font-semibold text-slate-950">
                                         {{ patient.name ?? 'Paciente sem nome' }}
                                     </p>
                                     <p class="text-xs text-slate-500">#{{ patient.id }}</p>
@@ -289,18 +357,24 @@ onMounted(fetchExportPatients);
                                         {{ patientStatusLabels[patient.status] ?? 'Sem status' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 align-top text-sm text-slate-600">
-                                    {{ patient.notes ?? 'Sem observações registradas.' }}
+                                <td class="max-w-sm px-4 py-3 align-top text-sm text-slate-600">
+                                    <span class="line-clamp-2">
+                                        {{ patient.notes ?? 'Sem observações registradas.' }}
+                                    </span>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                    <div class="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
-                        {{ exportSelection.selected.length }} paciente(s) selecionado(s) de
-                        {{ exportPatients.length }} disponíveis.
+                    <div class="flex flex-col gap-1 border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                            Exibindo {{ filteredExportPatients.length }} de {{ exportPatients.length }} pacientes.
+                        </span>
+                        <span>
+                            {{ filteredSelectedCount }} selecionado(s) nesta visualização.
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 </template>

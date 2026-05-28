@@ -78,12 +78,35 @@ const statusLabels = {
     paused: 'Pausado',
     closed: 'Encerrado',
 };
+const statusBadgeClasses = {
+    active: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+    paused: 'bg-amber-100 text-amber-800 ring-amber-200',
+    closed: 'bg-slate-200 text-slate-700 ring-slate-300',
+};
 
 const hasRecords = computed(() => records.value.length > 0);
 const isEditingRecord = computed(() => Boolean(editingRecord.value));
 const recordFormTitle = computed(() => (isEditingRecord.value ? 'Editar anotação' : 'Nova anotação'));
 const recordFormSubmitLabel = computed(() => (isEditingRecord.value ? 'Salvar alterações' : 'Adicionar ao prontuário'));
 const hasActiveFilters = computed(() => Object.values(recordFiltersApplied).some((value) => Boolean(value)));
+const patientInitials = computed(() => {
+    const name = patient.value?.name ?? 'Paciente';
+    return name
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join('');
+});
+const patientStatusLabel = computed(() => statusLabels[patient.value?.status] ?? 'Indefinido');
+const patientStatusClass = computed(
+    () => statusBadgeClasses[patient.value?.status] ?? 'bg-slate-100 text-slate-700 ring-slate-200'
+);
+const recordStats = computed(() => [
+    { label: 'Registros', value: recordPagination.total ?? 0 },
+    { label: 'Objetivos', value: objectiveFilterOptions.value.length },
+    { label: 'Técnicas', value: techniqueFilterOptions.value.length },
+]);
 
 const recordFiltersSummary = computed(() => {
     if (!hasActiveFilters.value) return 'Sem filtros aplicados no momento.';
@@ -456,151 +479,125 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto max-w-5xl px-4 py-10">
-        <header class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white px-6 py-4 shadow">
-            <div>
-                <p class="text-sm font-medium text-slate-500">Prontuário</p>
-                <h1 class="text-2xl font-semibold text-slate-900">
-                    {{ patient ? patient.name : 'Paciente' }}
-                </h1>
-                <p class="mt-1 text-sm text-slate-500">Anotações clínicas e histórico do paciente.</p>
+    <div class="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 lg:px-8">
+        <header class="mb-5 flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-4">
+                <div class="flex size-14 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-lg font-semibold text-white">
+                    {{ patientInitials }}
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-cyan-700">Prontuário do paciente</p>
+                    <h1 class="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
+                        {{ patient ? patient.name : 'Paciente' }}
+                    </h1>
+                    <p class="mt-1 text-sm text-slate-500">Histórico clínico, plano terapêutico e materiais vinculados.</p>
+                </div>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <RouterLink
-                    :to="{ name: 'patients' }"
-                    class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                    <svg class="-ms-1 me-2 size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7" />
-                    </svg>
-                    Voltar
-                </RouterLink>
-            </div>
+            <RouterLink
+                :to="{ name: 'patients' }"
+                class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+                Voltar para pacientes
+            </RouterLink>
         </header>
 
-        <section class="mb-6 rounded-2xl bg-white p-6 shadow">
-            <div v-if="patientLoading" class="flex items-center gap-3 text-sm text-slate-500">
-                <svg class="size-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+        <div v-if="patientLoading" class="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
+            <div class="flex items-center gap-3">
+                <svg class="size-5 animate-spin text-cyan-700" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
                 Carregando dados do paciente...
             </div>
-            <template v-else>
-                <div v-if="patientError" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {{ patientError }}
-                    <button class="mt-2 text-xs font-semibold underline" type="button" @click="goBackToPatients">Voltar à lista</button>
-                </div>
-                <div v-else-if="patient" class="grid gap-4 md:grid-cols-2">
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Contato</p>
-                        <p class="mt-2 text-sm text-slate-900">{{ patient.email ?? 'E-mail não informado' }}</p>
-                        <p class="text-sm text-slate-500">{{ patient.phone ?? 'Telefone não informado' }}</p>
-                    </div>
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
-                        <p class="mt-2 text-sm font-semibold text-slate-900">
-                            {{ statusLabels[patient.status] ?? 'Indefinido' }}
-                        </p>
-                        <p class="text-sm text-slate-500">{{ patient.notes ?? 'Sem observações adicionais.' }}</p>
-                    </div>
-                </div>
-            </template>
-        </section>
+        </div>
 
-        <section class="rounded-2xl bg-white p-6 shadow">
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-semibold text-slate-900">Anotações do prontuário</h2>
-                    <p class="text-sm text-slate-500">Registre evoluções, hipóteses e condutas de cada atendimento.</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <button
-                        class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
-                        type="button"
-                        @click="recordFiltersOpen = !recordFiltersOpen"
-                    >
-                        <svg class="me-2 size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                        </svg>
-                        {{ recordFiltersOpen ? 'Ocultar filtros' : 'Filtros avançados' }}
-                    </button>
-                    <button
-                        class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-                        type="button"
-                        @click="openCreateRecordForm"
-                    >
-                        <svg class="-ms-1 me-2 size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5" />
-                        </svg>
-                        Nova anotação
-                    </button>
-                </div>
-            </div>
+        <div v-else-if="patientError" class="rounded-lg border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+            <p>{{ patientError }}</p>
+            <button class="mt-3 rounded-lg border border-rose-200 px-4 py-2 text-xs font-semibold transition hover:bg-rose-100" type="button" @click="goBackToPatients">
+                Voltar à lista
+            </button>
+        </div>
 
-            <transition name="fade">
-                <div v-if="recordFiltersOpen" class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <form class="space-y-4" @submit.prevent="applyRecordFilters">
-                        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <label class="text-sm font-semibold text-slate-600">
-                                <span>De</span>
-                                <input
-                                    v-model="recordFilters.from"
-                                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    type="date"
-                                />
+        <div v-else class="grid gap-5 lg:grid-cols-[320px_1fr]">
+            <aside class="space-y-4">
+                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase text-slate-500">Status</p>
+                            <span :class="['mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', patientStatusClass]">
+                                {{ patientStatusLabel }}
+                            </span>
+                        </div>
+                        <button
+                            class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                            type="button"
+                            @click="openCreateRecordForm"
+                        >
+                            Nova anotação
+                        </button>
+                    </div>
+
+                    <div class="mt-5 space-y-4 text-sm">
+                        <div>
+                            <p class="text-xs font-semibold uppercase text-slate-500">Contato</p>
+                            <p class="mt-2 text-slate-900">{{ patient.email ?? 'E-mail não informado' }}</p>
+                            <p class="mt-1 text-slate-500">{{ patient.phone ?? 'Telefone não informado' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase text-slate-500">Observações do cadastro</p>
+                            <p class="mt-2 leading-6 text-slate-600">{{ patient.notes ?? 'Sem observações adicionais.' }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm font-semibold text-slate-950">Resumo do prontuário</p>
+                    <div class="mt-4 grid grid-cols-3 gap-2">
+                        <article v-for="stat in recordStats" :key="stat.label" class="rounded-lg bg-slate-50 px-3 py-3 text-center">
+                            <p class="text-lg font-semibold text-slate-950">{{ stat.value }}</p>
+                            <p class="mt-1 text-[11px] font-semibold uppercase text-slate-500">{{ stat.label }}</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-slate-950">Filtros</p>
+                        <button class="text-xs font-semibold text-cyan-700 hover:text-cyan-900" type="button" @click="recordFiltersOpen = !recordFiltersOpen">
+                            {{ recordFiltersOpen ? 'Ocultar' : 'Abrir' }}
+                        </button>
+                    </div>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">{{ recordFiltersSummary }}</p>
+
+                    <form v-if="recordFiltersOpen" class="mt-4 space-y-3" @submit.prevent="applyRecordFilters">
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="text-xs font-semibold text-slate-600">
+                                De
+                                <input v-model="recordFilters.from" class="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="date" />
                             </label>
-                            <label class="text-sm font-semibold text-slate-600">
-                                <span>Até</span>
-                                <input
-                                    v-model="recordFilters.to"
-                                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    type="date"
-                                />
-                            </label>
-                            <label class="text-sm font-semibold text-slate-600">
-                                <span>Objetivo</span>
-                                <input
-                                    v-model="recordFilters.objective"
-                                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    list="record-objectives"
-                                    placeholder="Ex.: Ansiedade social"
-                                    type="text"
-                                />
-                            </label>
-                            <label class="text-sm font-semibold text-slate-600">
-                                <span>Técnica</span>
-                                <input
-                                    v-model="recordFilters.technique"
-                                    class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    list="record-techniques"
-                                    placeholder="Ex.: Exposição"
-                                    type="text"
-                                />
+                            <label class="text-xs font-semibold text-slate-600">
+                                Até
+                                <input v-model="recordFilters.to" class="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="date" />
                             </label>
                         </div>
-                        <label class="text-sm font-semibold text-slate-600">
-                            <span>Buscar em títulos e notas</span>
-                            <input
-                                v-model="recordFilters.search"
-                                class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                placeholder="Palavra-chave"
-                                type="search"
-                            />
+                        <label class="block text-xs font-semibold text-slate-600">
+                            Objetivo
+                            <input v-model="recordFilters.objective" class="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" list="record-objectives" placeholder="Ex.: Ansiedade social" />
                         </label>
-                        <div class="flex flex-wrap justify-end gap-3">
-                            <button
-                                class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                                type="button"
-                                @click="clearRecordFilters"
-                            >
-                                Limpar filtros
+                        <label class="block text-xs font-semibold text-slate-600">
+                            Técnica
+                            <input v-model="recordFilters.technique" class="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" list="record-techniques" placeholder="Ex.: Exposição" />
+                        </label>
+                        <label class="block text-xs font-semibold text-slate-600">
+                            Busca
+                            <input v-model="recordFilters.search" class="mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Título ou notas" type="search" />
+                        </label>
+                        <div class="flex gap-2 pt-1">
+                            <button class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="clearRecordFilters">
+                                Limpar
                             </button>
-                            <button
-                                class="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-                                type="submit"
-                            >
-                                Aplicar filtros
+                            <button class="flex-1 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800" type="submit">
+                                Aplicar
                             </button>
                         </div>
                     </form>
@@ -610,417 +607,267 @@ onMounted(() => {
                     <datalist id="record-techniques">
                         <option v-for="technique in techniqueFilterOptions" :key="`technique-${technique}`" :value="technique" />
                     </datalist>
-                </div>
-            </transition>
-            <p class="mb-6 text-xs text-slate-500">{{ recordFiltersSummary }}</p>
+                </section>
+            </aside>
 
-            <transition name="fade">
-                <div
-                    v-if="recordFormVisible"
-                    class="fixed inset-0 z-30 flex items-start justify-center bg-slate-900/40 px-4 py-10 backdrop-blur-sm"
-                    @click.self="closeRecordForm"
-                >
-                    <div class="flex w-full max-w-3xl flex-col rounded-3xl bg-white p-6 shadow-2xl max-h-[90vh]">
-                        <div class="mb-6 flex flex-wrap items-center justify-between gap-3 shrink-0">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Plano terapêutico</p>
-                                <h3 class="text-xl font-semibold text-slate-900">{{ recordFormTitle }}</h3>
-                                <p class="text-sm text-slate-500">Detalhe objetivos, intervenções, tarefas e anexos desta sessão.</p>
-                            </div>
-                            <button
-                                class="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
-                                type="button"
-                                @click="closeRecordForm"
-                            >
-                                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
-                                </svg>
-                            </button>
+            <main class="space-y-4">
+                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-xl font-semibold text-slate-950">Linha do tempo clínica</h2>
+                            <p class="mt-1 text-sm text-slate-500">Evoluções, intervenções, tarefas e anexos do paciente.</p>
                         </div>
-                        <form class="flex flex-1 flex-col gap-5 overflow-hidden" @submit.prevent="submitRecordForm">
-                            <div class="space-y-5 overflow-y-auto pr-2">
-                                <div class="grid gap-5 md:grid-cols-2">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700" for="modal-record-title">Título</label>
-                                        <input
-                                            id="modal-record-title"
-                                            v-model="recordForm.title"
-                                            class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                            placeholder="Ex.: Sessão 12 - avanços em autoestima"
-                                            required
-                                        />
-                                        <p v-if="recordFormErrors.title" class="mt-1 text-xs text-red-600">{{ recordFormErrors.title }}</p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700" for="modal-record-date">Data e horário</label>
-                                        <input
-                                            id="modal-record-date"
-                                            v-model="recordForm.recordedAt"
-                                            class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                            type="datetime-local"
-                                        />
-                                        <p v-if="recordFormErrors.recorded_at" class="mt-1 text-xs text-red-600">{{ recordFormErrors.recorded_at }}</p>
-                                    </div>
-                                </div>
+                        <button
+                            class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                            type="button"
+                            @click="openCreateRecordForm"
+                        >
+                            Nova anotação
+                        </button>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <div v-if="recordsLoading" class="flex items-center gap-3 rounded-lg border border-slate-100 px-4 py-6 text-sm text-slate-500">
+                        <svg class="size-5 animate-spin text-cyan-700" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        Carregando anotações...
+                    </div>
+                    <div v-else-if="recordsError" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {{ recordsError }}
+                    </div>
+                    <div v-else-if="!hasRecords" class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                        <p class="text-sm font-semibold text-slate-700">
+                            {{ hasActiveFilters ? 'Nenhuma anotação encontrada.' : 'Nenhuma anotação cadastrada.' }}
+                        </p>
+                        <p class="mt-1 text-sm text-slate-500">Comece registrando a primeira evolução deste paciente.</p>
+                    </div>
+                    <div v-else class="space-y-4">
+                        <article v-for="record in records" :key="record.id" class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700" for="modal-record-notes">Conteúdo textual</label>
-                                    <textarea
-                                        id="modal-record-notes"
-                                        v-model="recordForm.notes"
-                                        class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        rows="6"
-                                        placeholder="Descreva as observações clínicas, intervenções e encaminhamentos."
-                                    />
-                                    <p v-if="recordFormErrors.notes" class="mt-1 text-xs text-red-600">{{ recordFormErrors.notes }}</p>
+                                    <p class="text-xs font-semibold uppercase text-slate-500">{{ formatRecordDate(record.recorded_at) }}</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-slate-950">{{ record.title }}</h3>
                                 </div>
-                                <div class="grid gap-5 md:grid-cols-2">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700" for="modal-objective-input">Objetivos terapêuticos</label>
-                                        <div class="mt-2 flex gap-2">
-                                            <input
-                                                id="modal-objective-input"
-                                                v-model="newObjective"
-                                                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                placeholder="Ex.: Reduzir crises de ansiedade"
-                                                type="text"
-                                                @keyup.enter.prevent="addObjective"
-                                            />
-                                            <button
-                                                class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
-                                                type="button"
-                                                @click="addObjective"
-                                            >
-                                                Adicionar
-                                            </button>
-                                        </div>
-                                        <div v-if="recordForm.treatmentObjectives.length" class="mt-3 flex flex-wrap gap-2">
-                                            <span
-                                                v-for="(objective, index) in recordForm.treatmentObjectives"
-                                                :key="`objective-modal-${objective}-${index}`"
-                                                class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
-                                            >
-                                                {{ objective }}
-                                                <button class="text-blue-500 transition hover:text-blue-800" type="button" @click="removeObjective(index)">
-                                                    &times;
-                                                </button>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700" for="modal-technique-input">Técnicas aplicadas</label>
-                                        <div class="mt-2 flex gap-2">
-                                            <input
-                                                id="modal-technique-input"
-                                                v-model="newTechnique"
-                                                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                placeholder="Ex.: Reestruturação cognitiva"
-                                                type="text"
-                                                @keyup.enter.prevent="addTechnique"
-                                            />
-                                            <button
-                                                class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
-                                                type="button"
-                                                @click="addTechnique"
-                                            >
-                                                Adicionar
-                                            </button>
-                                        </div>
-                                        <div v-if="recordForm.techniques.length" class="mt-3 flex flex-wrap gap-2">
-                                            <span
-                                                v-for="(technique, index) in recordForm.techniques"
-                                                :key="`technique-modal-${technique}-${index}`"
-                                                class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                                            >
-                                                {{ technique }}
-                                                <button class="text-emerald-500 transition hover:text-emerald-800" type="button" @click="removeTechnique(index)">
-                                                    &times;
-                                                </button>
-                                            </span>
-                                        </div>
+                                <div class="flex shrink-0 gap-2">
+                                    <button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="openEditRecordForm(record)">
+                                        Editar
+                                    </button>
+                                    <button class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60" type="button" :disabled="recordDeletingId === record.id" @click="deleteRecord(record)">
+                                        {{ recordDeletingId === record.id ? 'Excluindo...' : 'Excluir' }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p v-if="record.notes" class="mt-4 whitespace-pre-line rounded-lg bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                                {{ record.notes }}
+                            </p>
+
+                            <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                                <div v-if="record.treatment_objectives?.length">
+                                    <p class="text-xs font-semibold uppercase text-slate-500">Objetivos</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <span v-for="objective in record.treatment_objectives" :key="`record-${record.id}-objective-${objective}`" class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                                            {{ objective }}
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="rounded-2xl border border-slate-200 bg-white/70 p-4">
-                                    <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-800">Tarefas de casa</p>
-                                            <p class="text-xs text-slate-500">Registre orientações e atualize o status.</p>
+                                <div v-if="record.techniques?.length">
+                                    <p class="text-xs font-semibold uppercase text-slate-500">Técnicas</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <span v-for="technique in record.techniques" :key="`record-${record.id}-technique-${technique}`" class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                            {{ technique }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="record.homework_items?.length" class="mt-4">
+                                <p class="text-xs font-semibold uppercase text-slate-500">Tarefas</p>
+                                <div class="mt-2 space-y-2">
+                                    <div v-for="task in record.homework_items" :key="task.id ?? `${record.id}-task-${task.description}`" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                                        <p class="text-slate-800">{{ task.description }}</p>
+                                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold" :class="homeworkStatusBadges[task.status] ?? homeworkStatusBadges.pending">
+                                            {{ homeworkStatusLabel(task.status) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="record.attachments?.length" class="mt-4">
+                                <p class="text-xs font-semibold uppercase text-slate-500">Anexos</p>
+                                <div class="mt-2 grid gap-2 md:grid-cols-2">
+                                    <div v-for="attachment in record.attachments" :key="attachment.id ?? `${record.id}-attachment-${attachment.name}`" class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2 text-xs text-slate-600">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-slate-900">{{ attachment.name ?? 'Arquivo' }}</p>
+                                            <p class="text-xs text-slate-500">{{ attachment.mime_type ?? 'Arquivo' }} · {{ formatFileSize(attachment.size) }}</p>
                                         </div>
-                                        <button
-                                            class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
-                                            type="button"
-                                            @click="addHomeworkItem"
-                                        >
-                                            Adicionar tarefa
+                                        <a :href="attachment.url" class="shrink-0 rounded-lg border border-cyan-200 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50" rel="noopener noreferrer" target="_blank">
+                                            Abrir
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500">
+                            <p>Página {{ recordPagination.currentPage }} de {{ recordPagination.lastPage }} · {{ recordPagination.total }} registros</p>
+                            <div class="flex gap-2">
+                                <button class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="recordPagination.currentPage <= 1" type="button" @click="fetchRecords(recordPagination.currentPage - 1)">
+                                    Anterior
+                                </button>
+                                <button class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" :disabled="recordPagination.currentPage >= recordPagination.lastPage" type="button" @click="fetchRecords(recordPagination.currentPage + 1)">
+                                    Próxima
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <div v-if="recordFormVisible" class="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm" @click.self="closeRecordForm">
+            <div class="w-full max-w-6xl rounded-lg bg-white shadow-2xl">
+                <div class="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase text-cyan-700">Plano terapêutico</p>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">{{ recordFormTitle }}</h3>
+                        <p class="mt-1 text-sm text-slate-500">Registre a evolução com objetivos, técnicas, tarefas e anexos em áreas separadas.</p>
+                    </div>
+                    <button class="self-start rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" type="button" @click="closeRecordForm">
+                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
+                        </svg>
+                    </button>
+                </div>
+
+                <form class="p-5" @submit.prevent="submitRecordForm">
+                    <div class="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+                        <section class="space-y-4">
+                            <div class="grid gap-4 md:grid-cols-[1fr_220px]">
+                                <label class="block text-sm font-semibold text-slate-700" for="modal-record-title">
+                                    Título
+                                    <input id="modal-record-title" v-model="recordForm.title" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ex.: Sessão 12 - avanços em autoestima" required />
+                                    <span v-if="recordFormErrors.title" class="mt-1 block text-xs text-rose-600">{{ recordFormErrors.title }}</span>
+                                </label>
+                                <label class="block text-sm font-semibold text-slate-700" for="modal-record-date">
+                                    Data e horário
+                                    <input id="modal-record-date" v-model="recordForm.recordedAt" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="datetime-local" />
+                                    <span v-if="recordFormErrors.recorded_at" class="mt-1 block text-xs text-rose-600">{{ recordFormErrors.recorded_at }}</span>
+                                </label>
+                            </div>
+                            <label class="block text-sm font-semibold text-slate-700" for="modal-record-notes">
+                                Notas clínicas
+                                <textarea id="modal-record-notes" v-model="recordForm.notes" class="mt-2 min-h-96 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Descreva observações clínicas, intervenções, respostas do paciente e encaminhamentos."></textarea>
+                                <span v-if="recordFormErrors.notes" class="mt-1 block text-xs text-rose-600">{{ recordFormErrors.notes }}</span>
+                            </label>
+                        </section>
+
+                        <aside class="space-y-4">
+                            <section class="rounded-lg border border-slate-200 p-4">
+                                <p class="text-sm font-semibold text-slate-950">Objetivos terapêuticos</p>
+                                <div class="mt-3 flex gap-2">
+                                    <input id="modal-objective-input" v-model="newObjective" class="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ex.: Reduzir ansiedade" type="text" @keyup.enter.prevent="addObjective" />
+                                    <button class="rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="addObjective">Adicionar</button>
+                                </div>
+                                <div v-if="recordForm.treatmentObjectives.length" class="mt-3 flex flex-wrap gap-2">
+                                    <span v-for="(objective, index) in recordForm.treatmentObjectives" :key="`objective-modal-${objective}-${index}`" class="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                                        {{ objective }}
+                                        <button class="text-cyan-500 transition hover:text-cyan-800" type="button" @click="removeObjective(index)">&times;</button>
+                                    </span>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 p-4">
+                                <p class="text-sm font-semibold text-slate-950">Técnicas aplicadas</p>
+                                <div class="mt-3 flex gap-2">
+                                    <input id="modal-technique-input" v-model="newTechnique" class="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ex.: Reestruturação" type="text" @keyup.enter.prevent="addTechnique" />
+                                    <button class="rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="addTechnique">Adicionar</button>
+                                </div>
+                                <div v-if="recordForm.techniques.length" class="mt-3 flex flex-wrap gap-2">
+                                    <span v-for="(technique, index) in recordForm.techniques" :key="`technique-modal-${technique}-${index}`" class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                        {{ technique }}
+                                        <button class="text-emerald-500 transition hover:text-emerald-800" type="button" @click="removeTechnique(index)">&times;</button>
+                                    </span>
+                                </div>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-950">Tarefas de casa</p>
+                                        <p class="text-xs text-slate-500">Oriente e acompanhe o status.</p>
+                                    </div>
+                                    <button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="addHomeworkItem">Adicionar</button>
+                                </div>
+                                <div v-if="recordForm.homeworkItems.length" class="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+                                    <div v-for="(task, index) in recordForm.homeworkItems" :key="task.id" class="rounded-lg bg-slate-50 p-3">
+                                        <input v-model="task.description" class="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Descrição da tarefa" type="text" />
+                                        <div class="mt-2 flex gap-2">
+                                            <select v-model="task.status" class="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100">
+                                                <option v-for="option in homeworkStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                            </select>
+                                            <button class="rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50" type="button" @click="removeHomeworkItem(index)">Remover</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p v-else class="mt-3 text-xs text-slate-500">Nenhuma tarefa cadastrada para esta sessão.</p>
+                            </section>
+
+                            <section class="rounded-lg border border-slate-200 p-4">
+                                <p class="text-sm font-semibold text-slate-950">Anexos</p>
+                                <label class="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500 transition hover:border-cyan-300 hover:text-cyan-700">
+                                    <span class="font-semibold">Selecionar arquivos</span>
+                                    <span class="mt-1 text-xs">PDF ou áudio</span>
+                                    <input class="hidden" accept=".pdf,audio/*" multiple type="file" @change="handleAttachmentSelection" />
+                                </label>
+
+                                <div v-if="recordForm.existingAttachments.length" class="mt-3 space-y-2">
+                                    <p class="text-xs font-semibold uppercase text-slate-500">Salvos</p>
+                                    <div v-for="attachment in recordForm.existingAttachments" :key="attachment.id" class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                        <div class="min-w-0">
+                                            <p class="truncate font-semibold text-slate-900">{{ attachment.name }}</p>
+                                            <p class="text-xs text-slate-500">{{ formatFileSize(attachment.size) }}</p>
+                                        </div>
+                                        <button class="rounded-lg border px-3 py-1 text-xs font-semibold transition" :class="attachment.keep ? 'border-rose-200 text-rose-700 hover:bg-rose-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'" type="button" @click="toggleExistingAttachment(attachment)">
+                                            {{ attachment.keep ? 'Remover' : 'Restaurar' }}
                                         </button>
                                     </div>
-                                    <div v-if="recordForm.homeworkItems.length" class="mt-4 space-y-3 max-h-64 overflow-y-auto pr-1">
-                                        <div
-                                            v-for="(task, index) in recordForm.homeworkItems"
-                                            :key="task.id"
-                                            class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3"
-                                        >
-                                            <div class="flex flex-col gap-2 md:flex-row md:items-center">
-                                                <input
-                                                    v-model="task.description"
-                                                    class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                    placeholder="Descrição da tarefa"
-                                                    type="text"
-                                                />
-                                                <select
-                                                    v-model="task.status"
-                                                    class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                >
-                                                    <option v-for="option in homeworkStatusOptions" :key="option.value" :value="option.value">
-                                                        {{ option.label }}
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="mt-2 text-right">
-                                                <button
-                                                    class="text-xs font-semibold text-red-500 transition hover:text-red-700"
-                                                    type="button"
-                                                    @click="removeHomeworkItem(index)"
-                                                >
-                                                    Remover tarefa
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p v-else class="mt-3 text-xs text-slate-500">Nenhuma tarefa cadastrada para esta sessão.</p>
                                 </div>
-                                <div class="rounded-2xl border border-slate-200 bg-white/70 p-4">
-                                    <p class="text-sm font-semibold text-slate-800">Anexos (PDF/áudio)</p>
-                                    <p class="text-xs text-slate-500">Envie materiais de apoio ou gravações relevantes.</p>
-                                    <label class="mt-3 flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 hover:border-blue-300 hover:text-blue-700">
-                                        <svg class="mb-2 size-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8-4-4m0 0L8 8m4-4v12" />
-                                        </svg>
-                                        <span class="font-semibold">Clique para selecionar arquivos</span>
-                                        <input class="hidden" accept=".pdf,audio/*" multiple type="file" @change="handleAttachmentSelection" />
-                                    </label>
-                                    <div v-if="recordForm.existingAttachments.length" class="mt-4 space-y-2">
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Anexos salvos</p>
-                                        <div
-                                            v-for="attachment in recordForm.existingAttachments"
-                                            :key="attachment.id"
-                                            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-                                        >
-                                            <div>
-                                                <p class="font-semibold text-slate-900">{{ attachment.name }}</p>
-                                                <p class="text-xs text-slate-500">{{ attachment.mime_type }} · {{ formatFileSize(attachment.size) }}</p>
-                                            </div>
-                                            <button
-                                                class="rounded-xl border px-3 py-1 text-xs font-semibold transition"
-                                                :class="attachment.keep ? 'border-red-200 text-red-600 hover:border-red-300 hover:text-red-700' : 'border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800'"
-                                                type="button"
-                                                @click="toggleExistingAttachment(attachment)"
-                                            >
-                                                {{ attachment.keep ? 'Remover' : 'Restaurar' }}
-                                            </button>
+                                <div v-if="recordForm.newAttachments.length" class="mt-3 space-y-2">
+                                    <p class="text-xs font-semibold uppercase text-slate-500">Novos</p>
+                                    <div v-for="(file, index) in recordForm.newAttachments" :key="`${file.name}-${index}`" class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                        <div class="min-w-0">
+                                            <p class="truncate font-semibold text-slate-900">{{ file.name }}</p>
+                                            <p class="text-xs text-slate-500">{{ formatFileSize(file.size) }}</p>
                                         </div>
-                                    </div>
-                                    <div v-if="recordForm.newAttachments.length" class="mt-4 space-y-2">
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Anexos recentes</p>
-                                        <div
-                                            v-for="(file, index) in recordForm.newAttachments"
-                                            :key="`${file.name}-${index}`"
-                                            class="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm text-slate-700"
-                                        >
-                                            <div>
-                                                <p class="font-semibold text-slate-900">{{ file.name }}</p>
-                                                <p class="text-xs text-slate-500">{{ file.type || 'Arquivo' }} · {{ formatFileSize(file.size) }}</p>
-                                            </div>
-                                            <button
-                                                class="text-xs font-semibold text-red-500 transition hover:text-red-700"
-                                                type="button"
-                                                @click="removeNewAttachment(index)"
-                                            >
-                                                Remover
-                                            </button>
-                                        </div>
+                                        <button class="text-xs font-semibold text-rose-700 transition hover:text-rose-900" type="button" @click="removeNewAttachment(index)">Remover</button>
                                     </div>
                                 </div>
-                            </div>
-                            <p v-if="recordFormError" class="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-                                {{ recordFormError }}
-                            </p>
-                            <div class="flex justify-end gap-3 shrink-0">
-                                <button
-                                    class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                                    type="button"
-                                    @click="closeRecordForm"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:bg-blue-300"
-                                    :disabled="recordFormSubmitting"
-                                    type="submit"
-                                >
-                                    <svg v-if="recordFormSubmitting" class="-ms-1 me-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                    </svg>
-                                    {{ recordFormSubmitLabel }}
-                                </button>
-                            </div>
-                        </form>
+                            </section>
+                        </aside>
                     </div>
-                </div>
-            </transition>
-            <div v-if="recordsLoading" class="flex items-center gap-3 rounded-2xl border border-slate-100 px-4 py-3 text-sm text-slate-500">
-                <svg class="size-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-                Carregando anotações...
-            </div>
-            <div v-else-if="recordsError" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {{ recordsError }}
-            </div>
-            <div v-else>
-                <div v-if="!hasRecords" class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                    {{
-                        hasActiveFilters
-                            ? 'Nenhuma anotação encontrada para os filtros aplicados.'
-                            : 'Nenhuma anotação cadastrada. Comece registrando a primeira evolução.'
-                    }}
-                </div>
-                <div v-else class="space-y-4">
-                    <article
-                        v-for="record in records"
-                        :key="record.id"
-                        class="rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm"
-                    >
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    {{ formatRecordDate(record.recorded_at) }}
-                                </p>
-                                <h3 class="text-lg font-semibold text-slate-900">{{ record.title }}</h3>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button
-                                    class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
-                                    type="button"
-                                    @click="openEditRecordForm(record)"
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    class="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                    type="button"
-                                    :disabled="recordDeletingId === record.id"
-                                    @click="deleteRecord(record)"
-                                >
-                                    <svg v-if="recordDeletingId === record.id" class="-ms-1 me-2 inline size-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                    </svg>
-                                    Excluir
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mt-4 space-y-4 text-sm text-slate-700">
-                            <div v-if="record.treatment_objectives?.length">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Objetivos focados</p>
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    <span
-                                        v-for="objective in record.treatment_objectives"
-                                        :key="`record-${record.id}-objective-${objective}`"
-                                        class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
-                                    >
-                                        {{ objective }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div v-if="record.techniques?.length">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Técnicas aplicadas</p>
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    <span
-                                        v-for="technique in record.techniques"
-                                        :key="`record-${record.id}-technique-${technique}`"
-                                        class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                                    >
-                                        {{ technique }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div v-if="record.homework_items?.length" class="space-y-2">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tarefas de casa</p>
-                                <div
-                                    v-for="task in record.homework_items"
-                                    :key="task.id ?? `${record.id}-task-${task.description}`"
-                                    class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
-                                >
-                                    <p class="text-slate-800">{{ task.description }}</p>
-                                    <span
-                                        class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                                        :class="homeworkStatusBadges[task.status] ?? homeworkStatusBadges.pending"
-                                    >
-                                        {{ homeworkStatusLabel(task.status) }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div v-if="record.attachments?.length" class="space-y-2">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Anexos</p>
-                                <div
-                                    v-for="attachment in record.attachments"
-                                    :key="attachment.id ?? `${record.id}-attachment-${attachment.name}`"
-                                    class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2 text-xs text-slate-600"
-                                >
-                                    <div>
-                                        <p class="text-sm font-semibold text-slate-900">{{ attachment.name ?? 'Arquivo' }}</p>
-                                        <p class="text-xs text-slate-500">
-                                            {{ attachment.mime_type ?? 'Arquivo' }} · {{ formatFileSize(attachment.size) }}
-                                        </p>
-                                    </div>
-                                    <a
-                                        :href="attachment.url"
-                                        class="rounded-xl border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 transition hover:border-blue-300 hover:text-blue-800"
-                                        rel="noopener noreferrer"
-                                        target="_blank"
-                                    >
-                                        Abrir
-                                    </a>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Notas clínicas</p>
-                                <p v-if="record.notes" class="mt-1 whitespace-pre-line text-sm text-slate-700">
-                                    {{ record.notes }}
-                                </p>
-                                <p v-else class="mt-1 text-xs text-slate-400">Sem notas textuais nesta sessão.</p>
-                            </div>
-                        </div>
-                    </article>
 
-                    <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-                        <p>
-                            Mostrando página {{ recordPagination.currentPage }} de {{ recordPagination.lastPage }}
-                            ({{ recordPagination.total }} registros)
-                        </p>
-                        <div class="flex gap-2">
-                            <button
-                                class="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="recordPagination.currentPage <= 1"
-                                type="button"
-                                @click="fetchRecords(recordPagination.currentPage - 1)"
-                            >
-                                Anterior
-                            </button>
-                            <button
-                                class="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="recordPagination.currentPage >= recordPagination.lastPage"
-                                type="button"
-                                @click="fetchRecords(recordPagination.currentPage + 1)"
-                            >
-                                Próxima
-                            </button>
-                        </div>
+                    <p v-if="recordFormError" class="mt-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {{ recordFormError }}
+                    </p>
+
+                    <div class="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                        <button class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" type="button" @click="closeRecordForm">
+                            Cancelar
+                        </button>
+                        <button class="inline-flex items-center rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" :disabled="recordFormSubmitting" type="submit">
+                            <svg v-if="recordFormSubmitting" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                            </svg>
+                            {{ recordFormSubmitLabel }}
+                        </button>
                     </div>
-                </div>
+                </form>
             </div>
-        </section>
+        </div>
     </div>
 </template>

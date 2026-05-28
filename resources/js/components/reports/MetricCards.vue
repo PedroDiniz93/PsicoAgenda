@@ -17,24 +17,17 @@ interface Props {
 defineProps<Props>();
 
 const colorClasses = {
-  primary: 'bg-primary-50 border-primary-200',
-  success: 'bg-success-50 border-success-200',
-  warning: 'bg-warning-50 border-warning-200',
-  error: 'bg-error-50 border-error-200',
-};
-
-const textColorClasses = {
-  primary: 'text-primary-800',
-  success: 'text-success-800',
-  warning: 'text-warning-800',
-  error: 'text-error-800',
+  primary: 'bg-white border-slate-200',
+  success: 'bg-emerald-50 border-emerald-200',
+  warning: 'bg-amber-50 border-amber-200',
+  error: 'bg-rose-50 border-rose-200',
 };
 
 const iconColor = {
-  primary: 'text-primary-600',
-  success: 'text-success-600',
-  warning: 'text-warning-600',
-  error: 'text-error-600',
+  primary: 'text-cyan-700',
+  success: 'text-emerald-700',
+  warning: 'text-amber-700',
+  error: 'text-rose-700',
 };
 </script>
 
@@ -44,15 +37,15 @@ const iconColor = {
       v-for="card in cards"
       :key="card.id"
       :class="[
-        'rounded-xl border p-5 transition-all hover:shadow-md',
+        'rounded-lg border p-5 shadow-sm transition hover:shadow-md',
         colorClasses[card.color || 'primary'],
       ]"
     >
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1">
-          <p class="text-xs font-bold uppercase tracking-widest text-neutral-600">{{ card.label }}</p>
-          <p class="mt-2 text-3xl font-bold text-neutral-900">{{ card.value }}</p>
-          <p class="mt-1 text-xs text-neutral-600">{{ card.description }}</p>
+          <p class="text-xs font-semibold uppercase text-slate-500">{{ card.label }}</p>
+          <p class="mt-2 text-3xl font-semibold tracking-normal text-slate-950">{{ card.value }}</p>
+          <p class="mt-1 text-sm text-slate-600">{{ card.description }}</p>
         </div>
         <svg v-if="card.icon" :class="['size-8 flex-shrink-0', iconColor[card.color || 'primary']]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="card.icon" />

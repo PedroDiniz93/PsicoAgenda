@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import Button from '../base/Button.vue';
+import { RouterLink } from 'vue-router';
 
 interface Props {
   reportFiltersOpen: boolean;
@@ -23,81 +22,80 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <p class="text-xs font-bold uppercase tracking-widest text-neutral-500">Relatórios</p>
-        <h1 class="text-3xl font-bold text-neutral-900">Acompanhe seus resultados</h1>
-        <p class="mt-1 text-sm text-neutral-600">
+        <p class="text-sm font-semibold text-cyan-700">Relatórios</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Indicadores do consultório</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          Analise presença, faltas, cancelamentos e recebimentos em um período específico.
+        </p>
+        <p class="mt-2 text-sm text-slate-500">
           <slot name="info" />
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="md" @click="$emit('toggle-filters')">
-          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          {{ reportFiltersOpen ? 'Ocultar' : 'Filtros' }}
-        </Button>
-        <Button :loading="reportLoading" @click="$emit('refresh')">
-          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Atualizar
-        </Button>
+        <RouterLink
+          :to="{ name: 'home' }"
+          class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          Dashboard
+        </RouterLink>
+        <button
+          class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          type="button"
+          @click="$emit('toggle-filters')"
+        >
+          {{ reportFiltersOpen ? 'Ocultar filtros' : 'Filtrar' }}
+        </button>
       </div>
     </div>
 
     <transition name="fade">
       <form
         v-if="reportFiltersOpen"
-        class="rounded-xl border border-neutral-200 bg-neutral-50 p-5"
+        class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4"
         @submit.prevent="$emit('apply-filters')"
       >
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
+        <div class="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wide text-neutral-600 mb-2">De</label>
+            <label class="mb-2 block text-xs font-semibold uppercase text-slate-500">De</label>
             <input
-              :value="filters.from"
+              v-model="filters.from"
               type="date"
-              :class="[
-                'w-full rounded-lg border border-neutral-200 px-4 py-2 text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500',
-              ]"
-              @input="$emit('update:filters', { ...filters, from: $event.target.value })"
+              class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wide text-neutral-600 mb-2">Até</label>
+            <label class="mb-2 block text-xs font-semibold uppercase text-slate-500">Até</label>
             <input
-              :value="filters.to"
+              v-model="filters.to"
               type="date"
-              :class="[
-                'w-full rounded-lg border border-neutral-200 px-4 py-2 text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500',
-              ]"
-              @input="$emit('update:filters', { ...filters, to: $event.target.value })"
+              class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
             />
           </div>
-          <div class="flex gap-2 md:col-span-2">
-            <Button type="submit" :loading="reportLoading" class="flex-1">
-              Aplicar filtros
-            </Button>
-            <Button
+          <div class="flex gap-2">
+            <button
+              class="inline-flex h-11 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              type="submit"
+              :disabled="reportLoading"
+            >
+              {{ reportLoading ? 'Filtrando...' : 'Aplicar filtros' }}
+            </button>
+            <button
               v-if="hasReportFiltersFilled"
               type="button"
-              variant="secondary"
+              class="inline-flex h-11 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="reportLoading"
               @click="$emit('clear-filters')"
             >
               Limpar
-            </Button>
+            </button>
           </div>
         </div>
       </form>
     </transition>
 
-    <slot />
   </div>
 </template>
 

@@ -32,10 +32,10 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <Card>
-    <div class="flex items-center justify-between gap-3 mb-6">
+    <div class="mb-5 flex items-center justify-between gap-3">
       <div>
-        <p class="text-sm font-semibold text-neutral-900">Agendamentos</p>
-        <p class="text-xs text-neutral-600">Resumo dos atendimentos</p>
+        <p class="text-lg font-semibold text-slate-950">Status dos atendimentos</p>
+        <p class="text-sm text-slate-500">Distribuição de sessões no período filtrado.</p>
       </div>
     </div>
 
@@ -43,12 +43,12 @@ withDefaults(defineProps<Props>(), {
       <div
         v-for="section in sections"
         :key="section.key"
-        class="rounded-lg border border-neutral-100 bg-neutral-50 p-4"
+        class="rounded-lg border border-slate-200 bg-slate-50 p-4"
       >
         <div class="mb-4 flex items-center justify-between">
           <div>
-            <p class="text-sm font-semibold text-neutral-900">{{ section.label }}</p>
-            <p class="text-xs text-neutral-600">{{ section.count || 0 }} atendimentos</p>
+            <p class="text-sm font-semibold text-slate-950">{{ section.label }}</p>
+            <p class="text-xs text-slate-500">{{ items[section.key]?.length ?? 0 }} atendimentos</p>
           </div>
         </div>
 
@@ -59,19 +59,19 @@ withDefaults(defineProps<Props>(), {
           <div
             v-for="item in items[section.key].slice(0, 4)"
             :key="`${section.key}-${item.id}`"
-            class="rounded-lg border border-neutral-100 bg-white p-3 text-sm transition-colors hover:bg-neutral-50"
+            class="rounded-lg border border-slate-100 bg-white p-3 text-sm transition hover:bg-slate-50"
           >
-            <p class="font-medium text-neutral-900">
+            <p class="font-medium text-slate-950">
               {{ item.patient?.name ?? 'Paciente sem nome' }}
             </p>
-            <p class="text-xs text-neutral-500">{{ formatDateTime(item.start_at) }}</p>
+            <p class="text-xs text-slate-500">{{ formatDateTime(item.start_at) }}</p>
           </div>
 
-          <p v-if="items[section.key].length > 4" class="text-xs text-neutral-500 pt-2">
+          <p v-if="items[section.key].length > 4" class="pt-2 text-xs text-slate-500">
             + {{ items[section.key].length - 4 }} mais registros
           </p>
         </div>
-        <p v-else class="text-sm text-neutral-600">{{ section.empty }}</p>
+        <p v-else class="text-sm text-slate-500">{{ section.empty }}</p>
       </div>
     </div>
   </Card>

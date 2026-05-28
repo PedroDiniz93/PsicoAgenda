@@ -276,6 +276,7 @@ const calendarDayAppointments = computed(() => {
             const statusLabel =
                 appointmentStatusOptions.find((option) => option.value === statusKey)?.label ?? 'Status';
             const isRecurring = Boolean(appointment.recurrence_id) && statusKey === 'scheduled';
+            const isPaid = Boolean(appointment.paid_at ?? appointment.paidAt);
             const badgeLabel = isRecurring ? 'Recorrente' : statusLabel;
             const badgeClass =
                 appointmentStatusBadgeClasses[isRecurring ? 'recurrence' : statusKey] ??
@@ -293,6 +294,7 @@ const calendarDayAppointments = computed(() => {
                 statusKey,
                 badgeLabel,
                 badgeClass,
+                isPaid,
                 typeLabel,
                 meetingUrl,
             };
@@ -889,12 +891,20 @@ onBeforeUnmount(() => {
                                                         </a>
                                                     </div>
                                                 </div>
-                                                <span
-                                                    class="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                                                    :class="item.badgeClass"
-                                                >
-                                                    <span class="truncate">{{ item.badgeLabel }}</span>
-                                                </span>
+                                                <div class="mt-1 flex flex-wrap gap-1">
+                                                    <span
+                                                        class="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                                                        :class="item.badgeClass"
+                                                    >
+                                                        <span class="truncate">{{ item.badgeLabel }}</span>
+                                                    </span>
+                                                    <span
+                                                        v-if="item.isPaid"
+                                                        class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
+                                                    >
+                                                        Pago
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
