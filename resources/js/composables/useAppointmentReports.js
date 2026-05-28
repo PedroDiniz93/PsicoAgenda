@@ -10,10 +10,10 @@ const statusLabels = {
 };
 
 const statusBadgeClasses = {
-    scheduled: 'bg-slate-100 text-slate-700',
-    done: 'bg-emerald-100 text-emerald-800',
-    missed: 'bg-orange-100 text-orange-800',
-    canceled: 'bg-rose-100 text-rose-800',
+    scheduled: 'badge-neutral',
+    done: 'badge-success',
+    missed: 'badge-warning',
+    canceled: 'badge-danger',
 };
 
 const createReportState = () => ({
@@ -169,7 +169,7 @@ export function useAppointmentReports() {
     };
 
     const statusLabel = (status) => statusLabels[status] ?? status;
-    const statusBadgeClass = (status) => statusBadgeClasses[status] ?? 'bg-slate-100 text-slate-700';
+    const statusBadgeClass = (status) => statusBadgeClasses[status] ?? 'badge-neutral';
 
     return {
         appointmentReport,

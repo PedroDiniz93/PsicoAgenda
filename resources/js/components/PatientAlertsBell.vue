@@ -150,7 +150,7 @@ const formatLastActivityLabel = (patient) => {
 <template>
     <div v-if="authStore.isAuthenticated" ref="containerRef" class="fixed bottom-6 right-6 z-50">
         <button
-            class="relative inline-flex items-center justify-center rounded-full bg-white p-3 text-slate-600 shadow-lg shadow-slate-900/5 transition hover:text-blue-600"
+            class="relative inline-flex items-center justify-center rounded-full border border-border bg-surface p-3 text-muted-foreground shadow-lg transition hover:text-primary"
             type="button"
             aria-label="Alertas de pacientes sem agendamento"
             :aria-expanded="isPanelOpen"
@@ -166,7 +166,7 @@ const formatLastActivityLabel = (patient) => {
             </svg>
             <span
                 v-if="shouldShowBadge"
-                class="absolute -right-1 -top-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"
+                class="absolute -right-1 -top-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-danger px-1 text-xs font-bold text-white"
             >
                 {{ badgeLabel }}
             </span>
@@ -175,15 +175,15 @@ const formatLastActivityLabel = (patient) => {
         <transition name="fade">
             <div
                 v-if="isPanelOpen"
-                class="absolute bottom-16 right-0 w-80 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl"
+                class="absolute bottom-16 right-0 w-80 rounded-2xl border border-border bg-surface p-4 text-sm text-foreground shadow-2xl"
             >
                 <div class="mb-4 flex items-start justify-between gap-2">
                     <div>
-                        <p class="font-semibold text-slate-900">Pacientes sem agendar</p>
-                        <p class="text-xs text-slate-500">Há mais de {{ thresholdDays }} dia(s)</p>
+                        <p class="font-semibold text-foreground">Pacientes sem agendar</p>
+                        <p class="text-xs text-subtle-foreground">Há mais de {{ thresholdDays }} dia(s)</p>
                     </div>
                     <button
-                        class="rounded-full border border-slate-200 p-1 text-xs font-semibold text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="rounded-full border border-border p-1 px-2 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
                         :disabled="loading"
                         @click.stop="refreshAlerts"
@@ -192,10 +192,10 @@ const formatLastActivityLabel = (patient) => {
                     </button>
                 </div>
 
-                <div v-if="error" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">
+                <div v-if="error" class="rounded-xl bg-danger-soft p-3 text-xs text-danger">
                     <p>{{ error }}</p>
                     <button
-                        class="mt-2 w-full rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100"
+                        class="mt-2 w-full rounded-xl border border-danger/30 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger-soft"
                         type="button"
                         :disabled="loading"
                         @click.stop="refreshAlerts"
@@ -205,24 +205,24 @@ const formatLastActivityLabel = (patient) => {
                 </div>
                 <div
                     v-else-if="loading"
-                    class="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500"
+                    class="rounded-xl border border-dashed border-border p-4 text-center text-xs text-subtle-foreground"
                 >
                     Carregando alertas...
                 </div>
-                <div v-else-if="!inactiveCount" class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-slate-500">
+                <div v-else-if="!inactiveCount" class="rounded-xl border border-border bg-surface-muted p-4 text-xs text-muted-foreground">
                     <p>Todos os pacientes têm agendamentos recentes.</p>
                 </div>
                 <div v-else class="space-y-3">
                     <div
                         v-for="patient in inactivePatients"
                         :key="patient.id"
-                        class="rounded-xl border border-slate-100 p-3"
+                        class="rounded-xl border border-border p-3"
                     >
-                        <p class="text-sm font-semibold text-slate-900">{{ patient.name ?? `Paciente #${patient.id}` }}</p>
-                        <p class="text-xs text-slate-500">{{ formatLastActivityLabel(patient) }}</p>
+                        <p class="text-sm font-semibold text-foreground">{{ patient.name ?? `Paciente #${patient.id}` }}</p>
+                        <p class="text-xs text-subtle-foreground">{{ formatLastActivityLabel(patient) }}</p>
                     </div>
                     <button
-                        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
+                        class="w-full rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
                         type="button"
                         @click.stop="navigateToPatients"
                     >

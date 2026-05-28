@@ -4,6 +4,8 @@ import { useRouter, useRoute, RouterLink } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import { useAppointmentReports } from '../composables/useAppointmentReports';
+import AppIcon from '../components/AppIcon.vue';
+import { formatMoney } from '../utils/formatters';
 
 const router = useRouter();
 const route = useRoute();
@@ -20,6 +22,46 @@ const tabs = [
     { id: 'overview', label: 'Visão geral' },
     { id: 'profile', label: 'Perfil' },
     { id: 'settings', label: 'Configurações' },
+];
+
+const greeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+});
+
+const firstName = computed(() => String(userName.value).trim().split(/\s+/)[0] ?? userName.value);
+
+const quickActions = [
+    {
+        name: 'patients',
+        icon: 'patients',
+        title: 'Pacientes',
+        subtitle: 'Gerenciar cadastros',
+        text: 'Editar dados, filtrar status e cadastrar novos perfis.',
+    },
+    {
+        name: 'schedule',
+        icon: 'calendar',
+        title: 'Agenda',
+        subtitle: 'Controlar atendimentos',
+        text: 'Criar sessões, marcar faltas e acompanhar horários.',
+    },
+    {
+        name: 'reports',
+        icon: 'chart',
+        title: 'Relatórios',
+        subtitle: 'Analisar resultados',
+        text: 'Acompanhe comparecimento, pagamentos e indicadores.',
+    },
+    {
+        name: 'exports',
+        icon: 'download',
+        title: 'Exportação',
+        subtitle: 'Baixar relatórios',
+        text: 'Selecione pacientes e gere um CSV detalhado.',
+    },
 ];
 
 const statusListSections = [
@@ -94,6 +136,44 @@ const {
     statusLabel,
     statusBadgeClass,
 } = useAppointmentReports();
+
+const overviewStats = computed(() => [
+    {
+        id: 'done',
+        label: 'Sessões concluídas',
+        value: appointmentReport.appointments.done,
+        icon: 'check',
+        tone: 'success',
+    },
+    {
+        id: 'paid',
+        label: 'Recebido',
+        value: formatMoney(appointmentReport.payments.paid.value ?? '0.00'),
+        icon: 'money',
+        tone: 'primary',
+    },
+    {
+        id: 'pending',
+        label: 'A receber',
+        value: formatMoney(appointmentReport.payments.pending.value ?? '0.00'),
+        icon: 'clock',
+        tone: 'warning',
+    },
+    {
+        id: 'missed',
+        label: 'Faltas',
+        value: appointmentReport.appointments.missed,
+        icon: 'x',
+        tone: 'danger',
+    },
+]);
+
+const toneClasses = {
+    success: 'bg-success-soft text-success',
+    primary: 'bg-primary-soft text-primary-soft-foreground',
+    warning: 'bg-warning-soft text-warning',
+    danger: 'bg-danger-soft text-danger',
+};
 
 
 const handleLogout = async () => {
@@ -328,189 +408,170 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen w-full max-w-5xl px-4 py-10 lg:px-8">
-        <header class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white px-6 py-4 shadow">
-            <div>
-                <p class="text-sm font-medium text-slate-500">Olá</p>
-                <p class="text-2xl font-semibold text-slate-900">{{ userName }}</p>
-                <p class="text-sm text-slate-500">{{ userEmail }}</p>
-            </div>
+    <div class="space-y-6">
+        <!-- Greeting banner -->
+        <section class="overflow-hidden rounded-2xl bg-primary px-6 py-7 text-primary-foreground sm:px-8">
+            <p class="text-sm font-medium text-primary-foreground/75">{{ greeting }},</p>
+            <h2 class="mt-1 text-2xl font-semibold sm:text-3xl">{{ firstName }}</h2>
+            <p class="mt-1 max-w-xl text-sm text-primary-foreground/80">
+                Aqui está um resumo da sua clínica. Acompanhe seus atendimentos e mantenha tudo em dia.
+            </p>
+        </section>
+
+        <!-- Tabs -->
+        <nav class="card flex flex-wrap gap-1 p-1.5" aria-label="Navegação do dashboard">
             <button
-                class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:text-red-600"
+                v-for="tab in tabs"
+                :key="tab.id"
+                class="rounded-xl px-4 py-2 text-sm font-semibold transition"
+                :class="
+                    activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground'
+                "
                 type="button"
-                @click="handleLogout"
+                @click="activeTab = tab.id"
             >
-                Sair
+                {{ tab.label }}
             </button>
-        </header>
+        </nav>
 
-        <div class="mb-8 rounded-2xl bg-white p-3 shadow">
-            <nav class="flex flex-wrap gap-2" aria-label="Navegação do dashboard">
-                <button
-                    v-for="tab in tabs"
-                    :key="tab.id"
-                    class="rounded-xl px-4 py-2 text-sm font-semibold transition"
-                    :class="
-                        activeTab === tab.id
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                            : 'border border-transparent text-slate-500 hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700'
-                    "
-                    type="button"
-                    @click="activeTab = tab.id"
-                >
-                    {{ tab.label }}
-                </button>
-                <RouterLink
-                    :to="{ name: 'reports' }"
-                    class="rounded-xl border border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700"
-                >
-                    Relatórios
-                </RouterLink>
-            </nav>
-        </div>
+        <section v-if="activeTab === 'overview'" class="space-y-6">
+            <!-- KPI cards -->
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div v-for="stat in overviewStats" :key="stat.id" class="card p-5">
+                    <div class="flex items-center justify-between">
+                        <span
+                            class="flex size-10 items-center justify-center rounded-xl"
+                            :class="toneClasses[stat.tone]"
+                        >
+                            <AppIcon :name="stat.icon" :size="20" />
+                        </span>
+                    </div>
+                    <p class="mt-4 text-2xl font-semibold text-foreground">{{ stat.value }}</p>
+                    <p class="text-sm text-muted-foreground">{{ stat.label }}</p>
+                </div>
+            </div>
 
-        <section v-if="activeTab === 'overview'" class="space-y-8 rounded-2xl bg-white p-6 shadow">
-            <div class="grid gap-4 md:grid-cols-3">
-                <RouterLink
-                    :to="{ name: 'patients' }"
-                    class="flex min-h-[160px] flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 transition hover:border-blue-200 hover:bg-blue-50 hover:shadow"
-                >
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Pacientes</p>
-                        <p class="text-lg font-semibold text-slate-900">Gerenciar cadastros</p>
-                        <p class="text-xs text-slate-500">Editar dados, filtrar status e cadastrar novos perfis.</p>
-                    </div>
-                    <div class="rounded-full bg-blue-100 p-3 text-blue-600">
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </RouterLink>
-                <RouterLink
-                    :to="{ name: 'schedule' }"
-                    class="flex min-h-[160px] flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 transition hover:border-emerald-200 hover:bg-emerald-50 hover:shadow"
-                >
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Agenda</p>
-                        <p class="text-lg font-semibold text-slate-900">Controlar atendimentos</p>
-                        <p class="text-xs text-slate-500">Criar sessões, marcar faltas e acompanhar horários.</p>
-                    </div>
-                    <div class="rounded-full bg-emerald-100 p-3 text-emerald-600">
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </RouterLink>
-                <RouterLink
-                    :to="{ name: 'exports' }"
-                    class="flex min-h-[160px] flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 transition hover:border-purple-200 hover:bg-purple-50 hover:shadow"
-                >
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Exportação</p>
-                        <p class="text-lg font-semibold text-slate-900">Baixar relatórios</p>
-                        <p class="text-xs text-slate-500">Selecione pacientes e gere um CSV detalhado.</p>
-                    </div>
-                    <div class="rounded-full bg-purple-100 p-3 text-purple-600">
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </RouterLink>
+            <!-- Quick actions -->
+            <div>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-subtle-foreground">Acesso rápido</h3>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <RouterLink
+                        v-for="action in quickActions"
+                        :key="action.name"
+                        :to="{ name: action.name }"
+                        class="card card-hover flex flex-col gap-4 p-5"
+                    >
+                        <span class="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                            <AppIcon :name="action.icon" :size="22" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold text-foreground">{{ action.title }}</p>
+                            <p class="text-sm font-medium text-muted-foreground">{{ action.subtitle }}</p>
+                            <p class="mt-1 text-xs text-subtle-foreground">{{ action.text }}</p>
+                        </div>
+                        <span class="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                            Abrir
+                            <AppIcon name="chevronRight" :size="16" />
+                        </span>
+                    </RouterLink>
+                </div>
             </div>
         </section>
 
-        <section v-else-if="activeTab === 'profile'" class="rounded-2xl bg-white p-6 shadow">
+        <section v-else-if="activeTab === 'profile'" class="card p-6">
             <div class="mb-6">
-                <h2 class="text-xl font-semibold text-slate-900">Perfil profissional</h2>
-                <p class="mt-1 text-sm text-slate-500">Atualize as informações que serão usadas em comunicações e agendamentos.</p>
+                <h2 class="text-xl font-semibold text-foreground">Perfil profissional</h2>
+                <p class="mt-1 text-sm text-muted-foreground">Atualize as informações que serão usadas em comunicações e agendamentos.</p>
             </div>
 
-            <div v-if="profileLoading" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+            <div v-if="profileLoading" class="rounded-xl border border-border bg-surface-muted px-4 py-6 text-sm text-muted-foreground">
                 Carregando informações do perfil...
             </div>
 
             <form v-else class="space-y-5" @submit.prevent="submitProfile">
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700" for="psychologist-name">Nome completo</label>
+                        <label class="field-label" for="psychologist-name">Nome completo</label>
                         <input
                             id="psychologist-name"
                             v-model="profileForm.name"
-                            class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            class="field-input mt-1"
                             type="text"
                             placeholder="Nome do psicólogo"
                             required
                         />
-                        <p v-if="profileErrors.name" class="mt-1 text-xs text-red-600">{{ profileErrors.name }}</p>
+                        <p v-if="profileErrors.name" class="mt-1 text-xs text-danger">{{ profileErrors.name }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-700" for="psychologist-email">E-mail profissional</label>
+                        <label class="field-label" for="psychologist-email">E-mail profissional</label>
                         <input
                             id="psychologist-email"
                             v-model="profileForm.email"
-                            class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            class="field-input mt-1"
                             type="email"
                             placeholder="email@clinica.com"
                         />
-                        <p v-if="profileErrors.email" class="mt-1 text-xs text-red-600">{{ profileErrors.email }}</p>
+                        <p v-if="profileErrors.email" class="mt-1 text-xs text-danger">{{ profileErrors.email }}</p>
                     </div>
                 </div>
 
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700" for="psychologist-phone">Telefone</label>
+                        <label class="field-label" for="psychologist-phone">Telefone</label>
                         <input
                             id="psychologist-phone"
                             v-model="profileForm.phone"
-                            class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            class="field-input mt-1"
                             type="tel"
                             placeholder="(00) 00000-0000"
                         />
-                        <p v-if="profileErrors.phone" class="mt-1 text-xs text-red-600">{{ profileErrors.phone }}</p>
+                        <p v-if="profileErrors.phone" class="mt-1 text-xs text-danger">{{ profileErrors.phone }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-700" for="psychologist-timezone">Fuso horário</label>
+                        <label class="field-label" for="psychologist-timezone">Fuso horário</label>
                         <select
                             id="psychologist-timezone"
                             v-model="profileForm.timezone"
-                            class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            class="field-input mt-1"
                             required
                         >
                             <option v-for="option in timezoneOptions" :key="option.value" :value="option.value">
                                 {{ option.label }}
                             </option>
                         </select>
-                        <p v-if="profileErrors.timezone" class="mt-1 text-xs text-red-600">{{ profileErrors.timezone }}</p>
+                        <p v-if="profileErrors.timezone" class="mt-1 text-xs text-danger">{{ profileErrors.timezone }}</p>
                     </div>
                 </div>
 
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700" for="session-duration">Duração padrão da sessão</label>
+                        <label class="field-label" for="session-duration">Duração padrão da sessão</label>
                         <select
                             id="session-duration"
                             v-model.number="profileForm.sessionDuration"
-                            class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            class="field-input mt-1"
                             required
                         >
                             <option v-for="option in sessionDurationOptions" :key="option" :value="option">
                                 {{ option }} minutos
                             </option>
                         </select>
-                        <p v-if="profileErrors.sessionDuration" class="mt-1 text-xs text-red-600">
+                        <p v-if="profileErrors.sessionDuration" class="mt-1 text-xs text-danger">
                             {{ profileErrors.sessionDuration }}
                         </p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 rounded-2xl border border-slate-100 p-4">
-                        <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                            <input v-model="profileForm.allowOnline" class="size-4 rounded border-slate-300" type="checkbox" />
+                    <div class="grid grid-cols-2 gap-4 rounded-xl border border-border p-4">
+                        <label class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <input v-model="profileForm.allowOnline" class="size-4 rounded border-border-strong accent-[var(--color-primary)]" type="checkbox" />
                             Atende online
                         </label>
-                        <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                            <input v-model="profileForm.allowInPerson" class="size-4 rounded border-slate-300" type="checkbox" />
+                        <label class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <input v-model="profileForm.allowInPerson" class="size-4 rounded border-border-strong accent-[var(--color-primary)]" type="checkbox" />
                             Atende presencial
                         </label>
                     </div>
@@ -518,19 +579,15 @@ onMounted(() => {
 
                 <p
                     v-if="profileMessage"
-                    class="rounded-2xl border px-4 py-3 text-sm"
-                    :class="profileMessageType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'"
+                    class="rounded-xl border px-4 py-3 text-sm"
+                    :class="profileMessageType === 'success' ? 'border-success/30 bg-success-soft text-success' : 'border-danger/30 bg-danger-soft text-danger'"
                 >
                     {{ profileMessage }}
                 </p>
 
                 <div class="flex justify-end">
-                    <button
-                        class="inline-flex items-center rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:bg-blue-300"
-                        type="submit"
-                        :disabled="profileSaving"
-                    >
-                        <svg v-if="profileSaving" class="-ms-1 me-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <button class="btn btn-primary" type="submit" :disabled="profileSaving">
+                        <svg v-if="profileSaving" class="-ms-1 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                         </svg>
@@ -540,34 +597,39 @@ onMounted(() => {
             </form>
         </section>
 
-        <section v-else class="rounded-2xl bg-white p-6 shadow">
+        <section v-else class="card p-6">
             <div class="mb-6">
-                <h2 class="text-xl font-semibold text-slate-900">Configurações</h2>
-                <p class="mt-1 text-sm text-slate-500">
+                <h2 class="text-xl font-semibold text-foreground">Configurações</h2>
+                <p class="mt-1 text-sm text-muted-foreground">
                     Ajuste integrações como Google Calendar e confirme sessões automaticamente pelo WhatsApp.
                 </p>
             </div>
 
-            <div class="rounded-2xl border border-slate-100 p-5">
+            <div class="rounded-xl border border-border p-5">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Google Calendar</p>
-                        <p class="text-lg font-semibold text-slate-900">
-                            {{ googleConnected ? 'Sincronização ativa' : 'Nenhuma conta conectada' }}
-                        </p>
-                        <p class="text-sm text-slate-500">
-                            {{ googleConnected ? 'Os novos agendamentos podem ser enviados para o seu calendário.' : 'Conecte-se para exportar automaticamente seus compromissos.' }}
-                        </p>
+                    <div class="flex items-start gap-3">
+                        <span class="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                            <AppIcon name="calendar" :size="20" />
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium text-subtle-foreground">Google Calendar</p>
+                            <p class="text-lg font-semibold text-foreground">
+                                {{ googleConnected ? 'Sincronização ativa' : 'Nenhuma conta conectada' }}
+                            </p>
+                            <p class="text-sm text-muted-foreground">
+                                {{ googleConnected ? 'Os novos agendamentos podem ser enviados para o seu calendário.' : 'Conecte-se para exportar automaticamente seus compromissos.' }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <button
                             v-if="googleConnected"
-                            class="inline-flex items-center rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:border-red-300 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="btn !border-danger/30 !text-danger hover:!bg-danger-soft btn-secondary"
                             type="button"
                             :disabled="googleProcessing"
                             @click="disconnectGoogle"
                         >
-                            <svg v-if="googleProcessing" class="-ms-1 me-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <svg v-if="googleProcessing" class="-ms-1 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                             </svg>
@@ -575,12 +637,12 @@ onMounted(() => {
                         </button>
                         <button
                             v-else
-                            class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:bg-blue-300"
+                            class="btn btn-primary"
                             type="button"
                             :disabled="googleProcessing"
                             @click="connectGoogle"
                         >
-                            <svg v-if="googleProcessing" class="-ms-1 me-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <svg v-if="googleProcessing" class="-ms-1 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                             </svg>
@@ -588,7 +650,7 @@ onMounted(() => {
                         </button>
                     </div>
                 </div>
-                <p v-if="googleError" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                <p v-if="googleError" class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-4 py-2 text-sm text-danger">
                     {{ googleError }}
                 </p>
                 <p
@@ -596,33 +658,38 @@ onMounted(() => {
                     class="mt-4 rounded-xl px-4 py-2 text-sm"
                     :class="
                         googleStatusType === 'success'
-                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border border-blue-200 bg-blue-50 text-blue-700'
+                            ? 'border border-success/30 bg-success-soft text-success'
+                            : 'border border-primary/30 bg-primary-soft text-primary-soft-foreground'
                     "
                 >
                     {{ googleStatusMessage }}
                 </p>
             </div>
 
-            <div class="mt-6 rounded-2xl border border-slate-100 p-5">
+            <div class="mt-6 rounded-xl border border-border p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Lembretes automáticos</p>
-                        <p class="text-lg font-semibold text-slate-900">Configure os canais de aviso</p>
-                        <p class="text-sm text-slate-500">
-                            Os lembretes são enviados para sessões com status "Agendado" usando os canais habilitados abaixo.
-                        </p>
+                    <div class="flex items-start gap-3">
+                        <span class="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                            <AppIcon name="bell" :size="20" />
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium text-subtle-foreground">Lembretes automáticos</p>
+                            <p class="text-lg font-semibold text-foreground">Configure os canais de aviso</p>
+                            <p class="text-sm text-muted-foreground">
+                                Os lembretes são enviados para sessões com status "Agendado" usando os canais habilitados abaixo.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 <form class="mt-4 space-y-5" @submit.prevent="submitReminderSettings">
                     <div class="grid gap-4 md:grid-cols-2">
-                        <label class="block text-sm font-medium text-slate-700" for="reminder-days-before">
+                        <label class="field-label" for="reminder-days-before">
                             Dias antes para enviar o lembrete
                             <input
                                 id="reminder-days-before"
                                 v-model.number="reminderSettings.daysBefore"
-                                class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                class="field-input mt-2"
                                 type="number"
                                 min="0"
                                 max="30"
