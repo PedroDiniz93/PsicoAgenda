@@ -363,6 +363,26 @@ class PatientController extends Controller
             'registro_titulo' => $record->title,
             'registro_anotacoes' => $record->notes,
             'registro_data' => $record->recorded_at?->toIso8601String(),
+            'registro_objetivos' => implode(' | ', $record->treatment_objectives ?? []),
+            'registro_tecnicas' => implode(' | ', $record->techniques ?? []),
+            'registro_tarefas' => collect($record->homework_items ?? [])
+                ->map(function ($item) {
+                    if (!is_array($item)) {
+                        return null;
+                    }
+                    $status = match ($item['status'] ?? '') {
+                        'done' => 'Concluída',
+                        'in_progress' => 'Em andamento',
+                        default => 'Pendente',
+                    };
+                    return "{$status}: {$item['description']}";
+                })
+                ->filter()
+                ->implode(' | '),
+            'registro_anexos' => collect($record->attachments ?? [])
+                ->map(fn ($attachment) => is_array($attachment) ? ($attachment['url'] ?? $attachment['name'] ?? '') : '')
+                ->filter()
+                ->implode(' | '),
         ];
     }
 
@@ -389,6 +409,10 @@ class PatientController extends Controller
             'registro_titulo',
             'registro_anotacoes',
             'registro_data',
+            'registro_objetivos',
+            'registro_tecnicas',
+            'registro_tarefas',
+            'registro_anexos',
         ];
     }
 
@@ -571,7 +595,16 @@ class PatientController extends Controller
             'records' => array_merge(
                 ['tipo_registro'],
                 $patientColumns,
-                ['registro_id', 'registro_titulo', 'registro_anotacoes', 'registro_data']
+                [
+                    'registro_id',
+                    'registro_titulo',
+                    'registro_anotacoes',
+                    'registro_data',
+                    'registro_objetivos',
+                    'registro_tecnicas',
+                    'registro_tarefas',
+                    'registro_anexos',
+                ]
             ),
             default => $this->csvHeaders(),
         };

@@ -101,8 +101,8 @@ const calendarConfig = {
     startHour: 7,
     endHour: 22,
     slotMinutes: 30,
-    slotHeight: 50,
-    minAppointmentHeight: 100,
+    slotHeight: 52.5,
+    minAppointmentHeight: 105,
 };
 
 const calendarTotalMinutes = (calendarConfig.endHour - calendarConfig.startHour) * 60;
@@ -283,6 +283,8 @@ const calendarDayAppointments = computed(() => {
             const typeLabel =
                 appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ?? 'Sessão';
 
+            const meetingUrl = appointment.meeting_url ?? appointment.meetingUrl ?? '';
+
             return {
                 appointment,
                 top,
@@ -292,6 +294,7 @@ const calendarDayAppointments = computed(() => {
                 badgeLabel,
                 badgeClass,
                 typeLabel,
+                meetingUrl,
             };
         });
 
@@ -868,9 +871,23 @@ onBeforeUnmount(() => {
                                                     <p class="text-sm font-semibold text-slate-800 group-[.bg-purple-50\\/90]:text-purple-900 truncate">
                                                         {{ item.appointment.patient?.name ?? 'Paciente removido' }}
                                                     </p>
-                                                    <p class="text-[10px] uppercase tracking-wide text-slate-400 group-[.bg-purple-50\\/90]:text-purple-600">
-                                                        {{ item.typeLabel }}
-                                                    </p>
+                                                    <div class="flex items-center justify-between gap-1">
+                                                        <p class="text-[10px] uppercase tracking-wide text-slate-400 group-[.bg-purple-50\\/90]:text-purple-600">
+                                                            {{ item.typeLabel }}
+                                                        </p>
+                                                        <a
+                                                            v-if="item.meetingUrl"
+                                                            :href="item.meetingUrl"
+                                                            class="inline-flex items-center rounded-full border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Abrir link da sessão"
+                                                            @click.stop
+                                                            @keydown.enter.stop
+                                                        >
+                                                            Meet
+                                                        </a>
+                                                    </div>
                                                 </div>
                                                 <span
                                                     class="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"

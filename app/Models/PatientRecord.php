@@ -16,10 +16,18 @@ class PatientRecord extends Model
         'recorded_at',
         'title',
         'notes',
+        'treatment_objectives',
+        'techniques',
+        'homework_items',
+        'attachments',
     ];
 
     protected $casts = [
         'recorded_at' => 'datetime',
+        'treatment_objectives' => 'array',
+        'techniques' => 'array',
+        'homework_items' => 'array',
+        'attachments' => 'array',
     ];
 
     public function patient(): BelongsTo
