@@ -14,14 +14,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      HETZNER_HOST: ${{ secrets.HETZNER_HOST || vars.HETZNER_HOST }}
+      HETZNER_USER: ${{ secrets.HETZNER_USER || vars.HETZNER_USER }}
+      HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY || vars.HETZNER_SSH_KEY }}
 
     steps:
+      - name: Validate deploy configuration
+        run: |
+          test -n "$HETZNER_HOST" || (echo "HETZNER_HOST is missing" && exit 1)
+          test -n "$HETZNER_USER" || (echo "HETZNER_USER is missing" && exit 1)
+          test -n "$HETZNER_SSH_KEY" || (echo "HETZNER_SSH_KEY is missing" && exit 1)
+
       - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
+          host: ${{ env.HETZNER_HOST }}
+          username: ${{ env.HETZNER_USER }}
+          key: ${{ env.HETZNER_SSH_KEY }}
           script_stop: true
           script: |
             /usr/local/bin/deploy-psicoagenda
