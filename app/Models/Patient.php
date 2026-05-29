@@ -17,6 +17,11 @@ class Patient extends Model
         'name',
         'phone',
         'email',
+        'cpf',
+        'birth_date',
+        'emergency_contacts',
+        'minor_guardian_name',
+        'minor_guardian_phone',
         'status',
         'notes',
         'session_fee_type',
@@ -25,6 +30,8 @@ class Patient extends Model
 
     protected $casts = [
         'status' => 'string',
+        'birth_date' => 'date:Y-m-d',
+        'emergency_contacts' => 'array',
         'session_fee_value' => 'decimal:2',
     ];
 

@@ -52,6 +52,12 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 
 const formatCurrency = (value) => currencyFormatter.format(Number(value ?? 0));
 
+const formatDate = (value) => {
+    if (!value) return '';
+
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
+};
+
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -63,6 +69,11 @@ const formErrors = reactive({
     name: '',
     email: '',
     phone: '',
+    cpf: '',
+    birth_date: '',
+    emergency_contacts: '',
+    minor_guardian_name: '',
+    minor_guardian_phone: '',
     status: '',
     notes: '',
     session_fee_type: '',
@@ -73,6 +84,11 @@ const form = reactive({
     name: '',
     email: '',
     phone: '',
+    cpf: '',
+    birthDate: '',
+    emergencyContacts: [],
+    minorGuardianName: '',
+    minorGuardianPhone: '',
     status: 'active',
     notes: '',
     sessionFeeType: 'session',
@@ -162,6 +178,11 @@ const openEditForm = (patient) => {
     form.name = patient.name ?? '';
     form.email = patient.email ?? '';
     form.phone = patient.phone ?? '';
+    form.cpf = patient.cpf ?? '';
+    form.birthDate = patient.birth_date ?? '';
+    form.emergencyContacts = normalizeEmergencyContacts(patient.emergency_contacts);
+    form.minorGuardianName = patient.minor_guardian_name ?? '';
+    form.minorGuardianPhone = patient.minor_guardian_phone ?? '';
     form.status = patient.status ?? 'active';
     form.notes = patient.notes ?? '';
     form.sessionFeeType = patient.session_fee_type ?? 'session';
@@ -180,6 +201,11 @@ const resetForm = () => {
     form.name = '';
     form.email = '';
     form.phone = '';
+    form.cpf = '';
+    form.birthDate = '';
+    form.emergencyContacts = [];
+    form.minorGuardianName = '';
+    form.minorGuardianPhone = '';
     form.status = 'active';
     form.notes = '';
     form.sessionFeeType = 'session';
@@ -194,10 +220,51 @@ const clearFormErrors = () => {
     });
 };
 
+const normalizeEmergencyContacts = (contacts) => {
+    if (!Array.isArray(contacts)) return [];
+
+    return contacts
+        .slice(0, 3)
+        .map((contact) => ({
+            name: contact?.name ?? '',
+            phone: contact?.phone ?? '',
+            relationship: contact?.relationship ?? '',
+        }));
+};
+
+const isMinorBirthDate = (birthDate) => {
+    if (!birthDate) return false;
+
+    const parsed = new Date(`${birthDate}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return false;
+
+    const today = new Date();
+    let age = today.getFullYear() - parsed.getFullYear();
+    const monthDiff = today.getMonth() - parsed.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsed.getDate())) {
+        age -= 1;
+    }
+
+    return age < 18;
+};
+
 const sanitizePayload = () => ({
     name: form.name.trim(),
     email: form.email.trim() || null,
     phone: form.phone.trim() || null,
+    cpf: form.cpf.trim() || null,
+    birth_date: form.birthDate || null,
+    emergency_contacts: form.emergencyContacts
+        .map((contact) => ({
+            name: contact.name?.trim() ?? '',
+            phone: contact.phone?.trim() ?? '',
+            relationship: contact.relationship?.trim() ?? '',
+        }))
+        .filter((contact) => contact.name || contact.phone || contact.relationship)
+        .slice(0, 3),
+    minor_guardian_name: isMinorBirthDate(form.birthDate) ? form.minorGuardianName.trim() || null : null,
+    minor_guardian_phone: isMinorBirthDate(form.birthDate) ? form.minorGuardianPhone.trim() || null : null,
     status: form.status,
     notes: form.notes.trim() ? form.notes.trim() : null,
     session_fee_type: form.sessionFeeType || null,
@@ -232,6 +299,8 @@ const submitForm = async () => {
             Object.entries(errors).forEach(([field, messages]) => {
                 if (formErrors[field] !== undefined) {
                     formErrors[field] = messages[0];
+                } else if (field.startsWith('emergency_contacts.')) {
+                    formErrors.emergency_contacts = messages[0];
                 }
             });
             formError.value = 'Corrija os campos destacados e tente novamente.';
@@ -271,6 +340,7 @@ onMounted(() => {
                 :status-badges="statusBadges"
                 :session-fee-label="sessionFeeLabel"
                 :format-currency="formatCurrency"
+                :format-date="formatDate"
                 @retry="fetchPatients(pagination.currentPage)"
                 @edit="openEditForm"
                 @previous="goToPrevious"

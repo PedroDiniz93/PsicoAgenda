@@ -145,6 +145,16 @@ const formatDateFilter = (value) => {
     }
 };
 
+const formatBirthDate = (value) => {
+    if (!value) return '';
+
+    try {
+        return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
+    } catch (_) {
+        return value;
+    }
+};
+
 const formatRecordDate = (value) => {
     if (!value) return 'Sem data';
     try {
@@ -542,6 +552,28 @@ onMounted(() => {
                             <p class="text-xs font-semibold uppercase text-slate-500">Contato</p>
                             <p class="mt-2 text-slate-900">{{ patient.email ?? 'E-mail não informado' }}</p>
                             <p class="mt-1 text-slate-500">{{ patient.phone ?? 'Telefone não informado' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase text-slate-500">Identificação</p>
+                            <p class="mt-2 text-slate-900">{{ patient.cpf ?? 'CPF não informado' }}</p>
+                            <p class="mt-1 text-slate-500">
+                                {{ patient.birth_date ? formatBirthDate(patient.birth_date) : 'Data de nascimento não informada' }}
+                            </p>
+                        </div>
+                        <div v-if="patient.emergency_contacts?.length">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Emergência</p>
+                            <div class="mt-2 space-y-2">
+                                <p v-for="(contact, index) in patient.emergency_contacts" :key="index" class="leading-5 text-slate-600">
+                                    <span class="font-semibold text-slate-800">{{ contact.name }}</span>
+                                    <span v-if="contact.phone"> · {{ contact.phone }}</span>
+                                    <span v-if="contact.relationship"> · {{ contact.relationship }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div v-if="patient.minor_guardian_name || patient.minor_guardian_phone">
+                            <p class="text-xs font-semibold uppercase text-slate-500">Responsável</p>
+                            <p class="mt-2 text-slate-900">{{ patient.minor_guardian_name ?? 'Nome não informado' }}</p>
+                            <p class="mt-1 text-slate-500">{{ patient.minor_guardian_phone ?? 'Telefone não informado' }}</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase text-slate-500">Observações do cadastro</p>

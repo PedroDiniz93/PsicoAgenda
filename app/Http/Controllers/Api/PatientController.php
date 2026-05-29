@@ -62,7 +62,8 @@ class PatientController extends Controller
             $query->where(function ($w) use ($q) {
                 $w->where('name', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%")
-                    ->orWhere('phone', 'like', "%{$q}%");
+                    ->orWhere('phone', 'like', "%{$q}%")
+                    ->orWhere('cpf', 'like', "%{$q}%");
             });
         }
 
@@ -299,6 +300,11 @@ class PatientController extends Controller
             'paciente_nome' => $patient->name,
             'paciente_email' => $patient->email,
             'paciente_telefone' => $patient->phone,
+            'paciente_cpf' => $patient->cpf,
+            'paciente_data_nascimento' => $patient->birth_date?->format('Y-m-d'),
+            'paciente_contatos_emergencia' => $this->formatEmergencyContacts($patient->emergency_contacts ?? []),
+            'responsavel_menor_nome' => $patient->minor_guardian_name,
+            'responsavel_menor_telefone' => $patient->minor_guardian_phone,
             'paciente_status' => $this->translatePatientStatus($patient->status),
             'paciente_observacoes' => $patient->notes,
             'plano_tipo' => $this->translateSessionFeeType($patient->session_fee_type),
@@ -393,6 +399,11 @@ class PatientController extends Controller
             'paciente_nome',
             'paciente_email',
             'paciente_telefone',
+            'paciente_cpf',
+            'paciente_data_nascimento',
+            'paciente_contatos_emergencia',
+            'responsavel_menor_nome',
+            'responsavel_menor_telefone',
             'paciente_status',
             'paciente_observacoes',
             'plano_tipo',
@@ -414,6 +425,26 @@ class PatientController extends Controller
             'registro_tarefas',
             'registro_anexos',
         ];
+    }
+
+    private function formatEmergencyContacts(array $contacts): string
+    {
+        return collect($contacts)
+            ->map(function ($contact) {
+                if (!is_array($contact)) {
+                    return null;
+                }
+
+                $parts = array_filter([
+                    $contact['name'] ?? null,
+                    $contact['phone'] ?? null,
+                    $contact['relationship'] ?? null,
+                ]);
+
+                return empty($parts) ? null : implode(' - ', $parts);
+            })
+            ->filter()
+            ->implode(' | ');
     }
 
     private function translatePatientStatus(?string $status): string
@@ -570,6 +601,11 @@ class PatientController extends Controller
             'paciente_nome',
             'paciente_email',
             'paciente_telefone',
+            'paciente_cpf',
+            'paciente_data_nascimento',
+            'paciente_contatos_emergencia',
+            'responsavel_menor_nome',
+            'responsavel_menor_telefone',
             'paciente_status',
             'paciente_observacoes',
             'plano_tipo',

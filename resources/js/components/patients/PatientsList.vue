@@ -38,6 +38,10 @@ defineProps({
         type: Function,
         required: true,
     },
+    formatDate: {
+        type: Function,
+        required: true,
+    },
 });
 
 defineEmits(['retry', 'edit', 'previous', 'next']);
@@ -94,10 +98,17 @@ defineEmits(['retry', 'edit', 'previous', 'next']);
                             <td class="px-5 py-4">
                                 <p class="font-semibold text-slate-950">{{ patient.name }}</p>
                                 <p v-if="patient.id" class="mt-1 text-xs text-slate-500">#{{ patient.id }}</p>
+                                <p v-if="patient.cpf" class="mt-1 text-xs text-slate-500">CPF {{ patient.cpf }}</p>
+                                <p v-if="patient.birth_date" class="mt-1 text-xs text-slate-500">
+                                    Nasc. {{ formatDate(patient.birth_date) }}
+                                </p>
                             </td>
                             <td class="px-5 py-4">
                                 <p v-if="patient.email" class="text-sm text-slate-700">{{ patient.email }}</p>
                                 <p v-if="patient.phone" class="mt-1 text-sm text-slate-500">{{ patient.phone }}</p>
+                                <p v-if="patient.emergency_contacts?.length" class="mt-1 text-xs text-slate-500">
+                                    Emergência: {{ patient.emergency_contacts[0].name }} · {{ patient.emergency_contacts[0].phone }}
+                                </p>
                                 <p v-if="!patient.email && !patient.phone" class="text-sm text-slate-400">Sem contato</p>
                             </td>
                             <td class="px-5 py-4">
@@ -148,12 +159,17 @@ defineEmits(['retry', 'edit', 'previous', 'next']);
                         <div class="min-w-0">
                             <p class="truncate font-semibold text-slate-950">{{ patient.name }}</p>
                             <p class="mt-1 text-xs text-slate-500">#{{ patient.id }}</p>
+                            <p v-if="patient.cpf" class="mt-1 text-xs text-slate-500">CPF {{ patient.cpf }}</p>
+                            <p v-if="patient.birth_date" class="mt-1 text-xs text-slate-500">Nasc. {{ formatDate(patient.birth_date) }}</p>
                         </div>
                     </div>
 
                     <div class="mt-4 grid gap-3 text-sm text-slate-600">
                         <p>{{ patient.email || 'Sem e-mail' }}</p>
                         <p>{{ patient.phone || 'Sem telefone' }}</p>
+                        <p v-if="patient.emergency_contacts?.length">
+                            Emergência: {{ patient.emergency_contacts[0].name }} · {{ patient.emergency_contacts[0].phone }}
+                        </p>
                         <p>
                             <span class="font-semibold text-slate-800">{{ sessionFeeLabel(patient.session_fee_type) }}</span>
                             <span v-if="patient.session_fee_value"> · {{ formatCurrency(patient.session_fee_value) }}</span>
