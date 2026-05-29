@@ -22,7 +22,7 @@ defineEmits<{
                     <span
                         class="inline-flex h-5 items-center rounded-full border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold uppercase leading-none tracking-normal text-amber-700"
                     >
-                         Beta
+                         Beta 2
                     </span>
                 </div>
                 <p class="mt-1 text-sm text-slate-500">{{ userEmail }}</p>
