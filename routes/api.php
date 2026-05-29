@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminPsychologistController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\PsychologistController;
@@ -22,6 +23,11 @@ Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify']);
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'receive']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/psychologists', [AdminPsychologistController::class, 'index']);
+    Route::post('/admin/psychologists', [AdminPsychologistController::class, 'store']);
+    Route::put('/admin/psychologists/{psychologist}', [AdminPsychologistController::class, 'update'])
+        ->whereNumber('psychologist');
+
     Route::get('/psychologist/profile', [PsychologistController::class, 'show']);
     Route::put('/psychologist/profile', [PsychologistController::class, 'update']);
     Route::put('/psychologist/settings', [PsychologistController::class, 'updateSettings']);

@@ -10,6 +10,7 @@ import HomeSectionTabs from '../components/home/HomeSectionTabs.vue';
 import HomeOverviewPanel from '../components/home/HomeOverviewPanel.vue';
 import HomeProfilePanel from '../components/home/HomeProfilePanel.vue';
 import HomeSettingsPanel from '../components/home/HomeSettingsPanel.vue';
+import HomeAdminPanel from '../components/home/HomeAdminPanel.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -19,14 +20,16 @@ const defaultTimezone = 'America/Sao_Paulo';
 
 const authUser = computed(() => auth.user ?? {});
 const authPsychologist = computed(() => authUser.value.psychologist ?? {});
+const isAdmin = computed(() => authUser.value.role === 'admin');
 const userName = computed(() => authPsychologist.value.name ?? authUser.value.name ?? 'Psicólogo(a)');
 const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.email ?? '');
 
-const tabs = [
+const tabs = computed(() => [
     { id: 'overview', label: 'Visão geral' },
     { id: 'profile', label: 'Perfil' },
     { id: 'settings', label: 'Configurações' },
-];
+    ...(isAdmin.value ? [{ id: 'admin', label: 'Admin' }] : []),
+]);
 
 const activeTab = ref('overview');
 const profileForm = reactive({
@@ -79,6 +82,33 @@ const reminderSettings = reactive({
 const reminderMessage = ref('');
 const reminderMessageType = ref('success');
 const reminderSaving = ref(false);
+
+const adminPsychologists = ref<any[]>([]);
+const adminLoading = ref(false);
+const adminSaving = ref(false);
+const editingPsychologistId = ref<number | null>(null);
+const adminMessage = ref('');
+const adminMessageType = ref('success');
+const adminForm = reactive({
+    name: '',
+    userEmail: '',
+    password: '',
+    role: 'psychologist',
+    email: '',
+    phone: '',
+    timezone: defaultTimezone,
+    sessionDuration: 50,
+    allowOnline: true,
+    allowInPerson: true,
+});
+const adminErrors = reactive({
+    name: '',
+    userEmail: '',
+    password: '',
+    email: '',
+    timezone: '',
+    sessionDuration: '',
+});
 
 const {
     appointmentReport,
@@ -352,6 +382,113 @@ const submitReminderSettings = async () => {
     }
 };
 
+const resetAdminForm = () => {
+    editingPsychologistId.value = null;
+    adminForm.name = '';
+    adminForm.userEmail = '';
+    adminForm.password = '';
+    adminForm.role = 'psychologist';
+    adminForm.email = '';
+    adminForm.phone = '';
+    adminForm.timezone = defaultTimezone;
+    adminForm.sessionDuration = 50;
+    adminForm.allowOnline = true;
+    adminForm.allowInPerson = true;
+    Object.keys(adminErrors).forEach((key) => {
+        adminErrors[key as keyof typeof adminErrors] = '';
+    });
+};
+
+const setAdminForm = (psychologist: any) => {
+    editingPsychologistId.value = psychologist.id;
+    adminForm.name = psychologist.name ?? '';
+    adminForm.userEmail = psychologist.user?.email ?? psychologist.email ?? '';
+    adminForm.password = '';
+    adminForm.role = psychologist.user?.role ?? 'psychologist';
+    adminForm.email = psychologist.email ?? '';
+    adminForm.phone = psychologist.phone ?? '';
+    adminForm.timezone = psychologist.timezone ?? defaultTimezone;
+    adminForm.sessionDuration = psychologist.session_duration ?? 50;
+    adminForm.allowOnline = psychologist.allow_online ?? true;
+    adminForm.allowInPerson = psychologist.allow_in_person ?? true;
+    adminMessage.value = '';
+    Object.keys(adminErrors).forEach((key) => {
+        adminErrors[key as keyof typeof adminErrors] = '';
+    });
+};
+
+const sanitizeAdminPayload = () => ({
+    name: adminForm.name.trim(),
+    user_email: adminForm.userEmail.trim(),
+    password: adminForm.password,
+    role: adminForm.role,
+    email: adminForm.email.trim() || null,
+    phone: adminForm.phone.trim() || null,
+    timezone: adminForm.timezone,
+    session_duration: Number(adminForm.sessionDuration),
+    allow_online: Boolean(adminForm.allowOnline),
+    allow_in_person: Boolean(adminForm.allowInPerson),
+});
+
+const fetchAdminPsychologists = async () => {
+    if (!isAdmin.value) return;
+
+    adminLoading.value = true;
+
+    try {
+        const { data } = await axios.get('/api/admin/psychologists');
+        adminPsychologists.value = data?.psychologists ?? [];
+    } catch (error: any) {
+        adminMessageType.value = 'error';
+        adminMessage.value = error?.response?.data?.message ?? 'Não foi possível carregar os psicólogos.';
+    } finally {
+        adminLoading.value = false;
+    }
+};
+
+const submitAdminPsychologist = async () => {
+    Object.keys(adminErrors).forEach((key) => {
+        adminErrors[key as keyof typeof adminErrors] = '';
+    });
+    adminMessage.value = '';
+    adminSaving.value = true;
+
+    try {
+        const payload = sanitizeAdminPayload();
+        if (editingPsychologistId.value) {
+            await axios.put(`/api/admin/psychologists/${editingPsychologistId.value}`, payload);
+            adminMessage.value = 'Perfil atualizado com sucesso.';
+        } else {
+            await axios.post('/api/admin/psychologists', payload);
+            adminMessage.value = 'Psicólogo criado com sucesso.';
+        }
+
+        adminMessageType.value = 'success';
+        resetAdminForm();
+        await fetchAdminPsychologists();
+    } catch (error: any) {
+        if (error?.response?.status === 422) {
+            const errors = error.response.data.errors ?? {};
+            Object.entries(errors).forEach(([field, messages]: [string, any]) => {
+                const fieldMap: Record<string, keyof typeof adminErrors> = {
+                    user_email: 'userEmail',
+                    session_duration: 'sessionDuration',
+                };
+                const key = fieldMap[field] ?? field;
+                if (key in adminErrors) {
+                    adminErrors[key as keyof typeof adminErrors] = messages[0];
+                }
+            });
+            adminMessage.value = 'Corrija os campos destacados e tente novamente.';
+        } else {
+            adminMessage.value = error?.response?.data?.message ?? 'Não foi possível salvar o perfil.';
+        }
+        adminMessageType.value = 'error';
+    } finally {
+        adminSaving.value = false;
+    }
+};
+
 hydrateFromAuth();
 
 const clearGoogleQueryParam = () => {
@@ -397,6 +534,7 @@ onMounted(() => {
     fetchProfile();
     handleGoogleCallbackStatus();
     fetchAppointmentReport();
+    fetchAdminPsychologists();
 });
 </script>
 
@@ -435,7 +573,7 @@ onMounted(() => {
             />
 
             <HomeSettingsPanel
-                v-else
+                v-else-if="activeTab === 'settings'"
                 :integration-items="integrationItems"
                 :google-connected="googleConnected"
                 :google-processing="googleProcessing"
@@ -449,6 +587,24 @@ onMounted(() => {
                 @connect-google="connectGoogle"
                 @disconnect-google="disconnectGoogle"
                 @submit-reminders="submitReminderSettings"
+            />
+
+            <HomeAdminPanel
+                v-else-if="activeTab === 'admin' && isAdmin"
+                :admin-form="adminForm"
+                :admin-errors="adminErrors"
+                :admin-message="adminMessage"
+                :admin-message-type="adminMessageType"
+                :admin-loading="adminLoading"
+                :admin-saving="adminSaving"
+                :admin-psychologists="adminPsychologists"
+                :editing-psychologist-id="editingPsychologistId"
+                :timezone-options="timezoneOptions"
+                :session-duration-options="sessionDurationOptions"
+                @submit="submitAdminPsychologist"
+                @edit="setAdminForm"
+                @reset="resetAdminForm"
+                @refresh="fetchAdminPsychologists"
             />
         </main>
     </div>

@@ -21,6 +21,8 @@ class DevSeeder extends Seeder
             [
                 'name' => 'Psicólogo Admin',
                 'password' => Hash::make('12345678'),
+                'role' => 'admin',
+                'email_verified_at' => now(),
             ]
         );
 
