@@ -36,11 +36,13 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
 
 const fetchAlerts = () => {
     if (!authStore.isAuthenticated) return;
+    if (authStore.requiresEmailVerification) return;
     alertsStore.fetchInactivePatients();
 };
 
 const togglePanel = () => {
     if (!authStore.isAuthenticated) return;
+    if (authStore.requiresEmailVerification) return;
     isPanelOpen.value = !isPanelOpen.value;
 };
 
@@ -89,11 +91,23 @@ onBeforeUnmount(() => {
 watch(
     () => authStore.isAuthenticated,
     (isAuthenticated) => {
-        if (isAuthenticated) {
+        if (isAuthenticated && !authStore.requiresEmailVerification) {
             fetchAlerts();
         } else {
             alertsStore.reset();
             closePanel();
+        }
+    }
+);
+
+watch(
+    () => authStore.requiresEmailVerification,
+    (requiresEmailVerification) => {
+        if (requiresEmailVerification) {
+            alertsStore.reset();
+            closePanel();
+        } else if (authStore.isAuthenticated) {
+            fetchAlerts();
         }
     }
 );
@@ -148,7 +162,7 @@ const formatLastActivityLabel = (patient) => {
 </script>
 
 <template>
-    <div v-if="authStore.isAuthenticated" ref="containerRef" class="fixed bottom-6 right-6 z-50">
+    <div v-if="authStore.isAuthenticated && !authStore.requiresEmailVerification" ref="containerRef" class="fixed bottom-6 right-6 z-50">
         <button
             class="relative inline-flex items-center justify-center rounded-full bg-white p-3 text-slate-600 shadow-lg shadow-slate-900/5 transition hover:text-blue-600"
             type="button"

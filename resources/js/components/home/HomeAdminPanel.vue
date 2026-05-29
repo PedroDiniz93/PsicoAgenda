@@ -6,6 +6,7 @@ defineProps<{
     adminMessageType: string;
     adminLoading: boolean;
     adminSaving: boolean;
+    adminResendingId: number | null;
     adminPsychologists: Array<any>;
     editingPsychologistId: number | null;
     timezoneOptions: Array<{ label: string; value: string }>;
@@ -15,6 +16,7 @@ defineProps<{
 defineEmits<{
     submit: [];
     edit: [psychologist: any];
+    resendEmailVerification: [psychologist: any];
     reset: [];
     refresh: [];
 }>();
@@ -206,17 +208,34 @@ defineEmits<{
                             >
                                 {{ psychologist.user?.role === 'admin' ? 'Admin' : 'Psicólogo' }}
                             </span>
+                            <span
+                                class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                :class="psychologist.user?.email_verified_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+                            >
+                                {{ psychologist.user?.email_verified_at ? 'E-mail validado' : 'Validação pendente' }}
+                            </span>
                         </div>
                         <p class="mt-1 text-sm text-slate-500">{{ psychologist.user?.email }}</p>
                         <p class="text-xs text-slate-400">{{ psychologist.timezone }} · {{ psychologist.session_duration }} min</p>
                     </div>
-                    <button
-                        class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-                        type="button"
-                        @click="$emit('edit', psychologist)"
-                    >
-                        Editar
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-if="!psychologist.user?.email_verified_at"
+                            class="inline-flex h-9 items-center justify-center rounded-lg border border-amber-200 px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            type="button"
+                            :disabled="adminResendingId === psychologist.id"
+                            @click="$emit('resendEmailVerification', psychologist)"
+                        >
+                            {{ adminResendingId === psychologist.id ? 'Reenviando...' : 'Reenviar validação' }}
+                        </button>
+                        <button
+                            class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                            type="button"
+                            @click="$emit('edit', psychologist)"
+                        >
+                            Editar
+                        </button>
+                    </div>
                 </article>
             </div>
         </section>

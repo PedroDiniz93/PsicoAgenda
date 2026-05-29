@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const LoginView = () => import('../views/LoginView.vue');
+const EmailVerificationView = () => import('../views/EmailVerificationView.vue');
 const HomeView = () => import('../views/HomeView.vue');
 const ReportsView = () => import('../views/ReportsView.vue');
 const PatientsView = () => import('../views/PatientsView.vue');
@@ -18,6 +19,12 @@ const router = createRouter({
             name: 'login',
             component: LoginView,
             meta: { public: true, guest: true, title: 'Entrar' },
+        },
+        {
+            path: '/email-verification',
+            name: 'email-verification',
+            component: EmailVerificationView,
+            meta: { requiresAuth: true, title: 'Validação de e-mail' },
         },
         {
             path: '/',

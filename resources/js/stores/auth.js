@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', {
     state: () => ({
         token: null,
         user: null,
+        requiresEmailVerification: false,
         loading: false,
         error: null,
         initialized: false,
@@ -30,6 +31,7 @@ export const useAuthStore = defineStore('auth', {
             if (user) {
                 try {
                     this.user = JSON.parse(user);
+                    this.requiresEmailVerification = this.user?.role === 'psychologist' && !this.user?.email_verified_at;
                 } catch (_) {
                     localStorage.removeItem(USER_KEY);
                 }
@@ -44,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const { data } = await axios.post('/api/auth/login', credentials);
                 this.setSession(data.token, data.user);
+                this.requiresEmailVerification = Boolean(data.requires_email_verification);
             } catch (error) {
                 const message = this.extractErrorMessage(error);
                 this.error = message;
@@ -61,16 +64,55 @@ export const useAuthStore = defineStore('auth', {
 
             this.clearSession();
         },
+        async verifyEmail(code) {
+            this.loading = true;
+            this.error = null;
+
+            try {
+                const { data } = await axios.post('/api/auth/email-verification/verify', { code });
+                this.setUser(data.user);
+                this.requiresEmailVerification = false;
+                return data.message;
+            } catch (error) {
+                const message = this.extractErrorMessage(error);
+                this.error = message;
+                throw new Error(message);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async resendEmailVerification() {
+            this.loading = true;
+            this.error = null;
+
+            try {
+                const { data } = await axios.post('/api/auth/email-verification/resend');
+                this.setUser(data.user);
+                this.requiresEmailVerification = this.user?.role === 'psychologist' && !this.user?.email_verified_at;
+                return data.message;
+            } catch (error) {
+                const message = this.extractErrorMessage(error);
+                this.error = message;
+                throw new Error(message);
+            } finally {
+                this.loading = false;
+            }
+        },
         setSession(token, user) {
             this.token = token;
-            this.user = user;
             axios.defaults.headers.common.Authorization = `Bearer ${token}`;
             localStorage.setItem(TOKEN_KEY, token);
+            this.setUser(user);
+        },
+        setUser(user) {
+            this.user = user;
+            this.requiresEmailVerification = user?.role === 'psychologist' && !user?.email_verified_at;
             localStorage.setItem(USER_KEY, JSON.stringify(user));
         },
         clearSession() {
             this.token = null;
             this.user = null;
+            this.requiresEmailVerification = false;
             delete axios.defaults.headers.common.Authorization;
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(USER_KEY);

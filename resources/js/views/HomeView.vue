@@ -86,6 +86,7 @@ const reminderSaving = ref(false);
 const adminPsychologists = ref<any[]>([]);
 const adminLoading = ref(false);
 const adminSaving = ref(false);
+const adminResendingId = ref<number | null>(null);
 const editingPsychologistId = ref<number | null>(null);
 const adminMessage = ref('');
 const adminMessageType = ref('success');
@@ -489,6 +490,33 @@ const submitAdminPsychologist = async () => {
     }
 };
 
+const resendAdminEmailVerification = async (psychologist: any) => {
+    if (!psychologist?.id) return;
+
+    adminMessage.value = '';
+    adminResendingId.value = psychologist.id;
+
+    try {
+        const { data } = await axios.post(`/api/admin/psychologists/${psychologist.id}/email-verification`);
+        adminMessageType.value = 'success';
+        adminMessage.value = data?.message ?? 'E-mail de validação reenviado.';
+
+        if (data?.psychologist) {
+            const index = adminPsychologists.value.findIndex((item) => item.id === data.psychologist.id);
+            if (index >= 0) {
+                adminPsychologists.value[index] = data.psychologist;
+            }
+        } else {
+            await fetchAdminPsychologists();
+        }
+    } catch (error: any) {
+        adminMessageType.value = 'error';
+        adminMessage.value = error?.response?.data?.message ?? 'Não foi possível reenviar o e-mail de validação.';
+    } finally {
+        adminResendingId.value = null;
+    }
+};
+
 hydrateFromAuth();
 
 const clearGoogleQueryParam = () => {
@@ -597,12 +625,14 @@ onMounted(() => {
                 :admin-message-type="adminMessageType"
                 :admin-loading="adminLoading"
                 :admin-saving="adminSaving"
+                :admin-resending-id="adminResendingId"
                 :admin-psychologists="adminPsychologists"
                 :editing-psychologist-id="editingPsychologistId"
                 :timezone-options="timezoneOptions"
                 :session-duration-options="sessionDurationOptions"
                 @submit="submitAdminPsychologist"
                 @edit="setAdminForm"
+                @resend-email-verification="resendAdminEmailVerification"
                 @reset="resetAdminForm"
                 @refresh="fetchAdminPsychologists"
             />

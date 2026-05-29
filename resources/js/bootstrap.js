@@ -13,6 +13,7 @@ if (token) {
 const UNAUTHORIZED_STATUSES = [401, 419];
 const AUTH_IGNORED_ENDPOINTS = ['/api/auth/login', '/api/auth/logout'];
 let handlingUnauthorizedResponse = false;
+let handlingEmailVerificationResponse = false;
 
 const shouldIgnoreUnauthorized = (requestUrl = '') =>
     AUTH_IGNORED_ENDPOINTS.some((endpoint) => requestUrl.includes(endpoint));
@@ -29,6 +30,13 @@ const redirectToLoginWithExpiredSession = () => {
     window.location.assign(loginUrl.toString());
 };
 
+const redirectToEmailVerification = () => {
+    if (handlingEmailVerificationResponse) return;
+    handlingEmailVerificationResponse = true;
+
+    window.location.assign(new URL('/email-verification', window.location.origin).toString());
+};
+
 axios.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -37,6 +45,10 @@ axios.interceptors.response.use(
 
         if (UNAUTHORIZED_STATUSES.includes(status) && !shouldIgnoreUnauthorized(requestUrl)) {
             redirectToLoginWithExpiredSession();
+        }
+
+        if (status === 403 && error?.response?.data?.requires_email_verification) {
+            redirectToEmailVerification();
         }
 
         return Promise.reject(error);

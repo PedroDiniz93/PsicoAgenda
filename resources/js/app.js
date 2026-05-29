@@ -19,6 +19,14 @@ router.beforeEach((to) => {
         return { name: 'login', query: { redirect: to.fullPath } };
     }
 
+    if (auth.isAuthenticated && auth.requiresEmailVerification && to.name !== 'email-verification') {
+        return { name: 'email-verification' };
+    }
+
+    if (auth.isAuthenticated && !auth.requiresEmailVerification && to.name === 'email-verification') {
+        return { name: 'home' };
+    }
+
     if (to.meta?.guest && auth.isAuthenticated) {
         return { name: 'home' };
     }
