@@ -77,6 +77,8 @@ let googleStatusTimeoutId: any;
 const reminderSettings = reactive({
     daysBefore: 1,
     whatsappEnabled: false,
+    whatsappSenderPhoneId: '',
+    whatsappSenderDisplayNumber: '',
     emailEnabled: false,
 });
 const reminderMessage = ref('');
@@ -218,8 +220,12 @@ const integrationItems = computed(() => [
     },
     {
         label: 'WhatsApp',
-        status: reminderSettings.whatsappEnabled ? 'Ativo' : 'Inativo',
-        class: reminderSettings.whatsappEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600',
+        status: reminderSettings.whatsappEnabled
+            ? (reminderSettings.whatsappSenderPhoneId ? 'Ativo' : 'Configurar número')
+            : 'Inativo',
+        class: reminderSettings.whatsappEnabled
+            ? (reminderSettings.whatsappSenderPhoneId ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')
+            : 'bg-slate-100 text-slate-600',
     },
     {
         label: 'E-mail',
@@ -253,6 +259,8 @@ const setReminderSettings = (psychologist: any = {}) => {
     const days = Number(psychologist?.whatsapp_confirm_days_before ?? 1);
     reminderSettings.daysBefore = Number.isNaN(days) ? 1 : days;
     reminderSettings.whatsappEnabled = Boolean(psychologist?.whatsapp_confirm_enabled);
+    reminderSettings.whatsappSenderPhoneId = psychologist?.whatsapp_sender_phone_id ?? '';
+    reminderSettings.whatsappSenderDisplayNumber = psychologist?.whatsapp_sender_display_number ?? '';
     reminderSettings.emailEnabled = Boolean(psychologist?.email_confirm_enabled);
 };
 
@@ -374,6 +382,8 @@ const submitReminderSettings = async () => {
         const { data } = await axios.put('/api/psychologist/settings', {
             whatsapp_confirm_enabled: Boolean(reminderSettings.whatsappEnabled),
             whatsapp_confirm_days_before: sanitizedDays,
+            whatsapp_sender_phone_id: reminderSettings.whatsappSenderPhoneId.trim() || null,
+            whatsapp_sender_display_number: reminderSettings.whatsappSenderDisplayNumber.trim() || null,
             email_confirm_enabled: Boolean(reminderSettings.emailEnabled),
         });
         const psychologist = data?.psychologist ?? data ?? {};

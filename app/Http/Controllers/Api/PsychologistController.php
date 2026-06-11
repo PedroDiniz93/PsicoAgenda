@@ -61,6 +61,14 @@ class PsychologistController extends Controller
             $psychologist->whatsapp_confirm_days_before = (int) $data['whatsapp_confirm_days_before'];
         }
 
+        if (array_key_exists('whatsapp_sender_phone_id', $data)) {
+            $psychologist->whatsapp_sender_phone_id = $this->nullableTrim($data['whatsapp_sender_phone_id']);
+        }
+
+        if (array_key_exists('whatsapp_sender_display_number', $data)) {
+            $psychologist->whatsapp_sender_display_number = $this->nullableTrim($data['whatsapp_sender_display_number']);
+        }
+
         if (array_key_exists('email_confirm_enabled', $data)) {
             $psychologist->email_confirm_enabled = (bool) $data['email_confirm_enabled'];
         }
@@ -70,5 +78,12 @@ class PsychologistController extends Controller
         return response()->json([
             'psychologist' => $psychologist->fresh(),
         ]);
+    }
+
+    private function nullableTrim(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 }

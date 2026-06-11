@@ -29,7 +29,8 @@ Configure o endpoint `POST {{APP_URL}}/api/webhook/whatsapp` no painel do WhatsA
 
 - responde ao desafio (`GET`) para validar o endpoint no Meta;
 - processa mensagens recebidas e, ao detectar respostas de confirmação (ex.: “confirmado”, “sim”), marca o agendamento mais recente daquele paciente como `done`.
-- garanta que `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` e `WHATSAPP_VERIFY_TOKEN` estejam preenchidos no `.env`.
+- garanta que `WHATSAPP_TOKEN` e `WHATSAPP_VERIFY_TOKEN` estejam preenchidos no `.env`.
+- configure em **Configurações > Lembretes automáticos** o `Phone Number ID` do número WhatsApp que cada psicólogo usará para envio. O `WHATSAPP_PHONE_ID` do `.env` fica como fallback para psicólogos sem número próprio configurado.
 
 ## Lembretes por WhatsApp e e-mail
 

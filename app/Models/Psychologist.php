@@ -20,6 +20,8 @@ class Psychologist extends Model
         'google_calendar_token',
         'whatsapp_confirm_enabled',
         'whatsapp_confirm_days_before',
+        'whatsapp_sender_phone_id',
+        'whatsapp_sender_display_number',
         'email_confirm_enabled',
         'sms_confirm_enabled',
         'pix_key_type',

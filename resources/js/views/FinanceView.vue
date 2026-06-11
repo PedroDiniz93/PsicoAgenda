@@ -24,6 +24,41 @@ const formatDate = (value?: string) => {
     }
 };
 
+const toBrazilianDate = (value?: string) => {
+    if (!value) return '';
+
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return value;
+
+    return `${match[3]}/${match[2]}/${match[1]}`;
+};
+
+const toIsoDate = (value?: string) => {
+    if (!value) return '';
+
+    const trimmed = String(value).trim();
+    const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (brMatch) {
+        return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+    }
+
+    return trimmed;
+};
+
+const applyBrazilianDateMask = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 8);
+    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+    chargeForm.paymentDueAt = parts.join('/');
+};
+
+const selectedPaymentDueAtIso = computed({
+    get: () => toIsoDate(chargeForm.paymentDueAt),
+    set: (value: string) => {
+        chargeForm.paymentDueAt = toBrazilianDate(value);
+    },
+});
+
 const formatPercent = (value: number | null | undefined) => {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
         return 'Sem base';
@@ -323,7 +358,7 @@ const openReceivable = (item: any) => {
     actionMessage.value = '';
     copyMessage.value = '';
     chargeForm.price = item.price ?? '';
-    chargeForm.paymentDueAt = item.payment_due_at ?? item.due_at ?? '';
+    chargeForm.paymentDueAt = toBrazilianDate(item.payment_due_at ?? item.due_at ?? '');
     chargeForm.paymentMethod = item.payment_method ?? 'pix';
     chargeForm.paymentLink = item.payment_link ?? item.effective_payment_link ?? '';
     chargeForm.paymentNotes = item.payment_notes ?? '';
@@ -341,7 +376,7 @@ const closeReceivable = () => {
 const paymentPayload = (paid?: boolean) => {
     const payload: any = {
         price: chargeForm.price === '' ? null : Number(chargeForm.price),
-        payment_due_at: chargeForm.paymentDueAt || null,
+        payment_due_at: toIsoDate(chargeForm.paymentDueAt) || null,
         payment_method: chargeForm.paymentMethod || null,
         payment_link: chargeForm.paymentLink || null,
         payment_notes: chargeForm.paymentNotes || null,
@@ -910,12 +945,25 @@ Obrigado(a).</p>
                     </label>
 
                     <label class="space-y-1.5">
-                        <span class="text-sm font-medium text-slate-700">Vencimento</span>
-                        <input
-                            v-model="chargeForm.paymentDueAt"
-                            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
-                            type="date"
-                        />
+                        <span class="text-sm font-medium text-slate-700">Data de vencimento</span>
+                        <div class="flex gap-2">
+                            <input
+                                v-model="chargeForm.paymentDueAt"
+                                class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                                inputmode="numeric"
+                                maxlength="10"
+                                placeholder="dd/mm/aaaa"
+                                type="text"
+                                @input="applyBrazilianDateMask"
+                            />
+                            <input
+                                v-model="selectedPaymentDueAtIso"
+                                aria-label="Selecionar data de vencimento"
+                                class="w-12 rounded-lg border border-slate-200 px-2 py-2 text-sm text-transparent focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                                lang="pt-BR"
+                                type="date"
+                            />
+                        </div>
                     </label>
                     <label class="space-y-1.5 sm:col-span-2">
                         <span class="text-sm font-medium text-slate-700">Observações internas</span>

@@ -36,9 +36,10 @@ class WhatsAppWebhookController extends Controller
             foreach ($changes as $change) {
                 $value = $change['value'] ?? [];
                 $messages = $value['messages'] ?? [];
+                $metadata = $value['metadata'] ?? [];
 
                 foreach ($messages as $message) {
-                    $this->handleMessage($message);
+                    $this->handleMessage($message, $metadata);
                 }
             }
         }
@@ -46,7 +47,7 @@ class WhatsAppWebhookController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function handleMessage(array $message): void
+    private function handleMessage(array $message, array $metadata = []): void
     {
         $body = $message['text']['body'] ?? null;
         $from = $message['from'] ?? null;
@@ -60,17 +61,25 @@ class WhatsAppWebhookController extends Controller
         }
 
         $phone = $this->normalizePhone($from);
+        $senderPhoneId = $metadata['phone_number_id'] ?? null;
 
-        $appointment = Appointment::whereHas('patient', function ($query) use ($phone) {
-            $query->where('phone', 'like', '%' . substr($phone, -8));
-        })
-            ->where('status', 'scheduled')
+        $appointmentQuery = Appointment::query()
+            ->with('psychologist:id,name,whatsapp_sender_phone_id')
+            ->whereHas('patient', function ($query) use ($phone) {
+                $query->where('phone', 'like', '%' . substr($phone, -8));
+            })
+            ->where('status', 'scheduled');
+
+        $this->scopeBySenderPhoneId($appointmentQuery, $senderPhoneId);
+
+        $appointment = $appointmentQuery
             ->orderByDesc('start_at')
             ->first();
 
         if (!$appointment) {
             Log::info('WhatsApp confirmation message received but appointment not found', [
                 'from' => $from,
+                'sender_phone_id' => $senderPhoneId,
                 'message' => $body,
             ]);
 
@@ -84,7 +93,29 @@ class WhatsAppWebhookController extends Controller
 
         Log::info('Appointment confirmed via WhatsApp reply', [
             'appointment_id' => $appointment->id,
+            'psychologist_id' => $appointment->psychologist_id,
+            'sender_phone_id' => $senderPhoneId,
         ]);
+    }
+
+    private function scopeBySenderPhoneId($query, ?string $senderPhoneId): void
+    {
+        $senderPhoneId = trim((string) $senderPhoneId);
+
+        if ($senderPhoneId === '') {
+            return;
+        }
+
+        $defaultPhoneId = trim((string) config('services.whatsapp.phone_id'));
+
+        $query->whereHas('psychologist', function ($query) use ($senderPhoneId, $defaultPhoneId) {
+            $query->where('whatsapp_sender_phone_id', $senderPhoneId);
+
+            if ($defaultPhoneId !== '' && hash_equals($defaultPhoneId, $senderPhoneId)) {
+                $query->orWhereNull('whatsapp_sender_phone_id')
+                    ->orWhere('whatsapp_sender_phone_id', '');
+            }
+        });
     }
 
     private function looksLikeConfirmation(string $body): bool
