@@ -22,6 +22,12 @@ class Psychologist extends Model
         'whatsapp_confirm_days_before',
         'email_confirm_enabled',
         'sms_confirm_enabled',
+        'pix_key_type',
+        'pix_key',
+        'default_payment_link',
+        'receipt_prefix',
+        'payment_terms_days',
+        'charge_message_template',
     ];
 
     protected $casts = [
@@ -31,6 +37,7 @@ class Psychologist extends Model
         'whatsapp_confirm_days_before' => 'integer',
         'email_confirm_enabled' => 'boolean',
         'sms_confirm_enabled' => 'boolean',
+        'payment_terms_days' => 'integer',
     ];
 
     protected $hidden = [

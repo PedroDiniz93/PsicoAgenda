@@ -4,6 +4,7 @@ const LoginView = () => import('../views/LoginView.vue');
 const EmailVerificationView = () => import('../views/EmailVerificationView.vue');
 const HomeView = () => import('../views/HomeView.vue');
 const ReportsView = () => import('../views/ReportsView.vue');
+const FinanceView = () => import('../views/FinanceView.vue');
 const PatientsView = () => import('../views/PatientsView.vue');
 const ScheduleView = () => import('../views/ScheduleView.vue');
 const PatientRecordView = () => import('../views/PatientRecordView.vue');
@@ -61,6 +62,12 @@ const router = createRouter({
             name: 'reports',
             component: ReportsView,
             meta: { requiresAuth: true, title: 'Relatórios' },
+        },
+        {
+            path: '/finance',
+            name: 'finance',
+            component: FinanceView,
+            meta: { requiresAuth: true, title: 'Financeiro' },
         },
     ],
 });

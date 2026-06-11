@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\PatientRecordController;
 use App\Http\Controllers\Api\RecurringAppointmentController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 use App\Http\Middleware\EnsurePsychologistEmailIsVerified;
 
@@ -67,4 +68,11 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::delete('/recurring-appointments/{id}', [RecurringAppointmentController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/reports/appointments', [ReportController::class, 'appointments']);
+
+    Route::get('/finance/dashboard', [FinanceController::class, 'dashboard']);
+    Route::put('/finance/settings', [FinanceController::class, 'updateSettings']);
+    Route::patch('/finance/appointments/{appointment}/payment', [FinanceController::class, 'updatePayment'])
+        ->whereNumber('appointment');
+    Route::post('/finance/appointments/{appointment}/receipt', [FinanceController::class, 'issueReceipt'])
+        ->whereNumber('appointment');
 });

@@ -147,6 +147,15 @@ const quickLinks = computed(() => [
         color: 'warning' as const,
     },
     {
+        id: 'finance',
+        label: 'Financeiro',
+        title: 'Recebimentos',
+        description: 'Cobranças, Pix e recibos',
+        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1m9-5a9 9 0 11-18 0 9 9 0 0118 0z',
+        to: { name: 'finance' },
+        color: 'primary' as const,
+    },
+    {
         id: 'exports',
         label: 'Exportação',
         title: 'Arquivos clínicos',
