@@ -3,11 +3,17 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\Psychologist;
 use App\Models\RecurringAppointment;
 use Illuminate\Support\Carbon;
 
 class RecurringAppointmentService
 {
+    public function __construct(
+        private readonly AppointmentAvailabilityService $availabilityService
+    ) {
+    }
+
     private const WEEKS_AHEAD = 8;
 
     public function generateUpcomingOccurrences(RecurringAppointment $recurrence, ?Carbon $until = null): void
@@ -92,6 +98,11 @@ class RecurringAppointmentService
         $end = $start->copy()->addMinutes($recurrence->session_duration);
 
         if ($this->hasOverlap($recurrence->psychologist_id, $start, $end)) {
+            return;
+        }
+
+        $psychologist = Psychologist::find($recurrence->psychologist_id);
+        if (!$psychologist || $this->availabilityService->firstSchedulingConflict($psychologist, $start, $end) !== null) {
             return;
         }
 

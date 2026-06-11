@@ -15,6 +15,7 @@ class Psychologist extends Model
         'email',
         'timezone',
         'session_duration',
+        'daily_appointment_limit',
         'allow_online',
         'allow_in_person',
         'google_calendar_token',
@@ -39,6 +40,7 @@ class Psychologist extends Model
         'whatsapp_confirm_days_before' => 'integer',
         'email_confirm_enabled' => 'boolean',
         'sms_confirm_enabled' => 'boolean',
+        'daily_appointment_limit' => 'integer',
         'payment_terms_days' => 'integer',
     ];
 
@@ -63,6 +65,16 @@ class Psychologist extends Model
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    public function availabilityRules(): HasMany
+    {
+        return $this->hasMany(PsychologistAvailabilityRule::class);
+    }
+
+    public function scheduleBlocks(): HasMany
+    {
+        return $this->hasMany(PsychologistScheduleBlock::class);
     }
 
     public function patientRecords(): HasMany

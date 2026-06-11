@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminPsychologistController;
 use App\Http\Controllers\Api\PatientController;
@@ -66,6 +67,11 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed'])->whereNumber('id');
     Route::delete('/recurring-appointments/{id}', [RecurringAppointmentController::class, 'destroy'])->whereNumber('id');
+
+    Route::get('/availability', [AvailabilityController::class, 'index']);
+    Route::put('/availability/settings', [AvailabilityController::class, 'updateSettings']);
+    Route::post('/availability/blocks', [AvailabilityController::class, 'storeBlock']);
+    Route::delete('/availability/blocks/{block}', [AvailabilityController::class, 'destroyBlock'])->whereNumber('block');
 
     Route::get('/reports/appointments', [ReportController::class, 'appointments']);
 

@@ -185,6 +185,38 @@ let patientSearchTimeout = null;
 
 const appointmentActionLoading = reactive({ id: null, action: '' });
 
+const weekdayOptions = [
+    { value: 1, label: 'Segunda' },
+    { value: 2, label: 'Terça' },
+    { value: 3, label: 'Quarta' },
+    { value: 4, label: 'Quinta' },
+    { value: 5, label: 'Sexta' },
+    { value: 6, label: 'Sábado' },
+    { value: 0, label: 'Domingo' },
+];
+
+const defaultAvailabilityRules = () => weekdayOptions.map((day) => ({
+    weekday: day.value,
+    enabled: false,
+    startTime: '08:00',
+    endTime: '18:00',
+}));
+
+const availabilityLoading = ref(false);
+const availabilitySaving = ref(false);
+const blockSaving = ref(false);
+const availabilityMessage = ref('');
+const availabilityMessageType = ref('success');
+const availabilityRules = ref(defaultAvailabilityRules());
+const scheduleBlocks = ref([]);
+const dailyAppointmentLimit = ref('');
+const blockForm = reactive({
+    type: 'block',
+    startsAt: '',
+    endsAt: '',
+    reason: '',
+});
+
 const defaultSessionMinutes = computed(() => Number(sessionDuration.value) || 50);
 
 const todayString = computed(() => formatDate(new Date(nowTick.value)));
@@ -304,6 +336,77 @@ const calendarDayAppointments = computed(() => {
     });
 
     return columns;
+});
+
+const timeStringToMinutes = (value) => {
+    const [hours = '0', minutes = '0'] = String(value ?? '').split(':');
+    return Number(hours) * 60 + Number(minutes);
+};
+
+const minutesToCalendarBox = (startMinutes, endMinutes) => {
+    const dayStart = calendarConfig.startHour * 60;
+    const dayEnd = calendarConfig.endHour * 60;
+    const clippedStart = Math.max(dayStart, startMinutes);
+    const clippedEnd = Math.min(dayEnd, endMinutes);
+
+    if (clippedEnd <= clippedStart) {
+        return null;
+    }
+
+    return {
+        top: ((clippedStart - dayStart) / calendarConfig.slotMinutes) * calendarConfig.slotHeight,
+        height: ((clippedEnd - clippedStart) / calendarConfig.slotMinutes) * calendarConfig.slotHeight,
+    };
+};
+
+const calendarDayAvailability = computed(() => {
+    const grouped = Object.fromEntries(weekDays.value.map((day) => [day.date, []]));
+
+    weekDays.value.forEach((day) => {
+        const weekday = new Date(`${day.date}T00:00:00`).getDay();
+        availabilityRules.value
+            .filter((rule) => rule.enabled && Number(rule.weekday) === weekday)
+            .forEach((rule) => {
+                const box = minutesToCalendarBox(timeStringToMinutes(rule.startTime), timeStringToMinutes(rule.endTime));
+                if (box) {
+                    grouped[day.date].push({ ...box, label: `${rule.startTime} - ${rule.endTime}` });
+                }
+            });
+    });
+
+    return grouped;
+});
+
+const calendarDayBlocks = computed(() => {
+    const grouped = Object.fromEntries(weekDays.value.map((day) => [day.date, []]));
+
+    weekDays.value.forEach((day) => {
+        const dayStart = new Date(`${day.date}T00:00:00`);
+        const dayEnd = new Date(`${day.date}T23:59:59`);
+
+        scheduleBlocks.value.forEach((block) => {
+            const startsAt = new Date(block.starts_at);
+            const endsAt = new Date(block.ends_at);
+            if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return;
+            if (startsAt > dayEnd || endsAt < dayStart) return;
+
+            const visibleStart = startsAt < dayStart ? dayStart : startsAt;
+            const visibleEnd = endsAt > dayEnd ? dayEnd : endsAt;
+            const startMinutes = visibleStart.getHours() * 60 + visibleStart.getMinutes();
+            const endMinutes = visibleEnd.getHours() * 60 + visibleEnd.getMinutes();
+            const box = minutesToCalendarBox(startMinutes, endMinutes);
+            if (box) {
+                grouped[day.date].push({
+                    ...box,
+                    label: block.type === 'vacation' ? 'Férias' : 'Bloqueio',
+                    reason: block.reason,
+                    type: block.type,
+                });
+            }
+        });
+    });
+
+    return grouped;
 });
 
 const currentTimeIndicator = computed(() => {
@@ -467,6 +570,121 @@ const closeAppointmentModal = () => {
     recurrenceForm.until = '';
 };
 
+const applyAvailability = (payload = {}) => {
+    const nextRules = defaultAvailabilityRules();
+    (payload.rules ?? []).forEach((rule) => {
+        const index = nextRules.findIndex((item) => Number(item.weekday) === Number(rule.weekday));
+        if (index >= 0) {
+            nextRules[index] = {
+                weekday: Number(rule.weekday),
+                enabled: Boolean(rule.is_active),
+                startTime: rule.start_time ?? '08:00',
+                endTime: rule.end_time ?? '18:00',
+            };
+        }
+    });
+
+    availabilityRules.value = nextRules;
+    scheduleBlocks.value = payload.blocks ?? [];
+    dailyAppointmentLimit.value = payload.daily_appointment_limit ?? '';
+};
+
+const fetchAvailability = async () => {
+    availabilityLoading.value = true;
+
+    try {
+        const params = { from: scheduleDate.value, to: addDays(scheduleDate.value, 6) };
+        const { data } = await axios.get('/api/availability', { params });
+        applyAvailability(data ?? {});
+    } catch (error) {
+        availabilityMessageType.value = 'error';
+        availabilityMessage.value = error?.response?.data?.message ?? 'Não foi possível carregar a disponibilidade.';
+    } finally {
+        availabilityLoading.value = false;
+    }
+};
+
+const saveAvailabilitySettings = async () => {
+    availabilitySaving.value = true;
+    availabilityMessage.value = '';
+
+    try {
+        const rules = availabilityRules.value
+            .filter((rule) => rule.enabled)
+            .map((rule) => ({
+                weekday: rule.weekday,
+                start_time: rule.startTime,
+                end_time: rule.endTime,
+                is_active: true,
+            }));
+
+        const { data } = await axios.put('/api/availability/settings', {
+            daily_appointment_limit: dailyAppointmentLimit.value === '' ? null : Number(dailyAppointmentLimit.value),
+            rules,
+        });
+        applyAvailability(data ?? {});
+        availabilityMessageType.value = 'success';
+        availabilityMessage.value = 'Disponibilidade salva.';
+    } catch (error) {
+        availabilityMessageType.value = 'error';
+        availabilityMessage.value = error?.response?.data?.message ?? 'Não foi possível salvar a disponibilidade.';
+    } finally {
+        availabilitySaving.value = false;
+    }
+};
+
+const resetBlockForm = () => {
+    blockForm.type = 'block';
+    blockForm.startsAt = '';
+    blockForm.endsAt = '';
+    blockForm.reason = '';
+};
+
+const createScheduleBlock = async () => {
+    blockSaving.value = true;
+    availabilityMessage.value = '';
+
+    try {
+        await axios.post('/api/availability/blocks', {
+            type: blockForm.type,
+            starts_at: fromLocalInputToIso(blockForm.startsAt),
+            ends_at: fromLocalInputToIso(blockForm.endsAt),
+            reason: blockForm.reason.trim() || null,
+        });
+        resetBlockForm();
+        await fetchAvailability();
+        availabilityMessageType.value = 'success';
+        availabilityMessage.value = 'Bloqueio salvo.';
+    } catch (error) {
+        availabilityMessageType.value = 'error';
+        availabilityMessage.value = error?.response?.data?.message ?? 'Não foi possível salvar o bloqueio.';
+    } finally {
+        blockSaving.value = false;
+    }
+};
+
+const deleteScheduleBlock = async (block) => {
+    if (!block?.id) return;
+    const confirmed = window.confirm('Remover este bloqueio da agenda?');
+    if (!confirmed) return;
+
+    try {
+        await axios.delete(`/api/availability/blocks/${block.id}`);
+        await fetchAvailability();
+    } catch (error) {
+        availabilityMessageType.value = 'error';
+        availabilityMessage.value = error?.response?.data?.message ?? 'Não foi possível remover o bloqueio.';
+    }
+};
+
+const refreshSchedule = () => {
+    fetchAppointments();
+    fetchAvailability();
+};
+
+const blockTypeLabel = (type) => (type === 'vacation' ? 'Férias' : 'Bloqueio');
+
+
 const fetchAppointments = async () => {
     scheduleLoading.value = true;
     scheduleError.value = '';
@@ -485,17 +703,17 @@ const fetchAppointments = async () => {
 
 const handleScheduleDateChange = () => {
     scheduleDate.value = normalizeWeekDate(scheduleDate.value);
-    fetchAppointments();
+    refreshSchedule();
 };
 
 const changeWeek = (offset) => {
     scheduleDate.value = addDays(scheduleDate.value, offset * 7);
-    fetchAppointments();
+    refreshSchedule();
 };
 
 const goToToday = () => {
     scheduleDate.value = formatDate(getWeekStart(new Date()));
-    fetchAppointments();
+    refreshSchedule();
 };
 
 const sanitizeAppointmentPayload = () => {
@@ -684,6 +902,7 @@ watch(
 onMounted(() => {
     fetchProfile();
     fetchAppointments();
+    fetchAvailability();
     nowInterval = setInterval(() => {
         nowTick.value = Date.now();
     }, 60000);
@@ -768,6 +987,122 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
+            <section class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-base font-semibold text-slate-950">Disponibilidade automática</p>
+                        <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Configure horários livres, bloqueios, férias e limite diário. Quando houver horários livres ativos, novos agendamentos só entram dentro desses intervalos.</p>
+                    </div>
+                    <button
+                        class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                        type="button"
+                        :disabled="availabilitySaving"
+                        @click="saveAvailabilitySettings"
+                    >
+                        {{ availabilitySaving ? 'Salvando...' : 'Salvar disponibilidade' }}
+                    </button>
+                </div>
+
+                <div class="mt-4 grid gap-4 xl:grid-cols-[1.4fr_.9fr]">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-slate-900">Horários livres semanais</p>
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                Limite por dia
+                                <input
+                                    v-model="dailyAppointmentLimit"
+                                    class="w-20 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    min="0"
+                                    max="40"
+                                    type="number"
+                                />
+                            </label>
+                        </div>
+
+                        <div class="grid gap-2 md:grid-cols-2">
+                            <div
+                                v-for="rule in availabilityRules"
+                                :key="rule.weekday"
+                                class="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-xl border border-slate-100 px-3 py-2"
+                            >
+                                <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                    <input v-model="rule.enabled" class="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" type="checkbox" />
+                                    {{ weekdayOptions.find((day) => day.value === rule.weekday)?.label }}
+                                </label>
+                                <input
+                                    v-model="rule.startTime"
+                                    class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-100"
+                                    type="time"
+                                    :disabled="!rule.enabled"
+                                />
+                                <input
+                                    v-model="rule.endTime"
+                                    class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-100"
+                                    type="time"
+                                    :disabled="!rule.enabled"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p class="text-sm font-semibold text-slate-900">Bloqueios e férias</p>
+                        <form class="mt-3 space-y-3" @submit.prevent="createScheduleBlock">
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-slate-600">Tipo</span>
+                                    <select v-model="blockForm.type" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                                        <option value="block">Bloqueio</option>
+                                        <option value="vacation">Férias</option>
+                                    </select>
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-slate-600">Motivo</span>
+                                    <input v-model="blockForm.reason" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ex.: férias" />
+                                </label>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-slate-600">Início</span>
+                                    <input v-model="blockForm.startsAt" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required type="datetime-local" />
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-slate-600">Fim</span>
+                                    <input v-model="blockForm.endsAt" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required type="datetime-local" />
+                                </label>
+                            </div>
+                            <button class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60" type="submit" :disabled="blockSaving">
+                                {{ blockSaving ? 'Salvando...' : 'Adicionar bloqueio' }}
+                            </button>
+                        </form>
+
+                        <div class="mt-4 space-y-2">
+                            <div v-if="availabilityLoading" class="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-500">Carregando disponibilidade...</div>
+                            <div
+                                v-for="block in scheduleBlocks"
+                                :key="block.id"
+                                class="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm"
+                            >
+                                <div>
+                                    <p class="font-semibold text-slate-800">{{ blockTypeLabel(block.type) }}{{ block.reason ? ` · ${block.reason}` : '' }}</p>
+                                    <p class="text-xs text-slate-500">{{ formatTimeLabel(block.starts_at) }} - {{ formatTimeLabel(block.ends_at) }}</p>
+                                </div>
+                                <button class="text-xs font-semibold text-rose-600 hover:text-rose-700" type="button" @click="deleteScheduleBlock(block)">Remover</button>
+                            </div>
+                            <p v-if="!availabilityLoading && scheduleBlocks.length === 0" class="rounded-xl border border-dashed border-slate-200 px-3 py-3 text-center text-sm text-slate-500">Nenhum bloqueio nesta semana.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p
+                    v-if="availabilityMessage"
+                    class="mt-4 rounded-xl border px-4 py-3 text-sm"
+                    :class="availabilityMessageType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'"
+                >
+                    {{ availabilityMessage }}
+                </p>
+            </section>
+
             <div v-if="scheduleError" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <p>{{ scheduleError }}</p>
@@ -842,6 +1177,23 @@ onBeforeUnmount(() => {
                                     <div class="relative h-full">
                                         <div class="pointer-events-none absolute inset-y-0 left-1 z-10 w-px bg-slate-200/70"></div>
                                         <div class="pointer-events-none absolute inset-y-0 right-1 z-10 w-px bg-slate-200/70"></div>
+                                        <div
+                                            v-for="slot in calendarDayAvailability[day.date] ?? []"
+                                            :key="`availability-${day.date}-${slot.label}`"
+                                            class="pointer-events-none absolute inset-x-2 z-0 rounded-xl border border-emerald-200 bg-emerald-50/70"
+                                            :style="{ top: `${slot.top}px`, height: `${slot.height}px` }"
+                                        >
+                                            <span class="absolute right-2 top-1 text-[10px] font-semibold text-emerald-700">Livre {{ slot.label }}</span>
+                                        </div>
+                                        <div
+                                            v-for="block in calendarDayBlocks[day.date] ?? []"
+                                            :key="`block-${day.date}-${block.label}-${block.top}`"
+                                            class="pointer-events-none absolute inset-x-2 z-[15] rounded-xl border px-2 py-1 text-[10px] font-semibold"
+                                            :class="block.type === 'vacation' ? 'border-rose-200 bg-rose-100/80 text-rose-700' : 'border-amber-200 bg-amber-100/80 text-amber-700'"
+                                            :style="{ top: `${block.top}px`, height: `${block.height}px` }"
+                                        >
+                                            {{ block.label }}{{ block.reason ? ` · ${block.reason}` : '' }}
+                                        </div>
                                         <div
                                             v-if="currentTimeIndicator && currentTimeIndicator.date === day.date"
                                             class="pointer-events-none absolute inset-x-2 z-10 flex items-center gap-2 text-[10px] font-semibold text-red-500"

@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Psychologist;
 use App\Models\RecurringAppointment;
+use App\Services\AppointmentAvailabilityService;
 use App\Services\GoogleCalendarService;
 use App\Services\RecurringAppointmentService;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ class AppointmentController extends Controller
 {
     public function __construct(
         private readonly GoogleCalendarService $googleCalendarService,
-        private readonly RecurringAppointmentService $recurringAppointmentService
+        private readonly RecurringAppointmentService $recurringAppointmentService,
+        private readonly AppointmentAvailabilityService $availabilityService
     ) {
     }
 
@@ -101,6 +103,7 @@ class AppointmentController extends Controller
         $end = Carbon::parse($data['end_at']);
         $this->ensureValidRange($start, $end);
         $this->ensureNoOverlap($psychologistId, $start, $end);
+        $this->availabilityService->ensureCanSchedule($psychologist, $start, $end);
         $data['start_at'] = $start;
         $data['end_at'] = $end;
         $this->applyPatientFee($data, $patient);
@@ -121,7 +124,8 @@ class AppointmentController extends Controller
 
     public function update(AppointmentUpdateRequest $request, int $id)
     {
-        $psychologistId = $this->psychologistId($request);
+        $psychologist = $this->psychologist($request);
+        $psychologistId = $psychologist->id;
 
         $appointment = Appointment::where('psychologist_id', $psychologistId)
             ->findOrFail($id);
@@ -139,6 +143,7 @@ class AppointmentController extends Controller
             $end = Carbon::parse($data['end_at'] ?? $appointment->end_at);
             $this->ensureValidRange($start, $end);
             $this->ensureNoOverlap($psychologistId, $start, $end, $appointment->id);
+            $this->availabilityService->ensureCanSchedule($psychologist, $start, $end, $appointment->id);
             $data['start_at'] = $start;
             $data['end_at'] = $end;
         }
