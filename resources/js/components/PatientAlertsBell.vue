@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlertsStore } from '../stores/alerts';
 import { useAuthStore } from '../stores/auth';
+import AppIcon from './base/AppIcon.vue';
+import { formatDateOnly } from '../utils/formatters';
 
 const alertsStore = useAlertsStore();
 const authStore = useAuthStore();
@@ -28,11 +30,7 @@ const badgeLabel = computed(() => {
     return '';
 });
 
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-});
+const dateFormatter = (value) => formatDateOnly(value, 'America/Sao_Paulo');
 
 const fetchAlerts = () => {
     if (!authStore.isAuthenticated) return;
@@ -150,11 +148,11 @@ const formatLastActivityLabel = (patient) => {
     const daysLabel = typeof days === 'number' ? `${days} dia(s) sem agendar` : 'Sem registros de agenda';
 
     if (lastAppointment) {
-        return `${daysLabel} • Último: ${dateFormatter.format(new Date(lastAppointment))}`;
+        return `${daysLabel} • Último: ${dateFormatter(lastAppointment)}`;
     }
 
     if (referenceDate) {
-        return `${daysLabel} • Desde: ${dateFormatter.format(new Date(referenceDate))}`;
+        return `${daysLabel} • Desde: ${dateFormatter(referenceDate)}`;
     }
 
     return daysLabel;
@@ -164,20 +162,13 @@ const formatLastActivityLabel = (patient) => {
 <template>
     <div v-if="authStore.isAuthenticated && !authStore.requiresEmailVerification" ref="containerRef" class="fixed bottom-6 right-6 z-50">
         <button
-            class="relative inline-flex items-center justify-center rounded-full bg-white p-3 text-slate-600 shadow-lg shadow-slate-900/5 transition hover:text-blue-600"
+            class="relative inline-flex items-center justify-center rounded-full border border-[#e2ddd3] bg-white p-3 text-[#58635f] shadow-lg shadow-slate-900/5 transition hover:text-[#3f4f46]"
             type="button"
             aria-label="Alertas de pacientes sem agendamento"
             :aria-expanded="isPanelOpen"
             @click.stop="togglePanel"
         >
-            <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.8"
-                    d="M14.25 17h5.25l-1.5-1.5a2.5 2.5 0 0 1-.73-1.77V11a6.5 6.5 0 0 0-5.32-6.39V4a1.75 1.75 0 0 0-3.5 0v.61A6.5 6.5 0 0 0 3.43 11v2.73c0 .66-.26 1.29-.73 1.77L1.2 17h5.3M9 21h6"
-                />
-            </svg>
+            <AppIcon name="BellRing" class="size-6" />
             <span
                 v-if="shouldShowBadge"
                 class="absolute -right-1 -top-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"

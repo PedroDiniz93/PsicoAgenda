@@ -4,7 +4,8 @@ import { RouterLink } from 'vue-router';
 import axios from 'axios';
 import Alert from '../components/base/Alert.vue';
 import Modal from '../components/base/Modal.vue';
-import { formatDateTime, formatMoney } from '../utils/formatters';
+import AppIcon from '../components/base/AppIcon.vue';
+import { formatDateOnly, formatDateTime, formatMoney } from '../utils/formatters';
 
 const toLocalMonth = (date = new Date()) => {
     const year = date.getFullYear();
@@ -17,11 +18,7 @@ const moneyNumber = (value: unknown) => Number(value ?? 0);
 const formatDate = (value?: string) => {
     if (!value) return 'Sem vencimento';
 
-    try {
-        return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
-    } catch {
-        return value;
-    }
+    return formatDateOnly(value);
 };
 
 const toBrazilianDate = (value?: string) => {
@@ -159,7 +156,7 @@ const summaryCards = computed(() => {
             value: formatMoney(summary.received_value),
             detail: `${summary.received_count ?? 0} atendimentos pagos`,
             tone: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-            icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1m9-5a9 9 0 11-18 0 9 9 0 0118 0z',
+            icon: 'CircleDollarSign',
         },
         {
             id: 'open',
@@ -167,7 +164,7 @@ const summaryCards = computed(() => {
             value: formatMoney(summary.pending_value),
             detail: `${summary.pending_count ?? 0} cobranças do mês`,
             tone: 'border-cyan-200 bg-cyan-50 text-cyan-950',
-            icon: 'M9 14h6m-7 4h8M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z',
+            icon: 'HandCoins',
         },
         {
             id: 'overdue',
@@ -175,7 +172,7 @@ const summaryCards = computed(() => {
             value: formatMoney(summary.overdue_value),
             detail: `${summary.overdue_count ?? 0} cobranças atrasadas`,
             tone: 'border-rose-200 bg-rose-50 text-rose-950',
-            icon: 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z',
+            icon: 'AlertTriangle',
         },
         {
             id: 'forecast',
@@ -183,7 +180,7 @@ const summaryCards = computed(() => {
             value: formatMoney(summary.forecast_value),
             detail: `${summary.forecast_count ?? 0} sessões futuras no mês`,
             tone: 'border-violet-200 bg-violet-50 text-violet-950',
-            icon: 'M3 17l6-6 4 4 8-8M14 7h7v7',
+            icon: 'TrendingUp',
         },
     ];
 });
@@ -559,13 +556,13 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 lg:px-8">
-        <header class="mb-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="page-shell">
+        <header class="mb-5 rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm font-semibold text-cyan-700">Financeiro</p>
+                    <p class="section-kicker">Financeiro</p>
                     <h1 class="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Recebimentos, cobranças e previsão</h1>
-                    <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                    <p class="mt-1 max-w-2xl text-sm leading-6 text-[#58635f]">
                         Controle pagamentos por sessão, acompanhe inadimplência e emita recibos sem sair do fluxo da agenda.
                     </p>
                 </div>
@@ -573,22 +570,18 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-2">
                     <RouterLink
                         :to="{ name: 'home' }"
-                        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                        class="btn-secondary"
                     >
-                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7" />
-                        </svg>
+                        <AppIcon name="ChevronLeft" class="size-4" />
                         Dashboard
                     </RouterLink>
                     <button
-                        class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                        class="btn-primary disabled:opacity-60"
                         type="button"
                         :disabled="loading"
                         @click="fetchDashboard"
                     >
-                        <svg class="size-4" :class="{ 'animate-spin': loading }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0019 5M19 5h-5m5 0v5" />
-                        </svg>
+                        <AppIcon name="RefreshCcw" class="size-4" :class="{ 'animate-spin': loading }" />
                         Atualizar
                     </button>
                 </div>
@@ -604,15 +597,15 @@ onMounted(() => {
             </section>
 
             <template v-else>
-                <section class="sticky top-0 z-10 -mx-4 border-y border-slate-200 bg-slate-100/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:rounded-lg lg:border lg:bg-white lg:shadow-sm">
+                <section class="sticky top-0 z-10 -mx-4 border-y border-[#e2ddd3] bg-[#f4f1eb]/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:rounded-2xl lg:border lg:bg-white/95 lg:shadow-sm">
                     <div class="flex gap-2 overflow-x-auto pb-1 lg:pb-0" role="tablist" aria-label="Categorias financeiras">
                         <button
                             v-for="section in financeSections"
                             :key="section.id"
                             class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition"
                             :class="activeSection === section.id
-                                ? 'border-cyan-700 bg-cyan-700 text-white shadow-sm'
-                                : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800'"
+                                ? 'border-[#3f4f46] bg-[#3f4f46] text-white shadow-sm'
+                                : 'border-[#e2ddd3] bg-white text-[#58635f] hover:border-[#c9c1b3] hover:bg-[#f8f5ef] hover:text-[#1f2522]'"
                             type="button"
                             role="tab"
                             :aria-selected="activeSection === section.id"
@@ -630,7 +623,7 @@ onMounted(() => {
                     </div>
                 </section>
 
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-5 shadow-sm">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-lg font-semibold text-slate-950">{{ sectionTitle.title }}</p>
@@ -647,7 +640,7 @@ onMounted(() => {
                         <article
                             v-for="card in summaryCards"
                             :key="card.id"
-                            :class="['rounded-lg border p-4 shadow-sm', card.tone]"
+                            :class="['rounded-xl border p-4 shadow-sm', card.tone]"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
@@ -655,9 +648,7 @@ onMounted(() => {
                                     <p class="mt-2 text-2xl font-semibold tracking-normal sm:text-3xl">{{ card.value }}</p>
                                     <p class="mt-2 text-sm text-current/70">{{ card.detail }}</p>
                                 </div>
-                                <svg class="size-8 shrink-0 text-current/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" :d="card.icon" />
-                                </svg>
+                                <AppIcon :name="card.icon" class="size-8 shrink-0 text-current/70" :stroke-width="1.7" />
                             </div>
                         </article>
                     </section>
@@ -882,14 +873,11 @@ Obrigado(a).</p>
 
                         <div class="mt-5 flex justify-end">
                             <button
-                                class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                                class="btn-primary disabled:opacity-60"
                                 type="submit"
                                 :disabled="settingsSaving"
                             >
-                                <svg v-if="settingsSaving" class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                </svg>
+                                <AppIcon v-if="settingsSaving" name="LoaderCircle" class="size-4 animate-spin" />
                                 Salvar recebimento
                             </button>
                         </div>
@@ -911,9 +899,7 @@ Obrigado(a).</p>
                         type="button"
                         @click="closeReceivable"
                     >
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
-                        </svg>
+                        <AppIcon name="X" class="size-5" />
                     </button>
                 </div>
 

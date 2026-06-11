@@ -10,6 +10,7 @@ import PaymentSummary from '../components/reports/PaymentSummary.vue';
 import PaymentTable from '../components/reports/PaymentTable.vue';
 import Alert from '../components/base/Alert.vue';
 import Card from '../components/base/Card.vue';
+import AppIcon from '../components/base/AppIcon.vue';
 
 const reportFiltersOpen = ref(false);
 
@@ -29,14 +30,14 @@ const {
 
 const paymentSummaryCards = computed(() => [
     {
-        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        icon: 'BadgeCheck',
         label: 'Pagos',
         value: formatMoney(appointmentReport.payments.paid.value ?? 0),
         description: `${appointmentReport.payments.paid.appointments ?? 0} atendimentos recebidos`,
         color: 'success',
     },
     {
-        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        icon: 'ClockAlert',
         label: 'Pendentes',
         value: formatMoney(appointmentReport.payments.pending.value ?? 0),
         description: `${appointmentReport.payments.pending.appointments ?? 0} atendimentos aguardando`,
@@ -71,7 +72,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 lg:px-8">
+    <div class="page-shell">
         <section class="space-y-5">
             <ReportHeader
                 :report-filters-open="reportFiltersOpen"
@@ -93,11 +94,8 @@ onMounted(() => {
             </Alert>
 
             <Card v-else-if="reportLoading" class="flex justify-center py-12">
-                <div class="flex items-center gap-2 text-slate-500">
-                    <svg class="size-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
+                <div class="flex items-center gap-2 text-[#58635f]">
+                    <AppIcon name="LoaderCircle" class="size-5 animate-spin" />
                     Carregando relatório...
                 </div>
             </Card>

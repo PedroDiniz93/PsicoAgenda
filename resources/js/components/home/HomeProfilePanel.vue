@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppIcon from '../base/AppIcon.vue';
+
 defineProps<{
     profileForm: any;
     profileErrors: any;
@@ -16,10 +18,10 @@ defineEmits<{
 </script>
 
 <template>
-    <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
         <div class="flex flex-col gap-1 border-b border-slate-100 pb-5">
             <h2 class="text-xl font-semibold text-slate-950">Perfil profissional</h2>
-            <p class="text-sm text-slate-500">Dados usados nos agendamentos e comunicações com pacientes.</p>
+            <p class="text-sm text-[#58635f]">Dados usados nos agendamentos e comunicações com pacientes.</p>
         </div>
 
         <div v-if="profileLoading" class="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
@@ -125,10 +127,7 @@ defineEmits<{
                     type="submit"
                     :disabled="profileSaving"
                 >
-                    <svg v-if="profileSaving" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
+                    <AppIcon v-if="profileSaving" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                     Salvar perfil
                 </button>
             </div>

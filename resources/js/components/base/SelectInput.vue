@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import AppIcon from './AppIcon.vue';
 
 interface Props {
   modelValue?: string;
@@ -51,9 +52,7 @@ const hasError = computed(() => Boolean(props.error));
         @click="open = !open"
       >
         <span>{{ selectedLabel }}</span>
-        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" :style="{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }" />
-        </svg>
+        <AppIcon name="ChevronDown" class="size-4 transition-transform" :class="{ 'rotate-180': open }" />
       </button>
       <div
         v-if="open"

@@ -11,6 +11,17 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+:root {
+    --spa-bg: #f4f1eb;
+    --spa-surface: #fffdf9;
+    --spa-surface-muted: #f8f5ef;
+    --spa-border: #e2ddd3;
+    --spa-ink: #1f2522;
+    --spa-ink-soft: #58635f;
+    --spa-accent: #3f4f46;
+    --spa-accent-soft: #e3e9e4;
+}
+
 :where(button, [role='button']) {
     cursor: pointer;
 }
@@ -21,4 +32,135 @@
 
 html {
     overflow-y: scroll;
+}
+
+body {
+    background: radial-gradient(circle at top left, #f8f5ef 0%, var(--spa-bg) 45%, #efe9df 100%);
+    color: var(--spa-ink);
+}
+
+@layer components {
+    .page-shell {
+        @apply mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8;
+    }
+
+    .surface-panel {
+        @apply rounded-2xl border bg-white/95 shadow-sm;
+        border-color: var(--spa-border);
+    }
+
+    .surface-subtle {
+        @apply rounded-2xl border;
+        background: var(--spa-surface-muted);
+        border-color: var(--spa-border);
+    }
+
+    .section-kicker {
+        @apply text-xs font-semibold uppercase tracking-[0.16em];
+        color: var(--spa-ink-soft);
+    }
+
+    .tab-button {
+        @apply inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition;
+        border-color: var(--spa-border);
+        color: var(--spa-ink-soft);
+        background: #fff;
+    }
+
+    .tab-button:hover {
+        border-color: #c9c1b3;
+        color: var(--spa-ink);
+        background: #fbf8f2;
+    }
+
+    .tab-button--active {
+        color: #fff;
+        background: var(--spa-accent);
+        border-color: var(--spa-accent);
+    }
+
+    .tab-button--active:hover {
+        color: #fff;
+        background: #36433c;
+        border-color: #36433c;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+        background: var(--spa-accent);
+    }
+
+    .btn-primary:hover {
+        background: #36433c;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition;
+        border-color: var(--spa-border);
+        color: var(--spa-ink-soft);
+        background: #fff;
+    }
+
+    .btn-secondary:hover {
+        border-color: #c9c1b3;
+        color: var(--spa-ink);
+        background: #fbf8f2;
+    }
+
+    .field-input {
+        @apply w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:ring-2;
+        border-color: var(--spa-border);
+        background: #fff;
+        color: var(--spa-ink);
+    }
+
+    .field-input:focus {
+        border-color: #94a398;
+        --tw-ring-color: rgba(148, 163, 152, 0.2);
+    }
+}
+
+@layer utilities {
+    .text-cyan-600,
+    .text-cyan-700,
+    .text-cyan-800 {
+        color: var(--spa-accent) !important;
+    }
+
+    .bg-cyan-50,
+    .bg-cyan-100 {
+        background-color: var(--spa-accent-soft) !important;
+    }
+
+    .bg-cyan-700,
+    .bg-cyan-800 {
+        background-color: var(--spa-accent) !important;
+    }
+
+    .border-cyan-200,
+    .border-cyan-500 {
+        border-color: #c5d2c8 !important;
+    }
+
+    .hover\:bg-cyan-50:hover,
+    .hover\:bg-cyan-100:hover {
+        background-color: #d7e1d9 !important;
+    }
+
+    .hover\:border-cyan-200:hover {
+        border-color: #b2c5b8 !important;
+    }
+
+    .hover\:text-cyan-800:hover {
+        color: #2f3a34 !important;
+    }
+
+    .focus\:border-cyan-500:focus {
+        border-color: #94a398 !important;
+    }
+
+    .focus\:ring-cyan-100:focus,
+    .focus\:ring-cyan-500:focus {
+        --tw-ring-color: rgba(148, 163, 152, 0.2) !important;
+    }
 }

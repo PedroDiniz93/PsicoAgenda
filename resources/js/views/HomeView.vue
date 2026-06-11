@@ -126,7 +126,7 @@ const quickLinks = computed(() => [
         label: 'Pacientes',
         title: 'Base de pacientes',
         description: 'Cadastro, histórico e prontuários',
-        icon: 'M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM16 16H8a4 4 0 00-4 4v4h16v-4a4 4 0 00-4-4z',
+        icon: 'UsersRound',
         to: { name: 'patients' },
         color: 'primary' as const,
     },
@@ -135,7 +135,7 @@ const quickLinks = computed(() => [
         label: 'Agenda',
         title: 'Sessões e horários',
         description: 'Planejamento da rotina clínica',
-        icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+        icon: 'CalendarClock',
         to: { name: 'schedule' },
         color: 'success' as const,
     },
@@ -144,7 +144,7 @@ const quickLinks = computed(() => [
         label: 'Relatórios',
         title: 'Indicadores',
         description: 'Compare presença, receita e faltas',
-        icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+        icon: 'ChartColumn',
         to: { name: 'reports' },
         color: 'warning' as const,
     },
@@ -153,7 +153,7 @@ const quickLinks = computed(() => [
         label: 'Financeiro',
         title: 'Recebimentos',
         description: 'Cobranças, Pix e recibos',
-        icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1m9-5a9 9 0 11-18 0 9 9 0 0118 0z',
+        icon: 'WalletCards',
         to: { name: 'finance' },
         color: 'primary' as const,
     },
@@ -162,7 +162,7 @@ const quickLinks = computed(() => [
         label: 'Exportação',
         title: 'Arquivos clínicos',
         description: 'Exporte dados para conferência',
-        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+        icon: 'FileArchive',
         to: { name: 'exports' },
         color: 'error' as const,
     },
@@ -187,28 +187,28 @@ const dashboardMetrics = computed(() => [
         label: 'Sessões no período',
         value: appointmentReport.summary.totalSessions,
         detail: `${appointmentReport.summary.uniquePatients} pacientes únicos`,
-        tone: 'border-slate-200 bg-white text-slate-900',
+        tone: 'border-[#e2ddd3] bg-white text-slate-900',
     },
     {
         id: 'attendance',
         label: 'Comparecimento',
         value: attendancePercent.value === null ? 'Sem dados' : `${attendancePercent.value.toFixed(1)}%`,
         detail: `${appointmentReport.appointments.done} concluídas e ${appointmentReport.appointments.missed} faltas`,
-        tone: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+        tone: 'border-[#c9d8cd] bg-[#eff4f0] text-[#26362d]',
     },
     {
         id: 'ticket',
         label: 'Ticket médio',
         value: formatMoney(appointmentReport.summary.avgTicket),
         detail: 'Média dos atendimentos pagos',
-        tone: 'border-cyan-200 bg-cyan-50 text-cyan-950',
+        tone: 'border-[#d8d0c4] bg-[#f7f2e9] text-[#40372a]',
     },
     {
         id: 'pending',
         label: 'A receber',
         value: formatMoney(appointmentReport.payments.pending.value),
         detail: `${appointmentReport.payments.pending.appointments} sessões pendentes`,
-        tone: 'border-amber-200 bg-amber-50 text-amber-950',
+        tone: 'border-[#dfd5c3] bg-[#f9f4ea] text-[#4a3f30]',
     },
 ]);
 
@@ -313,7 +313,7 @@ const submitProfile = async () => {
             auth.user = { ...auth.user, psychologist };
         }
         profileMessageType.value = 'success';
-        profileMessage.value = 'Perfil atualizado com sucesso! ✨';
+        profileMessage.value = 'Perfil atualizado com sucesso.';
     } catch (error: any) {
         if (error?.response?.status === 422) {
             const errors = error.response.data.errors ?? {};
@@ -392,7 +392,7 @@ const submitReminderSettings = async () => {
             auth.user = { ...auth.user, psychologist };
         }
         reminderMessageType.value = 'success';
-        reminderMessage.value = 'Preferências de lembrete atualizadas com sucesso! ✨';
+        reminderMessage.value = 'Preferências de lembrete atualizadas com sucesso.';
     } catch (error: any) {
         reminderMessageType.value = 'error';
         reminderMessage.value =
@@ -586,7 +586,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-100">
+    <div class="min-h-screen">
         <HomeShellHeader
             :today-label="todayLabel"
             :user-name="userName"
@@ -594,7 +594,7 @@ onMounted(() => {
             @logout="handleLogout"
         />
 
-        <main class="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8">
+        <main class="page-shell">
             <HomeSectionTabs :tabs="tabs" :active-tab="activeTab" @change="activeTab = $event" />
 
             <HomeOverviewPanel

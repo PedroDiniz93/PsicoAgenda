@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Card from '../base/Card.vue';
+import AppIcon from '../base/AppIcon.vue';
 
 interface Metric {
   id: string;
@@ -33,9 +34,7 @@ const colorClasses = {
           <p class="text-3xl font-bold text-neutral-900 mt-1">{{ metric.value }}</p>
         </div>
         <div v-if="metric.icon" :class="['p-3 rounded-lg', colorClasses[metric.color]]">
-          <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="metric.icon" />
-          </svg>
+          <AppIcon :name="metric.icon" class="size-6" />
         </div>
       </div>
       <p v-if="metric.change" :class="['text-xs', metric.change.includes('↑') ? 'text-success-600' : 'text-error-600']">

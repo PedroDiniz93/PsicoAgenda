@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import AppIcon from './AppIcon.vue';
 
 interface Props {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success' | 'warning';
@@ -20,12 +21,12 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const variantClasses = {
-  primary: 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-300',
-  secondary: 'border border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-60',
-  danger: 'bg-error-600 text-white hover:bg-error-700 disabled:bg-error-300',
-  ghost: 'text-neutral-700 hover:bg-neutral-100 disabled:opacity-60',
-  success: 'bg-success-600 text-white hover:bg-success-700 disabled:bg-success-300',
-  warning: 'bg-warning-600 text-white hover:bg-warning-700 disabled:bg-warning-300',
+  primary: 'bg-[#3f4f46] text-white hover:bg-[#36433c] disabled:bg-[#aab5ae]',
+  secondary: 'border border-[#e2ddd3] text-[#58635f] hover:border-[#c9c1b3] hover:bg-[#fbf8f2] disabled:opacity-60',
+  danger: 'bg-[#9a4f57] text-white hover:bg-[#87464d] disabled:bg-[#c69ba0]',
+  ghost: 'text-[#58635f] hover:bg-[#f3efe7] disabled:opacity-60',
+  success: 'bg-[#4e6655] text-white hover:bg-[#435a4a] disabled:bg-[#9db2a2]',
+  warning: 'bg-[#8b6b3f] text-white hover:bg-[#775d38] disabled:bg-[#bea789]',
 };
 
 const sizeClasses = {
@@ -34,7 +35,7 @@ const sizeClasses = {
   lg: 'px-6 py-3 text-base',
 };
 
-const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-200 disabled:cursor-not-allowed';
+const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4ddd5] disabled:cursor-not-allowed';
 
 const computedClass = computed(() => {
   const classes = [
@@ -49,10 +50,7 @@ const computedClass = computed(() => {
 
 <template>
   <button :class="computedClass" :type="type" :disabled="disabled || loading">
-    <svg v-if="loading" class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-    </svg>
+    <AppIcon v-if="loading" name="LoaderCircle" class="size-4 animate-spin" />
     <slot />
   </button>
 </template>

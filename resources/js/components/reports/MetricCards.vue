@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Badge from '../base/Badge.vue';
+import AppIcon from '../base/AppIcon.vue';
 
 interface Card {
   id: string;
@@ -24,10 +24,10 @@ const colorClasses = {
 };
 
 const iconColor = {
-  primary: 'text-cyan-700',
-  success: 'text-emerald-700',
-  warning: 'text-amber-700',
-  error: 'text-rose-700',
+  primary: 'text-[#3f4f46]',
+  success: 'text-[#4e6655]',
+  warning: 'text-[#8b6b3f]',
+  error: 'text-[#9a4f57]',
 };
 </script>
 
@@ -47,9 +47,12 @@ const iconColor = {
           <p class="mt-2 text-3xl font-semibold tracking-normal text-slate-950">{{ card.value }}</p>
           <p class="mt-1 text-sm text-slate-600">{{ card.description }}</p>
         </div>
-        <svg v-if="card.icon" :class="['size-8 flex-shrink-0', iconColor[card.color || 'primary']]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="card.icon" />
-        </svg>
+        <AppIcon
+          v-if="card.icon"
+          :name="card.icon"
+          :class="['size-8 flex-shrink-0', iconColor[card.color || 'primary']]"
+          :stroke-width="1.8"
+        />
       </div>
     </article>
   </div>

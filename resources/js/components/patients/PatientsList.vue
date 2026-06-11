@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router';
+import AppIcon from '../base/AppIcon.vue';
 
 defineProps({
     patients: {
@@ -48,7 +49,7 @@ defineEmits(['retry', 'edit', 'previous', 'next']);
 </script>
 
 <template>
-    <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <section class="overflow-hidden rounded-2xl border border-[#e2ddd3] bg-white/95 shadow-sm">
         <div v-if="errorMessage" class="p-5">
             <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -65,10 +66,7 @@ defineEmits(['retry', 'edit', 'previous', 'next']);
         </div>
 
         <div v-else-if="loading" class="flex items-center justify-center gap-3 py-16 text-sm text-slate-500">
-            <svg class="size-5 animate-spin text-cyan-700" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-            </svg>
+            <AppIcon name="LoaderCircle" class="size-5 animate-spin text-[#3f4f46]" />
             Carregando pacientes...
         </div>
 

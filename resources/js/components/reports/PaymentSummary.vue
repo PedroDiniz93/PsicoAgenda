@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Card from '../base/Card.vue';
+import AppIcon from '../base/AppIcon.vue';
 
 interface SummaryCard {
   icon: string;
@@ -16,18 +17,18 @@ interface Props {
 defineProps<Props>();
 
 const colorClasses = {
-  success: 'border-emerald-200 bg-emerald-50',
-  warning: 'border-amber-200 bg-amber-50',
+  success: 'border-[#c9d8cd] bg-[#eff4f0]',
+  warning: 'border-[#dfd5c3] bg-[#f9f4ea]',
 };
 
 const textColorClasses = {
-  success: 'text-emerald-950',
-  warning: 'text-amber-950',
+  success: 'text-[#26362d]',
+  warning: 'text-[#4a3f30]',
 };
 
 const badgeColorClasses = {
-  success: 'text-emerald-700',
-  warning: 'text-amber-700',
+  success: 'text-[#4e6655]',
+  warning: 'text-[#8b6b3f]',
 };
 </script>
 
@@ -44,9 +45,7 @@ const badgeColorClasses = {
           <p :class="['mt-2 text-3xl font-semibold tracking-normal', textColorClasses[card.color]]">{{ card.value }}</p>
           <p class="mt-1 text-sm text-slate-600">{{ card.description }}</p>
         </div>
-        <svg :class="['size-10 flex-shrink-0', badgeColorClasses[card.color]]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="card.icon" />
-        </svg>
+        <AppIcon :name="card.icon" :class="['size-10 flex-shrink-0', badgeColorClasses[card.color]]" :stroke-width="1.8" />
       </div>
     </div>
   </div>

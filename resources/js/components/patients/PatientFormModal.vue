@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { formatCpf, formatPhone } from '../../utils/formatters';
+import AppIcon from '../base/AppIcon.vue';
 
 const props = defineProps({
     open: {
@@ -100,7 +101,7 @@ const maskEmergencyContactPhone = (contact) => {
         class="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-8 backdrop-blur-sm"
         @click.self="$emit('close')"
     >
-        <div class="w-full max-w-2xl rounded-lg bg-white shadow-2xl">
+        <div class="w-full max-w-2xl rounded-2xl border border-[#e2ddd3] bg-white/95 shadow-2xl">
             <div class="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
                 <div>
                     <h2 class="text-xl font-semibold text-slate-950">{{ modalTitle }}</h2>
@@ -113,9 +114,7 @@ const maskEmergencyContactPhone = (contact) => {
                     type="button"
                     @click="$emit('close')"
                 >
-                    <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
-                    </svg>
+                    <AppIcon name="X" class="size-5" />
                 </button>
             </div>
 
@@ -377,10 +376,7 @@ const maskEmergencyContactPhone = (contact) => {
                         type="submit"
                         :disabled="formSubmitting"
                     >
-                        <svg v-if="formSubmitting" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
+                        <AppIcon v-if="formSubmitting" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                         {{ submitLabel }}
                     </button>
                 </div>

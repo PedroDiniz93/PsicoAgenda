@@ -1,4 +1,6 @@
 <script setup>
+import AppIcon from '../base/AppIcon.vue';
+
 defineProps({
     filters: {
         type: Object,
@@ -18,14 +20,14 @@ defineEmits(['search', 'clear']);
 </script>
 
 <template>
-    <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-4 shadow-sm">
         <form class="grid gap-3 lg:grid-cols-[1fr_220px_auto]" @submit.prevent="$emit('search')">
             <label class="block text-sm font-semibold text-slate-700" for="patients-search">
                 Busca
                 <input
                     id="patients-search"
                     v-model="filters.q"
-                    class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                    class="field-input mt-2 h-11"
                     placeholder="Nome, e-mail ou telefone"
                     type="search"
                 />
@@ -36,7 +38,7 @@ defineEmits(['search', 'clear']);
                 <select
                     id="patients-status"
                     v-model="filters.status"
-                    class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                    class="field-input mt-2 h-11"
                 >
                     <option v-for="option in filterOptions" :key="option.value" :value="option.value">
                         {{ option.label }}
@@ -45,18 +47,17 @@ defineEmits(['search', 'clear']);
             </label>
 
             <div class="flex items-end gap-2">
-                <button
-                    class="inline-flex h-11 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    type="submit"
-                >
+                <button class="btn-primary h-11" type="submit">
+                    <AppIcon name="Search" class="size-4" />
                     Filtrar
                 </button>
                 <button
-                    class="inline-flex h-11 items-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="btn-secondary h-11 disabled:cursor-not-allowed disabled:opacity-50"
                     type="button"
                     :disabled="!hasFilters"
                     @click="$emit('clear')"
                 >
+                    <AppIcon name="X" class="size-4" />
                     Limpar
                 </button>
             </div>

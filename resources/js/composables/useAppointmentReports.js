@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from 'vue';
 import axios from 'axios';
-import { formatMoney } from '../utils/formatters';
+import { formatDateOnly, formatMoney } from '../utils/formatters';
 
 const statusLabels = {
     scheduled: 'Agendado',
@@ -52,14 +52,17 @@ export function useAppointmentReports() {
     const hasReportFiltersFilled = computed(() => Boolean(reportFilters.from || reportFilters.to));
 
     const reportFiltersInfo = computed(() => {
-        if (appliedReportFilters.from && appliedReportFilters.to) {
-            return `Período aplicado: ${appliedReportFilters.from} até ${appliedReportFilters.to}.`;
+        const from = appliedReportFilters.from ? formatDateOnly(appliedReportFilters.from) : '';
+        const to = appliedReportFilters.to ? formatDateOnly(appliedReportFilters.to) : '';
+
+        if (from && to) {
+            return `Período aplicado: ${from} até ${to}.`;
         }
-        if (appliedReportFilters.from) {
-            return `Filtrando a partir de ${appliedReportFilters.from}.`;
+        if (from) {
+            return `Filtrando a partir de ${from}.`;
         }
-        if (appliedReportFilters.to) {
-            return `Filtrando até ${appliedReportFilters.to}.`;
+        if (to) {
+            return `Filtrando até ${to}.`;
         }
         return 'Sem filtros de data aplicados.';
     });

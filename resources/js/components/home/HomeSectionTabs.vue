@@ -10,15 +10,15 @@ defineEmits<{
 </script>
 
 <template>
-    <nav class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm" aria-label="Seções da home">
+    <nav class="mb-6 flex w-full gap-1 rounded-2xl border border-[#e2ddd3] bg-white/95 p-1 shadow-sm" aria-label="Seções da home">
         <button
             v-for="tab in tabs"
             :key="tab.id"
-            class="h-10 flex-1 rounded-md px-3 text-sm font-semibold transition"
+            class="h-10 flex-1 rounded-xl px-3 text-sm font-semibold transition"
             :class="
                 activeTab === tab.id
-                    ? 'bg-slate-950 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-[#3f4f46] text-white shadow-sm'
+                    : 'text-[#58635f] hover:bg-[#f6f2ea] hover:text-[#1f2522]'
             "
             type="button"
             @click="$emit('change', tab.id)"

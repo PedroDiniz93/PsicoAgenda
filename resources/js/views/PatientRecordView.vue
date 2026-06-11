@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import axios from 'axios';
+import AppIcon from '../components/base/AppIcon.vue';
+import { formatDateOnly, formatDateTime } from '../utils/formatters';
 
 const route = useRoute();
 const router = useRouter();
@@ -138,33 +140,20 @@ const uniqueRecordsValues = (field) => {
 
 const formatDateFilter = (value) => {
     if (!value) return '';
-    try {
-        return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
-    } catch (error) {
-        return value;
-    }
+
+    return formatDateOnly(value);
 };
 
 const formatBirthDate = (value) => {
     if (!value) return '';
 
-    try {
-        return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
-    } catch (_) {
-        return value;
-    }
+    return formatDateOnly(value);
 };
 
 const formatRecordDate = (value) => {
     if (!value) return 'Sem data';
-    try {
-        return new Intl.DateTimeFormat('pt-BR', {
-            dateStyle: 'full',
-            timeStyle: 'short',
-        }).format(new Date(value));
-    } catch (_) {
-        return value;
-    }
+
+    return formatDateTime(value);
 };
 
 const toInputDateValue = (value) => {
@@ -513,10 +502,7 @@ onMounted(() => {
 
         <div v-if="patientLoading" class="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
             <div class="flex items-center gap-3">
-                <svg class="size-5 animate-spin text-cyan-700" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
+                <AppIcon name="LoaderCircle" class="size-5 animate-spin text-cyan-700" />
                 Carregando dados do paciente...
             </div>
         </div>
@@ -661,10 +647,7 @@ onMounted(() => {
 
                 <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                     <div v-if="recordsLoading" class="flex items-center gap-3 rounded-lg border border-slate-100 px-4 py-6 text-sm text-slate-500">
-                        <svg class="size-5 animate-spin text-cyan-700" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
+                        <AppIcon name="LoaderCircle" class="size-5 animate-spin text-cyan-700" />
                         Carregando anotações...
                     </div>
                     <div v-else-if="recordsError" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -769,9 +752,7 @@ onMounted(() => {
                         <p class="mt-1 text-sm text-slate-500">Registre a evolução com objetivos, técnicas, tarefas e anexos em áreas separadas.</p>
                     </div>
                     <button class="self-start rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" type="button" @click="closeRecordForm">
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
-                        </svg>
+                        <AppIcon name="X" class="size-5" />
                     </button>
                 </div>
 
@@ -891,10 +872,7 @@ onMounted(() => {
                             Cancelar
                         </button>
                         <button class="inline-flex items-center rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" :disabled="recordFormSubmitting" type="submit">
-                            <svg v-if="recordFormSubmitting" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                            </svg>
+                            <AppIcon v-if="recordFormSubmitting" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                             {{ recordFormSubmitLabel }}
                         </button>
                     </div>

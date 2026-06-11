@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppIcon from '../base/AppIcon.vue';
+
 defineProps<{
     integrationItems: Array<any>;
     googleConnected: boolean;
@@ -21,7 +23,7 @@ defineEmits<{
 
 <template>
     <section class="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <aside class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-slate-950">Status das integrações</h2>
             <div class="mt-4 space-y-3">
                 <div v-for="item in integrationItems" :key="item.label" class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
@@ -32,7 +34,7 @@ defineEmits<{
         </aside>
 
         <div class="space-y-4">
-            <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-slate-950">Google Calendar</h2>
@@ -47,10 +49,7 @@ defineEmits<{
                         :disabled="googleProcessing"
                         @click="$emit('disconnectGoogle')"
                     >
-                        <svg v-if="googleProcessing" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
+                        <AppIcon v-if="googleProcessing" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                         Desconectar
                     </button>
                     <button
@@ -60,10 +59,7 @@ defineEmits<{
                         :disabled="googleProcessing"
                         @click="$emit('connectGoogle')"
                     >
-                        <svg v-if="googleProcessing" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
+                        <AppIcon v-if="googleProcessing" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                         Conectar
                     </button>
                 </div>
@@ -83,7 +79,7 @@ defineEmits<{
                 </p>
             </section>
 
-            <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
                 <div>
                     <h2 class="text-lg font-semibold text-slate-950">Lembretes automáticos</h2>
                     <p class="mt-1 text-sm text-slate-500">Canais e antecedência para confirmação de sessões.</p>
@@ -160,10 +156,7 @@ defineEmits<{
                             type="submit"
                             :disabled="reminderSaving"
                         >
-                            <svg v-if="reminderSaving" class="mr-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                            </svg>
+                            <AppIcon v-if="reminderSaving" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
                             Salvar preferências
                         </button>
                     </div>

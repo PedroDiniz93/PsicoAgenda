@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import Card from '../base/Card.vue';
+import AppIcon from '../base/AppIcon.vue';
 
 interface RecentAppointment {
   id: string;
@@ -41,10 +41,7 @@ const statusLabels = {
     </div>
 
     <div v-if="loading" class="py-8 text-center">
-      <svg class="size-6 animate-spin inline-block text-primary-600" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-      </svg>
+      <AppIcon name="LoaderCircle" class="inline-block size-6 animate-spin text-primary-600" />
       <p class="text-sm text-neutral-600 mt-2">Carregando...</p>
     </div>
 
@@ -56,10 +53,19 @@ const statusLabels = {
       >
         <div class="flex-1">
           <p class="font-medium text-neutral-900">{{ appointment.patient_name }}</p>
-          <div class="flex gap-2 mt-1 text-xs text-neutral-600">
-            <span>📅 {{ appointment.date }}</span>
-            <span>🕐 {{ appointment.time }}</span>
-            <span>📝 {{ appointment.type }}</span>
+          <div class="mt-1 flex flex-wrap gap-3 text-xs text-neutral-600">
+            <span class="inline-flex items-center gap-1.5">
+              <AppIcon name="CalendarDays" class="size-3.5" />
+              {{ appointment.date }}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <AppIcon name="Clock3" class="size-3.5" />
+              {{ appointment.time }}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <AppIcon name="NotebookPen" class="size-3.5" />
+              {{ appointment.type }}
+            </span>
           </div>
         </div>
         <span :class="['px-3 py-1 rounded-full text-xs font-semibold', statusColors[appointment.status]]">

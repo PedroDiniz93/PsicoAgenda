@@ -2,6 +2,7 @@
 import { reactive, ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import AppIcon from '../components/base/AppIcon.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -44,11 +45,11 @@ const onSubmit = async () => {
 
 <template>
     <div class="flex min-h-screen items-center justify-center px-4 py-12">
-        <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+        <div class="w-full max-w-md rounded-3xl border border-[#e2ddd3] bg-white/95 p-8 shadow-xl">
             <div class="mb-8 text-center">
-                <p class="text-sm font-medium text-blue-600">Área restrita</p>
+                <p class="section-kicker">Área restrita</p>
                 <h1 class="mt-2 text-2xl font-semibold text-slate-900">Entrar</h1>
-                <p class="mt-1 text-sm text-slate-500">Use seu e-mail e senha cadastrados.</p>
+                <p class="mt-1 text-sm text-[#58635f]">Use seu e-mail e senha cadastrados.</p>
             </div>
 
             <p
@@ -90,20 +91,11 @@ const onSubmit = async () => {
                 </p>
 
                 <button
-                    class="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:bg-blue-400"
+                    class="btn-primary w-full py-2.5 shadow-lg shadow-[#3f4f46]/25 focus-visible:ring-[#d4ddd5] disabled:bg-[#aab5ae]"
                     :disabled="isSubmitting"
                     type="submit"
                 >
-                    <svg
-                        v-if="isSubmitting"
-                        class="-ms-1 me-2 size-4 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        role="presentation"
-                    >
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
+                    <AppIcon v-if="isSubmitting" name="LoaderCircle" class="-ms-1 me-2 size-4 animate-spin" />
                     Entrar
                 </button>
             </form>

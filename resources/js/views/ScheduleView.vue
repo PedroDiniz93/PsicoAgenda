@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
+import AppIcon from '../components/base/AppIcon.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -110,6 +111,7 @@ const calendarTotalSlots = calendarTotalMinutes / calendarConfig.slotMinutes;
 const hourLabelHeight = (60 / calendarConfig.slotMinutes) * calendarConfig.slotHeight;
 
 const scheduleDate = ref(formatDate(getWeekStart(new Date())));
+const scheduleCategory = ref('agenda');
 const scheduleLoading = ref(false);
 const scheduleError = ref('');
 const appointments = ref([]);
@@ -176,6 +178,12 @@ const appointmentStatusBadgeClasses = {
 const appointmentTypeOptions = [
     { value: 'online', label: 'Online' },
     { value: 'in_person', label: 'Presencial' },
+];
+
+const scheduleCategories = [
+    { id: 'agenda', label: 'Agenda' },
+    { id: 'availability', label: 'Disponibilidade' },
+    { id: 'blocks', label: 'Bloqueios e férias' },
 ];
 
 const appointmentPatientSearch = ref('');
@@ -270,6 +278,11 @@ const appointmentsByDay = computed(() => {
 });
 
 const appointmentsEmpty = computed(() => appointments.value.length === 0);
+const enabledAvailabilityRulesCount = computed(() =>
+    availabilityRules.value.filter((rule) => rule.enabled).length
+);
+const appointmentStatusLabel = (status) =>
+    appointmentStatusOptions.find((option) => option.value === status)?.label ?? 'Agendado';
 const calendarColumnHeight = computed(() => calendarTotalSlots * calendarConfig.slotHeight);
 const calendarTimeLabels = computed(() => {
     const labels = [];
@@ -683,6 +696,19 @@ const refreshSchedule = () => {
 };
 
 const blockTypeLabel = (type) => (type === 'vacation' ? 'Férias' : 'Bloqueio');
+const formatDateTimeLabel = (value) => {
+    if (!value) return '';
+    try {
+        return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(value));
+    } catch {
+        return value;
+    }
+};
 
 
 const fetchAppointments = async () => {
@@ -917,345 +943,239 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen max-w-7xl px-6 py-10">
-        <header class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white px-6 py-4 shadow">
-            <div>
-                <p class="text-sm font-medium text-slate-500">Agenda</p>
-                <h1 class="text-2xl font-semibold text-slate-900">Organize seus atendimentos</h1>
-                <p class="text-sm text-slate-500">Controle horários, marque faltas e mantenha os dias em ordem.</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <RouterLink
-                    :to="{ name: 'home' }"
-                    class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                    <svg class="-ms-1 me-2 size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7" />
-                    </svg>
-                    Dashboard
-                </RouterLink>
-            </div>
-        </header>
-
-        <section class="rounded-2xl bg-white p-6 shadow">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-500">Semana selecionada</p>
-                    <h1 class="text-2xl font-semibold text-slate-900 capitalize">{{ scheduleWeekLabel }}</h1>
-                    <p class="text-sm text-slate-500">Visualize e organize os atendimentos da semana.</p>
+    <div class="page-shell space-y-6">
+        <header class="surface-panel p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <p class="section-kicker">Agenda</p>
+                    <h1 class="mt-2 text-2xl font-semibold text-slate-900">Planejamento clínico semanal</h1>
+                    <p class="mt-2 max-w-3xl text-sm text-[#58635f]">
+                        Visualize sessões, organize disponibilidade e controle bloqueios em áreas separadas para manter o fluxo limpo.
+                    </p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2 lg:flex-none">
-                    <button
-                        class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                        type="button"
-                        @click="changeWeek(-1)"
-                    >
-                        Semana anterior
-                    </button>
-                    <button
-                        class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                        type="button"
-                        @click="goToToday"
-                    >
-                        Esta semana
-                    </button>
-                    <input
-                        v-model="scheduleDate"
-                        class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        type="date"
-                        @change="handleScheduleDateChange"
-                    />
-                    <button
-                        class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                        type="button"
-                        @click="changeWeek(1)"
-                    >
-                        Próxima semana
-                    </button>
-                </div>
-                <div class="lg:ms-auto">
-                    <button
-                        class="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-                        type="button"
-                        @click="openCreateAppointment"
-                    >
-                        <svg class="-ms-1 me-2 size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
-                        </svg>
+                <div class="flex flex-wrap gap-2">
+                    <RouterLink :to="{ name: 'home' }" class="btn-secondary">
+                        <AppIcon name="ChevronLeft" class="size-4" />
+                        Dashboard
+                    </RouterLink>
+                    <button class="btn-primary" type="button" @click="openCreateAppointment">
+                        <AppIcon name="CalendarPlus2" class="size-4" />
                         Novo agendamento
                     </button>
                 </div>
             </div>
+        </header>
 
-            <section class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p class="text-base font-semibold text-slate-950">Disponibilidade automática</p>
-                        <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Configure horários livres, bloqueios, férias e limite diário. Quando houver horários livres ativos, novos agendamentos só entram dentro desses intervalos.</p>
-                    </div>
-                    <button
-                        class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-                        type="button"
-                        :disabled="availabilitySaving"
-                        @click="saveAvailabilitySettings"
-                    >
-                        {{ availabilitySaving ? 'Salvando...' : 'Salvar disponibilidade' }}
+        <section class="surface-panel space-y-6 p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-medium text-[#58635f]">Semana selecionada</p>
+                    <h2 class="mt-1 text-2xl font-semibold text-slate-900 capitalize">{{ scheduleWeekLabel }}</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button class="btn-secondary" type="button" @click="changeWeek(-1)">
+                        <AppIcon name="ChevronLeft" class="size-4" />
+                        Semana anterior
                     </button>
-                </div>
-
-                <div class="mt-4 grid gap-4 xl:grid-cols-[1.4fr_.9fr]">
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-                            <p class="text-sm font-semibold text-slate-900">Horários livres semanais</p>
-                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                Limite por dia
-                                <input
-                                    v-model="dailyAppointmentLimit"
-                                    class="w-20 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    min="0"
-                                    max="40"
-                                    type="number"
-                                />
-                            </label>
-                        </div>
-
-                        <div class="grid gap-2 md:grid-cols-2">
-                            <div
-                                v-for="rule in availabilityRules"
-                                :key="rule.weekday"
-                                class="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-xl border border-slate-100 px-3 py-2"
-                            >
-                                <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <input v-model="rule.enabled" class="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" type="checkbox" />
-                                    {{ weekdayOptions.find((day) => day.value === rule.weekday)?.label }}
-                                </label>
-                                <input
-                                    v-model="rule.startTime"
-                                    class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                                    type="time"
-                                    :disabled="!rule.enabled"
-                                />
-                                <input
-                                    v-model="rule.endTime"
-                                    class="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm disabled:bg-slate-100"
-                                    type="time"
-                                    :disabled="!rule.enabled"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                        <p class="text-sm font-semibold text-slate-900">Bloqueios e férias</p>
-                        <form class="mt-3 space-y-3" @submit.prevent="createScheduleBlock">
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <label class="space-y-1">
-                                    <span class="text-xs font-semibold text-slate-600">Tipo</span>
-                                    <select v-model="blockForm.type" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                                        <option value="block">Bloqueio</option>
-                                        <option value="vacation">Férias</option>
-                                    </select>
-                                </label>
-                                <label class="space-y-1">
-                                    <span class="text-xs font-semibold text-slate-600">Motivo</span>
-                                    <input v-model="blockForm.reason" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ex.: férias" />
-                                </label>
-                            </div>
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <label class="space-y-1">
-                                    <span class="text-xs font-semibold text-slate-600">Início</span>
-                                    <input v-model="blockForm.startsAt" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required type="datetime-local" />
-                                </label>
-                                <label class="space-y-1">
-                                    <span class="text-xs font-semibold text-slate-600">Fim</span>
-                                    <input v-model="blockForm.endsAt" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required type="datetime-local" />
-                                </label>
-                            </div>
-                            <button class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60" type="submit" :disabled="blockSaving">
-                                {{ blockSaving ? 'Salvando...' : 'Adicionar bloqueio' }}
-                            </button>
-                        </form>
-
-                        <div class="mt-4 space-y-2">
-                            <div v-if="availabilityLoading" class="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-500">Carregando disponibilidade...</div>
-                            <div
-                                v-for="block in scheduleBlocks"
-                                :key="block.id"
-                                class="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm"
-                            >
-                                <div>
-                                    <p class="font-semibold text-slate-800">{{ blockTypeLabel(block.type) }}{{ block.reason ? ` · ${block.reason}` : '' }}</p>
-                                    <p class="text-xs text-slate-500">{{ formatTimeLabel(block.starts_at) }} - {{ formatTimeLabel(block.ends_at) }}</p>
-                                </div>
-                                <button class="text-xs font-semibold text-rose-600 hover:text-rose-700" type="button" @click="deleteScheduleBlock(block)">Remover</button>
-                            </div>
-                            <p v-if="!availabilityLoading && scheduleBlocks.length === 0" class="rounded-xl border border-dashed border-slate-200 px-3 py-3 text-center text-sm text-slate-500">Nenhum bloqueio nesta semana.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <p
-                    v-if="availabilityMessage"
-                    class="mt-4 rounded-xl border px-4 py-3 text-sm"
-                    :class="availabilityMessageType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'"
-                >
-                    {{ availabilityMessage }}
-                </p>
-            </section>
-
-            <div v-if="scheduleError" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p>{{ scheduleError }}</p>
-                    <button
-                        class="rounded-xl border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-800"
-                        type="button"
-                        @click="fetchAppointments"
-                    >
-                        Tentar novamente
+                    <button class="btn-secondary" type="button" @click="goToToday">
+                        <AppIcon name="CalendarCheck2" class="size-4" />
+                        Esta semana
+                    </button>
+                    <input
+                        v-model="scheduleDate"
+                        class="field-input min-w-[11rem]"
+                        type="date"
+                        @change="handleScheduleDateChange"
+                    />
+                    <button class="btn-secondary" type="button" @click="changeWeek(1)">
+                        Próxima semana
+                        <AppIcon name="ChevronRight" class="size-4" />
                     </button>
                 </div>
             </div>
 
-            <div v-else class="mt-6">
-                <div v-if="scheduleLoading" class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
-                    Carregando agenda...
+            <nav class="flex flex-wrap gap-2 border-t border-[#ece6db] pt-4" aria-label="Categorias da agenda">
+                <button
+                    v-for="section in scheduleCategories"
+                    :key="section.id"
+                    class="tab-button"
+                    :class="scheduleCategory === section.id ? 'tab-button--active' : ''"
+                    type="button"
+                    @click="scheduleCategory = section.id"
+                >
+                    <AppIcon
+                        :name="section.id === 'agenda' ? 'CalendarDays' : section.id === 'availability' ? 'Clock3' : 'Ban'"
+                        class="size-4"
+                    />
+                    {{ section.label }}
+                </button>
+            </nav>
+
+            <section v-if="scheduleCategory === 'agenda'" class="space-y-4">
+                <div class="grid gap-3 md:grid-cols-3">
+                    <article class="surface-subtle px-4 py-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Sessões na semana</p>
+                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ appointments.length }}</p>
+                    </article>
+                    <article class="surface-subtle px-4 py-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Dias com disponibilidade</p>
+                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ enabledAvailabilityRulesCount }}</p>
+                    </article>
+                    <article class="surface-subtle px-4 py-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Bloqueios na semana</p>
+                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ scheduleBlocks.length }}</p>
+                    </article>
                 </div>
 
-                <div v-else>
-                    <div class="overflow-x-auto">
-                        <div class="min-w-[1200px] rounded-2xl border border-slate-100">
-                            <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <div class="px-2 py-3 text-center">Horário</div>
-                                <div
-                                    v-for="day in weekDays"
-                                    :key="day.date"
-                                    class="px-4 py-3 text-center transition"
-                                    :class="day.isToday ? 'bg-blue-50/40 rounded-t-2xl text-blue-600' : ''"
-                                >
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        {{ day.shortLabel }}
-                                    </p>
-                                    <p class="text-lg font-semibold text-slate-900">
-                                        {{ day.dayNumber }}
-                                    </p>
-                                    <p class="text-xs text-slate-400">{{ day.monthShort }}</p>
-                                    <span
-                                        v-if="day.isToday"
-                                        class="mt-1 inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
-                                    >
-                                        Hoje
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
-                                <div class="border-r border-slate-100 bg-white">
-                                    <div
-                                        v-for="label in calendarTimeLabels"
-                                        :key="label"
-                                        class="flex items-start justify-end px-2 text-xs text-slate-400"
-                                        :style="{ height: `${hourLabelHeight}px` }"
-                                    >
-                                        <span class="-mt-2">{{ label }}</span>
-                                    </div>
-                                </div>
-                                <div
-                                    v-for="day in weekDays"
-                                    :key="day.date"
-                                    class="relative border-l border-slate-100 transition"
-                                    :class="day.isToday ? 'bg-blue-50/20' : 'bg-white hover:bg-slate-50/30'"
-                                    :style="{ height: `${calendarColumnHeight}px` }"
-                                >
-                                    <div class="absolute inset-0 pointer-events-none">
-                                        <div
-                                            v-for="(line, index) in calendarHourLines"
-                                            :key="index"
-                                            class="absolute inset-x-0 border-t"
-                                            :style="{ top: `${line}px`, borderColor: dividerColor }"
-                                        ></div>
-                                    </div>
+                <div v-if="scheduleError" class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <p>{{ scheduleError }}</p>
+                        <button class="btn-secondary text-red-700 hover:text-red-800" type="button" @click="fetchAppointments">
+                            <AppIcon name="RefreshCcw" class="size-4" />
+                            Tentar novamente
+                        </button>
+                    </div>
+                </div>
 
-                                    <div class="relative h-full">
-                                        <div class="pointer-events-none absolute inset-y-0 left-1 z-10 w-px bg-slate-200/70"></div>
-                                        <div class="pointer-events-none absolute inset-y-0 right-1 z-10 w-px bg-slate-200/70"></div>
-                                        <div
-                                            v-for="slot in calendarDayAvailability[day.date] ?? []"
-                                            :key="`availability-${day.date}-${slot.label}`"
-                                            class="pointer-events-none absolute inset-x-2 z-0 rounded-xl border border-emerald-200 bg-emerald-50/70"
-                                            :style="{ top: `${slot.top}px`, height: `${slot.height}px` }"
+                <div v-else class="space-y-4">
+                    <div
+                        v-if="scheduleLoading"
+                        class="rounded-2xl border border-[#ece6db] bg-[#f8f5ef] px-4 py-12 text-center text-sm text-[#58635f]"
+                    >
+                        <span class="inline-flex items-center gap-2">
+                            <AppIcon name="LoaderCircle" class="size-4 animate-spin" />
+                            Carregando agenda...
+                        </span>
+                    </div>
+
+                    <template v-else>
+                        <div class="hidden overflow-x-auto lg:block">
+                            <div class="min-w-[1080px] rounded-2xl border border-[#e7e1d6]">
+                                <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-[#ece6db] bg-[#f8f5ef] text-xs font-semibold uppercase tracking-wide text-[#58635f]">
+                                    <div class="px-2 py-3 text-center">Horário</div>
+                                    <div
+                                        v-for="day in weekDays"
+                                        :key="day.date"
+                                        class="px-4 py-3 text-center transition"
+                                        :class="day.isToday ? 'rounded-t-2xl bg-[#e7eee8] text-[#3f4f46]' : ''"
+                                    >
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">
+                                            {{ day.shortLabel }}
+                                        </p>
+                                        <p class="text-lg font-semibold text-slate-900">{{ day.dayNumber }}</p>
+                                        <p class="text-xs text-slate-400">{{ day.monthShort }}</p>
+                                        <span
+                                            v-if="day.isToday"
+                                            class="mt-1 inline-flex items-center justify-center rounded-full bg-[#dce6de] px-2 py-0.5 text-[10px] font-semibold text-[#3f4f46]"
                                         >
-                                            <span class="absolute right-2 top-1 text-[10px] font-semibold text-emerald-700">Livre {{ slot.label }}</span>
+                                            Hoje
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
+                                    <div class="border-r border-[#ece6db] bg-white">
+                                        <div
+                                            v-for="label in calendarTimeLabels"
+                                            :key="label"
+                                            class="flex items-start justify-end px-2 text-xs text-slate-400"
+                                            :style="{ height: `${hourLabelHeight}px` }"
+                                        >
+                                            <span class="-mt-2">{{ label }}</span>
                                         </div>
-                                        <div
-                                            v-for="block in calendarDayBlocks[day.date] ?? []"
-                                            :key="`block-${day.date}-${block.label}-${block.top}`"
-                                            class="pointer-events-none absolute inset-x-2 z-[15] rounded-xl border px-2 py-1 text-[10px] font-semibold"
-                                            :class="block.type === 'vacation' ? 'border-rose-200 bg-rose-100/80 text-rose-700' : 'border-amber-200 bg-amber-100/80 text-amber-700'"
-                                            :style="{ top: `${block.top}px`, height: `${block.height}px` }"
-                                        >
-                                            {{ block.label }}{{ block.reason ? ` · ${block.reason}` : '' }}
+                                    </div>
+                                    <div
+                                        v-for="day in weekDays"
+                                        :key="day.date"
+                                        class="relative border-l border-[#ece6db] transition"
+                                        :class="day.isToday ? 'bg-[#eef3ee]' : 'bg-white hover:bg-[#fcfaf6]'"
+                                        :style="{ height: `${calendarColumnHeight}px` }"
+                                    >
+                                        <div class="pointer-events-none absolute inset-0">
+                                            <div
+                                                v-for="(line, index) in calendarHourLines"
+                                                :key="index"
+                                                class="absolute inset-x-0 border-t"
+                                                :style="{ top: `${line}px`, borderColor: dividerColor }"
+                                            ></div>
                                         </div>
-                                        <div
-                                            v-if="currentTimeIndicator && currentTimeIndicator.date === day.date"
-                                            class="pointer-events-none absolute inset-x-2 z-10 flex items-center gap-2 text-[10px] font-semibold text-red-500"
-                                            :style="{ top: `${currentTimeIndicator.offset}px` }"
-                                        >
-                                            <div class="h-px flex-1 bg-red-400"></div>
-                                            <span class="rounded-full bg-red-500/10 px-2 py-0.5">Agora</span>
-                                        </div>
-                                        <div
-                                            v-for="item in calendarDayAppointments[day.date] ?? []"
-                                            :key="item.appointment.id"
-                                            class="group absolute z-20 w-[94%] cursor-pointer rounded-2xl border border-slate-200 bg-blue-50/90 px-3 py-2 text-left text-xs text-slate-700 shadow hover:border-blue-300 hover:bg-blue-100 focus:outline-none overflow-hidden"
-                                            :class="{ 'bg-purple-50 text-purple-900 border-purple-200': item.appointment.recurrence_id }"
-                                            :style="{
-                                                top: `${item.top}px`,
-                                                height: `${item.height}px`,
-                                                left: '3%',
-                                            }"
-                                            role="button"
-                                            tabindex="0"
-                                            @click.stop="openEditAppointment(item.appointment)"
-                                            @keydown.enter.prevent="openEditAppointment(item.appointment)"
-                                        >
-                                            <div class="flex h-full flex-col justify-between overflow-hidden">
-                                                <div class="space-y-1">
-                                                    <p class="text-[11px] font-semibold text-slate-500 group-[.bg-purple-50\\/90]:text-purple-700">
-                                                        {{ formatTimeLabel(item.appointment.start_at) }} - {{ formatTimeLabel(item.appointment.end_at) }}
-                                                    </p>
-                                                    <p class="text-sm font-semibold text-slate-800 group-[.bg-purple-50\\/90]:text-purple-900 truncate">
-                                                        {{ item.appointment.patient?.name ?? 'Paciente removido' }}
-                                                    </p>
-                                                    <div class="flex items-center justify-between gap-1">
-                                                        <p class="text-[10px] uppercase tracking-wide text-slate-400 group-[.bg-purple-50\\/90]:text-purple-600">
-                                                            {{ item.typeLabel }}
+
+                                        <div class="relative h-full">
+                                            <div class="pointer-events-none absolute inset-y-0 left-1 z-10 w-px bg-slate-200/70"></div>
+                                            <div class="pointer-events-none absolute inset-y-0 right-1 z-10 w-px bg-slate-200/70"></div>
+                                            <div
+                                                v-for="slot in calendarDayAvailability[day.date] ?? []"
+                                                :key="`availability-${day.date}-${slot.label}`"
+                                                class="pointer-events-none absolute inset-x-2 z-0 rounded-xl border border-[#c9d8cd] bg-[#eef4ef]/80"
+                                                :style="{ top: `${slot.top}px`, height: `${slot.height}px` }"
+                                            >
+                                                <span class="absolute right-2 top-1 text-[10px] font-semibold text-[#4e6655]">Livre {{ slot.label }}</span>
+                                            </div>
+                                            <div
+                                                v-for="block in calendarDayBlocks[day.date] ?? []"
+                                                :key="`block-${day.date}-${block.label}-${block.top}`"
+                                                class="pointer-events-none absolute inset-x-2 z-[15] rounded-xl border px-2 py-1 text-[10px] font-semibold"
+                                                :class="block.type === 'vacation' ? 'border-[#e6c8cc] bg-[#faeff1]/90 text-[#7d4950]' : 'border-[#dfd5c3] bg-[#f9f4ea]/90 text-[#6e5939]'"
+                                                :style="{ top: `${block.top}px`, height: `${block.height}px` }"
+                                            >
+                                                {{ block.label }}{{ block.reason ? ` · ${block.reason}` : '' }}
+                                            </div>
+                                            <div
+                                                v-if="currentTimeIndicator && currentTimeIndicator.date === day.date"
+                                                class="pointer-events-none absolute inset-x-2 z-10 flex items-center gap-2 text-[10px] font-semibold text-[#9a4f57]"
+                                                :style="{ top: `${currentTimeIndicator.offset}px` }"
+                                            >
+                                                <div class="h-px flex-1 bg-[#9a4f57]/80"></div>
+                                                <span class="rounded-full bg-[#9a4f57]/10 px-2 py-0.5">Agora</span>
+                                            </div>
+                                            <div
+                                                v-for="item in calendarDayAppointments[day.date] ?? []"
+                                                :key="item.appointment.id"
+                                                class="group absolute z-20 w-[94%] cursor-pointer overflow-hidden rounded-2xl border border-[#d7d2c7] bg-[#f8f4ec] px-3 py-2 text-left text-xs text-[#39423e] shadow transition hover:border-[#bcb39f] hover:bg-[#f3ede2] focus:outline-none"
+                                                :class="{ 'border-[#c7c0dc] bg-[#f1eef9] text-[#473f61]': item.appointment.recurrence_id }"
+                                                :style="{ top: `${item.top}px`, height: `${item.height}px`, left: '3%' }"
+                                                role="button"
+                                                tabindex="0"
+                                                @click.stop="openEditAppointment(item.appointment)"
+                                                @keydown.enter.prevent="openEditAppointment(item.appointment)"
+                                            >
+                                                <div class="flex h-full flex-col justify-between overflow-hidden">
+                                                    <div class="space-y-1">
+                                                        <p class="text-[11px] font-semibold text-[#6f7a75]">
+                                                            {{ formatTimeLabel(item.appointment.start_at) }} - {{ formatTimeLabel(item.appointment.end_at) }}
                                                         </p>
-                                                        <a
-                                                            v-if="item.meetingUrl"
-                                                            :href="item.meetingUrl"
-                                                            class="inline-flex items-center rounded-full border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            title="Abrir link da sessão"
-                                                            @click.stop
-                                                            @keydown.enter.stop
-                                                        >
-                                                            Meet
-                                                        </a>
+                                                        <p class="truncate text-sm font-semibold text-[#2d3531]">
+                                                            {{ item.appointment.patient?.name ?? 'Paciente removido' }}
+                                                        </p>
+                                                        <div class="flex items-center justify-between gap-1">
+                                                            <p class="text-[10px] uppercase tracking-wide text-[#89948f]">
+                                                                {{ item.typeLabel }}
+                                                            </p>
+                                                            <a
+                                                                v-if="item.meetingUrl"
+                                                                :href="item.meetingUrl"
+                                                                class="inline-flex items-center gap-1 rounded-full border border-[#c9d8cd] px-2 py-0.5 text-[10px] font-semibold text-[#4e6655] transition hover:border-[#b9ccbe] hover:bg-[#edf3ee] focus:outline-none"
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                title="Abrir link da sessão"
+                                                                @click.stop
+                                                                @keydown.enter.stop
+                                                            >
+                                                                <AppIcon name="Video" class="size-3" />
+                                                                Meet
+                                                            </a>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div class="mt-1 flex flex-wrap gap-1">
-                                                    <span
-                                                        class="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                                                        :class="item.badgeClass"
-                                                    >
-                                                        <span class="truncate">{{ item.badgeLabel }}</span>
-                                                    </span>
-                                                    <span
-                                                        v-if="item.isPaid"
-                                                        class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
-                                                    >
-                                                        Pago
-                                                    </span>
+                                                    <div class="mt-1 flex flex-wrap gap-1">
+                                                        <span class="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold" :class="item.badgeClass">
+                                                            <span class="truncate">{{ item.badgeLabel }}</span>
+                                                        </span>
+                                                        <span
+                                                            v-if="item.isPaid"
+                                                            class="inline-flex items-center rounded-full border border-[#c9d8cd] bg-[#edf3ee] px-2 py-0.5 text-[10px] font-semibold text-[#4e6655]"
+                                                        >
+                                                            Pago
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1263,25 +1183,202 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="space-y-3 lg:hidden">
+                            <article
+                                v-for="day in weekDays"
+                                :key="`mobile-${day.date}`"
+                                class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-4"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">{{ day.label }}</p>
+                                        <p class="mt-1 text-sm font-semibold text-slate-900">
+                                            {{ (appointmentsByDay[day.date] ?? []).length }} sessão(ões)
+                                        </p>
+                                    </div>
+                                    <span
+                                        v-if="day.isToday"
+                                        class="rounded-full bg-[#e7eee8] px-2.5 py-1 text-xs font-semibold text-[#3f4f46]"
+                                    >
+                                        Hoje
+                                    </span>
+                                </div>
+
+                                <div v-if="(appointmentsByDay[day.date] ?? []).length" class="mt-3 space-y-2">
+                                    <button
+                                        v-for="appointment in appointmentsByDay[day.date] ?? []"
+                                        :key="`mobile-appointment-${appointment.id}`"
+                                        class="w-full rounded-xl border border-[#e7e1d6] bg-[#fcfaf6] px-3 py-2 text-left transition hover:border-[#c9c1b3]"
+                                        type="button"
+                                        @click="openEditAppointment(appointment)"
+                                    >
+                                        <p class="text-sm font-semibold text-slate-900">
+                                            {{ appointment.patient?.name ?? 'Paciente removido' }}
+                                        </p>
+                                        <p class="mt-1 text-xs text-[#58635f]">
+                                            {{ formatTimeLabel(appointment.start_at) }} - {{ formatTimeLabel(appointment.end_at) }}
+                                        </p>
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <span class="rounded-full border border-[#e2ddd3] px-2 py-0.5 text-[11px] font-semibold text-[#58635f]">
+                                                {{ appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ?? 'Sessão' }}
+                                            </span>
+                                            <span class="rounded-full border border-[#e2ddd3] px-2 py-0.5 text-[11px] font-semibold text-[#58635f]">
+                                                {{ appointmentStatusLabel(appointment.status) }}
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+                                <p v-else class="mt-3 rounded-xl border border-dashed border-[#e2ddd3] px-3 py-3 text-center text-sm text-[#58635f]">
+                                    Sem agendamentos para este dia.
+                                </p>
+                            </article>
+                        </div>
+
+                        <div
+                            v-if="appointmentsEmpty"
+                            class="rounded-2xl border border-dashed border-[#d8d2c5] px-6 py-8 text-center text-sm text-[#58635f]"
+                        >
+                            Nenhum agendamento encontrado para esta semana.
+                            <div class="mt-4">
+                                <button class="btn-secondary" type="button" @click="openCreateAppointment">
+                                    <AppIcon name="CalendarPlus2" class="size-4" />
+                                    Agendar atendimento
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <section v-else-if="scheduleCategory === 'availability'" class="space-y-4">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-base font-semibold text-slate-950">Disponibilidade automática</p>
+                        <p class="mt-1 max-w-2xl text-sm leading-6 text-[#58635f]">
+                            Configure horários livres e limite diário. Novos agendamentos entram apenas nas janelas ativas.
+                        </p>
+                    </div>
+                    <button class="btn-primary" type="button" :disabled="availabilitySaving" @click="saveAvailabilitySettings">
+                        <AppIcon v-if="availabilitySaving" name="LoaderCircle" class="size-4 animate-spin" />
+                        {{ availabilitySaving ? 'Salvando...' : 'Salvar disponibilidade' }}
+                    </button>
+                </div>
+
+                <div class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-4">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-slate-900">Horários livres semanais</p>
+                        <label class="flex items-center gap-2 text-sm font-medium text-[#58635f]">
+                            Limite por dia
+                            <input
+                                v-model="dailyAppointmentLimit"
+                                class="field-input w-20"
+                                min="0"
+                                max="40"
+                                type="number"
+                            />
+                        </label>
                     </div>
 
-                    <div
-                        v-if="appointmentsEmpty"
-                        class="mt-4 rounded-2xl border border-dashed border-slate-200 px-6 py-6 text-center text-sm text-slate-500"
-                    >
-                        Nenhum agendamento encontrado para esta semana.
-                        <div class="mt-4">
-                            <button
-                                class="inline-flex items-center rounded-xl border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
-                                type="button"
-                                @click="openCreateAppointment"
-                            >
-                                Agendar atendimento
-                            </button>
+                    <div class="grid gap-2 md:grid-cols-2">
+                        <div
+                            v-for="rule in availabilityRules"
+                            :key="rule.weekday"
+                            class="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-xl border border-[#efeadf] px-3 py-2"
+                        >
+                            <label class="flex items-center gap-2 text-sm font-semibold text-[#39423e]">
+                                <input v-model="rule.enabled" class="size-4 rounded border-slate-300 text-[#3f4f46] focus:ring-[#3f4f46]" type="checkbox" />
+                                {{ weekdayOptions.find((day) => day.value === rule.weekday)?.label }}
+                            </label>
+                            <input v-model="rule.startTime" class="field-input w-24 disabled:bg-slate-100" type="time" :disabled="!rule.enabled" />
+                            <input v-model="rule.endTime" class="field-input w-24 disabled:bg-slate-100" type="time" :disabled="!rule.enabled" />
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <section v-else class="space-y-4">
+                <div>
+                    <p class="text-base font-semibold text-slate-950">Bloqueios e férias</p>
+                    <p class="mt-1 max-w-2xl text-sm leading-6 text-[#58635f]">
+                        Registre indisponibilidades específicas para manter a agenda realista e evitar conflitos.
+                    </p>
+                </div>
+
+                <div class="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                    <div class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-4">
+                        <form class="space-y-3" @submit.prevent="createScheduleBlock">
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-[#58635f]">Tipo</span>
+                                    <select v-model="blockForm.type" class="field-input">
+                                        <option value="block">Bloqueio</option>
+                                        <option value="vacation">Férias</option>
+                                    </select>
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-[#58635f]">Motivo</span>
+                                    <input v-model="blockForm.reason" class="field-input" placeholder="Ex.: férias" />
+                                </label>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-[#58635f]">Início</span>
+                                    <input v-model="blockForm.startsAt" class="field-input" required type="datetime-local" />
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-[#58635f]">Fim</span>
+                                    <input v-model="blockForm.endsAt" class="field-input" required type="datetime-local" />
+                                </label>
+                            </div>
+                            <button class="btn-primary w-full" type="submit" :disabled="blockSaving">
+                                <AppIcon v-if="blockSaving" name="LoaderCircle" class="size-4 animate-spin" />
+                                {{ blockSaving ? 'Salvando...' : 'Adicionar bloqueio' }}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-4">
+                        <p class="text-sm font-semibold text-slate-900">Bloqueios da semana</p>
+                        <div class="mt-4 space-y-2">
+                            <div v-if="availabilityLoading" class="rounded-xl bg-[#f8f5ef] px-3 py-2 text-sm text-[#58635f]">
+                                Carregando disponibilidade...
+                            </div>
+                            <div
+                                v-for="block in scheduleBlocks"
+                                :key="block.id"
+                                class="flex items-start justify-between gap-3 rounded-xl border border-[#efeadf] px-3 py-2 text-sm"
+                            >
+                                <div>
+                                    <p class="font-semibold text-slate-800">
+                                        {{ blockTypeLabel(block.type) }}{{ block.reason ? ` · ${block.reason}` : '' }}
+                                    </p>
+                                    <p class="text-xs text-[#58635f]">
+                                        {{ formatDateTimeLabel(block.starts_at) }} - {{ formatDateTimeLabel(block.ends_at) }}
+                                    </p>
+                                </div>
+                                <button class="text-xs font-semibold text-[#9a4f57] hover:text-[#87464d]" type="button" @click="deleteScheduleBlock(block)">
+                                    Remover
+                                </button>
+                            </div>
+                            <p
+                                v-if="!availabilityLoading && scheduleBlocks.length === 0"
+                                class="rounded-xl border border-dashed border-[#d8d2c5] px-3 py-3 text-center text-sm text-[#58635f]"
+                            >
+                                Nenhum bloqueio nesta semana.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <p
+                v-if="availabilityMessage && scheduleCategory !== 'agenda'"
+                class="rounded-xl border px-4 py-3 text-sm"
+                :class="availabilityMessageType === 'success' ? 'border-[#c9d8cd] bg-[#eff4f0] text-[#365341]' : 'border-[#e6c8cc] bg-[#faeff1] text-[#7d4950]'"
+            >
+                {{ availabilityMessage }}
+            </p>
         </section>
 
         <div
@@ -1289,20 +1386,18 @@ onBeforeUnmount(() => {
             class="fixed inset-0 z-20 flex items-start justify-center bg-slate-900/40 px-4 py-10 backdrop-blur-sm"
             @click.self="closeAppointmentModal"
         >
-            <div class="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div class="w-full max-w-3xl rounded-3xl border border-[#e2ddd3] bg-white p-6 shadow-2xl">
                 <div class="mb-6 flex items-center justify-between">
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">{{ appointmentModalTitle }}</h2>
-                        <p class="text-sm text-slate-500">Preencha os campos para organizar a sua agenda.</p>
+                        <p class="text-sm text-[#58635f]">Preencha os campos para organizar a sua agenda.</p>
                     </div>
                     <button
-                        class="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                        class="rounded-full border border-[#e2ddd3] p-2 text-[#58635f] transition hover:border-[#c9c1b3] hover:text-[#1f2522]"
                         type="button"
                         @click="closeAppointmentModal"
                     >
-                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M6 18 18 6" />
-                        </svg>
+                        <AppIcon name="X" class="size-5" />
                     </button>
                 </div>
 
@@ -1314,19 +1409,15 @@ onBeforeUnmount(() => {
                                 <input
                                     id="appointment-patient"
                                     v-model="appointmentPatientSearch"
-                                    class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    class="field-input"
                                     placeholder="Buscar paciente pelo nome..."
                                     type="search"
                                     @input="handlePatientSearchInput"
                                 />
-                                <p class="mt-1 text-xs text-slate-500">Digite para filtrar e depois selecione abaixo.</p>
+                                <p class="mt-1 text-xs text-[#58635f]">Digite para filtrar e depois selecione abaixo.</p>
                             </div>
                             <div class="md:w-56">
-                                <select
-                                    v-model="appointmentForm.patientId"
-                                    class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    required
-                                >
+                                <select v-model="appointmentForm.patientId" class="field-input" required>
                                     <option value="" disabled>Selecione o paciente</option>
                                     <option v-for="patient in patientOptions" :key="patient.id" :value="patient.id">
                                         {{ patient.name }}
@@ -1335,20 +1426,20 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <p v-if="appointmentErrors.patientId" class="mt-1 text-xs text-red-600">{{ appointmentErrors.patientId }}</p>
-                        <p v-if="patientOptionsLoading" class="mt-1 text-xs text-slate-500">Carregando pacientes...</p>
+                        <p v-if="patientOptionsLoading" class="mt-1 text-xs text-[#58635f]">Carregando pacientes...</p>
                     </div>
 
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+                    <div class="rounded-2xl border border-[#ece6db] bg-[#f8f5ef]/80 p-4">
                         <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <div>
                                 <p class="text-sm font-semibold text-slate-900">Repetir semanalmente</p>
-                                <p class="text-xs text-slate-500">Cria automaticamente este horário nas próximas semanas.</p>
+                                <p class="text-xs text-[#58635f]">Cria automaticamente este horário nas próximas semanas.</p>
                             </div>
-                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-[#39423e]">
                                 <input
                                     v-model="recurrenceForm.enabled"
                                     :disabled="!recurrenceControlsEnabled"
-                                    class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                                    class="size-4 rounded border-slate-300 text-[#3f4f46] focus:ring-[#3f4f46] disabled:cursor-not-allowed"
                                     type="checkbox"
                                 />
                                 <span>{{ recurrenceControlsEnabled ? 'Ativar' : 'Disponível ao criar' }}</span>
@@ -1357,38 +1448,27 @@ onBeforeUnmount(() => {
 
                         <p
                             v-if="!recurrenceControlsEnabled && !editingRecurringAppointment"
-                            class="mt-2 text-xs text-slate-500"
+                            class="mt-2 text-xs text-[#58635f]"
                         >
                             Para configurar uma recorrência, crie um novo agendamento com o horário desejado.
                         </p>
 
-                        <div
-                            v-if="recurrenceForm.enabled && recurrenceControlsEnabled"
-                            class="mt-4 grid gap-4 md:max-w-md md:grid-cols-2"
-                        >
+                        <div v-if="recurrenceForm.enabled && recurrenceControlsEnabled" class="mt-4 grid gap-4 md:max-w-md md:grid-cols-2">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700" for="recurrence-until">Repetir até</label>
-                                <input
-                                    id="recurrence-until"
-                                    v-model="recurrenceForm.until"
-                                    class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                    type="date"
-                                    :min="appointmentStartDateOnly"
-                                />
-                                <p v-if="appointmentErrors.repeatUntil" class="mt-1 text-xs text-red-600">
-                                    {{ appointmentErrors.repeatUntil }}
-                                </p>
-                                <p class="mt-1 text-xs text-slate-500">Deixe em branco para manter sem data final.</p>
+                                <input id="recurrence-until" v-model="recurrenceForm.until" class="field-input mt-1" type="date" :min="appointmentStartDateOnly" />
+                                <p v-if="appointmentErrors.repeatUntil" class="mt-1 text-xs text-red-600">{{ appointmentErrors.repeatUntil }}</p>
+                                <p class="mt-1 text-xs text-[#58635f]">Deixe em branco para manter sem data final.</p>
                             </div>
                         </div>
 
                         <div
                             v-if="editingRecurringAppointment"
-                            class="mt-4 rounded-2xl border border-purple-200 bg-purple-50/70 p-4 text-sm text-purple-900"
+                            class="mt-4 rounded-2xl border border-[#d2c9e7] bg-[#f5f2fb] p-4 text-sm text-[#554a74]"
                         >
                             <p>Este agendamento faz parte de uma recorrência semanal.</p>
                             <button
-                                class="mt-3 inline-flex items-center justify-center rounded-xl border border-purple-200 px-4 py-2 text-xs font-semibold text-purple-800 transition hover:border-purple-300 hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                class="mt-3 inline-flex items-center justify-center rounded-xl border border-[#d2c9e7] px-4 py-2 text-xs font-semibold text-[#554a74] transition hover:bg-[#efe9fa] disabled:cursor-not-allowed disabled:opacity-60"
                                 type="button"
                                 :disabled="recurrenceActionLoading"
                                 @click="stopRecurringSeries"
@@ -1401,25 +1481,12 @@ onBeforeUnmount(() => {
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-start">Início</label>
-                            <input
-                                id="appointment-start"
-                                v-model="appointmentForm.startAt"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                type="datetime-local"
-                                required
-                            />
+                            <input id="appointment-start" v-model="appointmentForm.startAt" class="field-input mt-1" type="datetime-local" required />
                             <p v-if="appointmentErrors.startAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.startAt }}</p>
                         </div>
-
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-end">Fim</label>
-                            <input
-                                id="appointment-end"
-                                v-model="appointmentForm.endAt"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                type="datetime-local"
-                                required
-                            />
+                            <input id="appointment-end" v-model="appointmentForm.endAt" class="field-input mt-1" type="datetime-local" required />
                             <p v-if="appointmentErrors.endAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.endAt }}</p>
                         </div>
                     </div>
@@ -1427,25 +1494,16 @@ onBeforeUnmount(() => {
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-status">Status</label>
-                            <select
-                                id="appointment-status"
-                                v-model="appointmentForm.status"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            >
+                            <select id="appointment-status" v-model="appointmentForm.status" class="field-input mt-1">
                                 <option v-for="option in appointmentStatusOptions" :key="option.value" :value="option.value">
                                     {{ option.label }}
                                 </option>
                             </select>
                             <p v-if="appointmentErrors.status" class="mt-1 text-xs text-red-600">{{ appointmentErrors.status }}</p>
                         </div>
-
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-type">Tipo</label>
-                            <select
-                                id="appointment-type"
-                                v-model="appointmentForm.type"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            >
+                            <select id="appointment-type" v-model="appointmentForm.type" class="field-input mt-1">
                                 <option v-for="option in appointmentTypeOptions" :key="option.value" :value="option.value">
                                     {{ option.label }}
                                 </option>
@@ -1460,30 +1518,21 @@ onBeforeUnmount(() => {
                             <input
                                 id="appointment-price"
                                 v-model="appointmentForm.price"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 shadow-inner"
+                                class="field-input mt-1 bg-[#f6f2ea]"
                                 type="number"
                                 min="0"
                                 step="0.01"
                                 placeholder="Valor definido pelo paciente"
                                 disabled
                             />
-                            <p
-                                class="mt-1 text-xs"
-                                :class="selectedPatientHasFee ? 'text-slate-500' : 'text-amber-600'"
-                            >
+                            <p class="mt-1 text-xs" :class="selectedPatientHasFee ? 'text-[#58635f]' : 'text-[#8b6b3f]'">
                                 {{ selectedPatientFeeDescription }}
                             </p>
                             <p v-if="appointmentErrors.price" class="mt-1 text-xs text-red-600">{{ appointmentErrors.price }}</p>
                         </div>
-
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-paid">Pago em</label>
-                            <input
-                                id="appointment-paid"
-                                v-model="appointmentForm.paidAt"
-                                class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-900 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                type="datetime-local"
-                            />
+                            <input id="appointment-paid" v-model="appointmentForm.paidAt" class="field-input mt-1" type="datetime-local" />
                             <p v-if="appointmentErrors.paidAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.paidAt }}</p>
                         </div>
                     </div>
@@ -1493,22 +1542,9 @@ onBeforeUnmount(() => {
                     </p>
 
                     <div class="flex justify-end gap-3">
-                        <button
-                            class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                            type="button"
-                            @click="closeAppointmentModal"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            class="inline-flex items-center rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:bg-blue-300"
-                            type="submit"
-                            :disabled="appointmentSubmitting"
-                        >
-                            <svg v-if="appointmentSubmitting" class="-ms-1 me-2 size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                            </svg>
+                        <button class="btn-secondary" type="button" @click="closeAppointmentModal">Cancelar</button>
+                        <button class="btn-primary px-5 py-2.5" type="submit" :disabled="appointmentSubmitting">
+                            <AppIcon v-if="appointmentSubmitting" name="LoaderCircle" class="-ms-1 me-2 size-4 animate-spin" />
                             {{ appointmentSubmitLabel }}
                         </button>
                     </div>

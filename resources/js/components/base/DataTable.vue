@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import AppIcon from './AppIcon.vue';
 
 interface Column {
   key: string;
@@ -24,15 +24,15 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div class="overflow-x-auto rounded-lg border border-neutral-100">
+  <div class="overflow-x-auto rounded-xl border border-[#e2ddd3] bg-white">
     <table class="min-w-full text-left text-sm">
-      <thead class="border-b border-neutral-100 bg-neutral-50">
+      <thead class="border-b border-[#ece6db] bg-[#f8f5ef]">
         <tr>
           <th
             v-for="column in columns"
             :key="column.key"
             :class="[
-              'px-6 py-3 font-semibold text-neutral-700 uppercase tracking-wide',
+              'px-6 py-3 font-semibold uppercase tracking-wide text-[#58635f]',
               column.class || '',
             ]"
           >
@@ -45,12 +45,12 @@ withDefaults(defineProps<Props>(), {
           v-for="(row, idx) in rows"
           :key="idx"
           :class="[
-            'border-b border-neutral-100 transition-colors',
-            striped && idx % 2 === 0 ? 'bg-neutral-50' : 'bg-white',
-            hoverable ? 'hover:bg-neutral-100' : '',
+            'border-b border-[#f0eadf] transition-colors',
+            striped && idx % 2 === 0 ? 'bg-[#fcfaf6]' : 'bg-white',
+            hoverable ? 'hover:bg-[#f6f2ea]' : '',
           ]"
         >
-          <td v-for="column in columns" :key="`${idx}-${column.key}`" :class="['px-6 py-4 text-neutral-700', column.class || '']">
+          <td v-for="column in columns" :key="`${idx}-${column.key}`" :class="['px-6 py-4 text-[#3f4742]', column.class || '']">
             <slot :name="`cell-${column.key}`" :row="row" :column="column">
               {{ row[column.key] }}
             </slot>
@@ -59,12 +59,9 @@ withDefaults(defineProps<Props>(), {
       </tbody>
       <tbody v-else-if="loading">
         <tr>
-          <td :colspan="columns.length" class="px-6 py-8 text-center text-neutral-500">
+          <td :colspan="columns.length" class="px-6 py-8 text-center text-[#58635f]">
             <div class="inline-flex items-center gap-2">
-              <svg class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
+              <AppIcon name="LoaderCircle" class="size-4 animate-spin" />
               Carregando...
             </div>
           </td>
@@ -72,7 +69,7 @@ withDefaults(defineProps<Props>(), {
       </tbody>
       <tbody v-else>
         <tr>
-          <td :colspan="columns.length" class="px-6 py-8 text-center text-neutral-500">
+          <td :colspan="columns.length" class="px-6 py-8 text-center text-[#58635f]">
             Nenhum registro encontrado
           </td>
         </tr>

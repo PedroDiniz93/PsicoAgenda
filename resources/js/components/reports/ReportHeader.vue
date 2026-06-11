@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import AppIcon from '../base/AppIcon.vue';
 
 interface Props {
   reportFiltersOpen: boolean;
@@ -22,12 +23,12 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
     <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <p class="text-sm font-semibold text-cyan-700">Relatórios</p>
+        <p class="section-kicker">Relatórios</p>
         <h1 class="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Indicadores do consultório</h1>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-[#58635f]">
           Analise presença, faltas, cancelamentos e recebimentos em um período específico.
         </p>
         <p class="mt-2 text-sm text-slate-500">
@@ -37,15 +38,17 @@ defineEmits<{
       <div class="flex flex-wrap items-center gap-2">
         <RouterLink
           :to="{ name: 'home' }"
-          class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          class="btn-secondary h-10"
         >
+          <AppIcon name="ChevronLeft" class="size-4" />
           Dashboard
         </RouterLink>
         <button
-          class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          class="btn-secondary h-10"
           type="button"
           @click="$emit('toggle-filters')"
         >
+          <AppIcon :name="reportFiltersOpen ? 'EyeOff' : 'Filter'" class="size-4" />
           {{ reportFiltersOpen ? 'Ocultar filtros' : 'Filtrar' }}
         </button>
       </div>
@@ -54,7 +57,7 @@ defineEmits<{
     <transition name="fade">
       <form
         v-if="reportFiltersOpen"
-        class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4"
+        class="mt-5 rounded-xl border border-[#e7e1d6] bg-[#f8f5ef] p-4"
         @submit.prevent="$emit('apply-filters')"
       >
         <div class="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -63,7 +66,7 @@ defineEmits<{
             <input
               v-model="filters.from"
               type="date"
-              class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              class="field-input h-11"
             />
           </div>
           <div>
@@ -71,24 +74,26 @@ defineEmits<{
             <input
               v-model="filters.to"
               type="date"
-              class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              class="field-input h-11"
             />
           </div>
           <div class="flex gap-2">
             <button
-              class="inline-flex h-11 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              class="btn-primary h-11 disabled:cursor-not-allowed disabled:opacity-60"
               type="submit"
               :disabled="reportLoading"
             >
+              <AppIcon v-if="reportLoading" name="LoaderCircle" class="mr-2 size-4 animate-spin" />
               {{ reportLoading ? 'Filtrando...' : 'Aplicar filtros' }}
             </button>
             <button
               v-if="hasReportFiltersFilled"
               type="button"
-              class="inline-flex h-11 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              class="btn-secondary h-11 disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="reportLoading"
               @click="$emit('clear-filters')"
             >
+              <AppIcon name="X" class="size-4" />
               Limpar
             </button>
           </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import AppIcon from '../base/AppIcon.vue';
 
 interface QuickLink {
   id: string;
@@ -48,9 +49,7 @@ const colorClasses = {
 
       <!-- Icon -->
       <div :class="['rounded-lg p-3 w-fit mt-4 transition-transform group-hover:scale-110', colorClasses[link.color].hover, colorClasses[link.color].text]">
-        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="link.icon" />
-        </svg>
+        <AppIcon :name="link.icon" class="size-6" />
       </div>
     </RouterLink>
   </div>

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import axios from 'axios';
 import { formatMoney } from '../utils/formatters';
+import AppIcon from './base/AppIcon.vue';
 
 const exportPatientsLoading = ref(false);
 const exportPatientsError = ref('');
@@ -181,43 +182,39 @@ onMounted(fetchExportPatients);
 
 <template>
     <div class="space-y-5">
-        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm font-semibold text-cyan-700">Arquivos CSV</p>
+                    <p class="section-kicker">Arquivos CSV</p>
                     <h2 class="mt-1 text-xl font-semibold text-slate-950">Dados para exportação</h2>
-                    <p class="mt-1 text-sm text-slate-500">
+                    <p class="mt-1 text-sm text-[#58635f]">
                         Escolha as informações que devem entrar no arquivo e selecione os pacientes na grid.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <button
-                        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="btn-secondary disabled:opacity-50"
                         type="button"
                         :disabled="exportPatientsLoading"
                         @click="fetchExportPatients"
                     >
-                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8A7.5 7.5 0 0 0 6.2 4.8L4 7m16 10-2.2 2.2A7.5 7.5 0 0 1 4 16" />
-                        </svg>
+                        <AppIcon name="RefreshCcw" class="size-4" />
                         {{ exportPatientsLoading ? 'Carregando...' : 'Recarregar' }}
                     </button>
                     <button
-                        class="inline-flex items-center gap-2 rounded-lg bg-cyan-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-cyan-300"
+                        class="btn-primary px-5 shadow-sm disabled:bg-[#aab5ae]"
                         type="button"
                         :disabled="!exportReady || exportSubmitting || exportPatientsLoading"
                         @click="submitExport"
                     >
-                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-                        </svg>
+                        <AppIcon name="Download" class="size-4" />
                         {{ exportSubmitting ? 'Gerando...' : 'Exportar CSV' }}
                     </button>
                 </div>
             </div>
         </section>
 
-        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
             <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h3 class="text-base font-semibold text-slate-950">Tipos de informação</h3>
@@ -252,7 +249,7 @@ onMounted(fetchExportPatients);
             </div>
         </section>
 
-        <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 shadow-sm">
             <div class="border-b border-slate-100 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
@@ -267,9 +264,7 @@ onMounted(fetchExportPatients);
                             Filtrar por nome
                         </span>
                         <div class="relative">
-                            <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
-                            </svg>
+                            <AppIcon name="Search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 v-model="patientNameFilter"
                                 class="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"

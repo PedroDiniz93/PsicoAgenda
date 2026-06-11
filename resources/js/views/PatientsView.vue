@@ -318,7 +318,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 lg:px-8">
+    <div class="page-shell">
         <div class="space-y-4">
             <PatientsHeader @create="openCreateForm" />
 
