@@ -90,10 +90,6 @@ defineEmits<{
             </nav>
 
             <div class="grid gap-2 border-t border-[#e2e2e2] pt-4">
-                <div class="rounded-xl bg-[#f3f4f3] px-3 py-3" :class="collapsed ? 'lg:hidden' : ''">
-                    <p class="text-xs font-semibold text-[#73787d]">Conta ativa</p>
-                    <p class="mt-1 truncate text-sm font-semibold text-[#1a1c1c]">{{ userName }}</p>
-                </div>
                 <button
                     class="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#42474c] transition hover:bg-[#ffdad6] hover:text-[#ba1a1a]"
                     :class="collapsed ? 'lg:justify-center' : ''"

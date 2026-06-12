@@ -17,6 +17,15 @@ Sempre que uma feature nova for implementada, adicione uma entrada no topo da li
 
 ## Features
 
+### 2026-06-12 - Dashboard consolidada com proximos pacientes e atendimentos semanais
+
+- Status: Implementada
+- Objetivo: substituir os blocos de leitura de periodo e acoes operacionais da dashboard por uma visao direta dos proximos pacientes e do volume semanal de atendimentos.
+- Escopo: `app/Http/Controllers/Api/HomeDashboardController.php`, `routes/api.php`, `resources/js/composables/useHomeDashboardModel.js`, `resources/js/components/home/HomeOverviewPanel.vue`, `resources/js/views/HomeView.vue`.
+- Comportamento: a Home passa a consumir `GET /api/home/dashboard` e exibe a lista dos proximos atendimentos agendados, barras de atendimentos realizados na semana atual e as metricas principais da dashboard.
+- Validacao: build frontend via `npm run build` e teste de integracao do endpoint consolidado.
+- Notas: a listagem usa dados reais do psicologo autenticado e nao exibe pacientes ficticios.
+
 ### 2026-06-12 - Autocomplete global de pacientes
 
 - Status: Implementada

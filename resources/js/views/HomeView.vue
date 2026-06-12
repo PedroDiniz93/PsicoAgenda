@@ -3,7 +3,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
-import { useAppointmentReports } from '../composables/useAppointmentReports';
 import { useHomeDashboardModel } from '../composables/useHomeDashboardModel';
 import HomeOverviewPanel from '../components/home/HomeOverviewPanel.vue';
 import HomeProfilePanel from '../components/home/HomeProfilePanel.vue';
@@ -106,27 +105,15 @@ const adminErrors = reactive({
 });
 
 const {
-    appointmentReport,
-    reportError,
-    reportLoading,
-    fetchAppointmentReport,
-} = useAppointmentReports();
-
-const todayLabel = computed(() =>
-    new Intl.DateTimeFormat('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-    }).format(new Date())
-);
-
-const {
+    dashboardLoading,
+    dashboardError,
     dashboardHero,
     dashboardMetrics,
     dashboardPrimaryActions,
-    dashboardQuickLinks,
-    dashboardInsightCards,
-} = useHomeDashboardModel({ appointmentReport, userName });
+    dashboardNextPatients,
+    dashboardWeeklyAttendances,
+    fetchDashboard,
+} = useHomeDashboardModel({ userName, isAdmin });
 
 const integrationItems = computed(() => [
     {
@@ -503,7 +490,7 @@ onMounted(() => {
     syncTabFromRoute();
     fetchProfile();
     handleGoogleCallbackStatus();
-    fetchAppointmentReport();
+    fetchDashboard();
     fetchAdminPsychologists();
 });
 </script>
@@ -514,13 +501,13 @@ onMounted(() => {
             <HomeOverviewPanel
                 v-if="activeTab === 'overview'"
                 :dashboard-hero="dashboardHero"
-                :report-loading="reportLoading"
-                :report-error="reportError"
+                :dashboard-loading="dashboardLoading"
+                :dashboard-error="dashboardError"
                 :dashboard-metrics="dashboardMetrics"
                 :primary-actions="dashboardPrimaryActions"
-                :quick-links="dashboardQuickLinks"
-                :insight-cards="dashboardInsightCards"
-                @refresh="fetchAppointmentReport"
+                :next-patients="dashboardNextPatients"
+                :weekly-attendances="dashboardWeeklyAttendances"
+                @refresh="fetchDashboard"
             />
 
             <HomeProfilePanel

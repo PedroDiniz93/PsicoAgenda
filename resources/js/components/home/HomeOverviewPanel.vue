@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppIcon from '../base/AppIcon.vue';
 
@@ -27,38 +28,63 @@ interface DashboardAction {
     variant: 'primary' | 'secondary';
 }
 
-interface DashboardQuickLink {
-    id: string;
-    label: string;
-    title: string;
-    description: string;
-    icon: string;
-    to: { name: string };
-    accent: Accent;
+interface NextPatient {
+    id: number;
+    patient: {
+        id: number;
+        name: string;
+    };
+    start_at: string;
+    end_at: string;
+    time_label: string;
+    modality: string;
+    modality_label: string;
+    status: string;
+    status_label: string;
+    status_accent: Accent;
 }
 
-interface DashboardInsight {
-    id: string;
+interface WeeklyAttendanceDay {
+    key: string;
     label: string;
-    title: string;
-    description: string;
-    icon: string;
-    accent: Accent;
+    full_label: string;
+    count: number;
+    ratio: number;
 }
 
-defineProps<{
+interface WeeklyAttendances {
+    label: string;
+    from: string;
+    to: string;
+    total: number;
+    average_daily: number;
+    days: WeeklyAttendanceDay[];
+}
+
+const props = defineProps<{
     dashboardHero: DashboardHero;
-    reportLoading: boolean;
-    reportError: string;
+    dashboardLoading: boolean;
+    dashboardError: string;
     dashboardMetrics: DashboardMetric[];
     primaryActions: DashboardAction[];
-    quickLinks: DashboardQuickLink[];
-    insightCards: DashboardInsight[];
+    nextPatients: NextPatient[];
+    weeklyAttendances: WeeklyAttendances;
 }>();
 
 defineEmits<{
     refresh: [];
 }>();
+
+const dashboardHero = computed(() => props.dashboardHero);
+const dashboardLoading = computed(() => props.dashboardLoading);
+const dashboardError = computed(() => props.dashboardError);
+const dashboardMetrics = computed(() => props.dashboardMetrics);
+const primaryActions = computed(() => props.primaryActions);
+const nextPatients = computed(() => props.nextPatients);
+const weeklyAttendances = computed(() => props.weeklyAttendances);
+
+const weeklyMax = computed(() => Math.max(0, ...weeklyAttendances.value.days.map((day) => day.count)));
+const weeklyAverage = computed(() => Number(weeklyAttendances.value.average_daily ?? 0).toFixed(1));
 
 const accentClasses: Record<Accent, { border: string; icon: string; soft: string; value: string }> = {
     primary: {
@@ -92,6 +118,25 @@ const accentClasses: Record<Accent, { border: string; icon: string; soft: string
         value: 'text-[#ba1a1a]',
     },
 };
+
+const appointmentAccent = (appointment: NextPatient): Accent => (
+    appointment.modality === 'in_person' ? 'success' : 'primary'
+);
+
+const patientInitials = (name: string) => name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'P';
+
+const barHeight = (count: number) => {
+    if (weeklyMax.value <= 0 || count <= 0) {
+        return '0%';
+    }
+
+    return `${Math.max(8, Math.round((count / weeklyMax.value) * 100))}%`;
+};
 </script>
 
 <template>
@@ -114,16 +159,17 @@ const accentClasses: Record<Accent, { border: string; icon: string; soft: string
                         <AppIcon :name="action.icon" class="size-4" />
                         {{ action.label }}
                     </RouterLink>
-                    <button class="btn-secondary h-10 disabled:opacity-60" type="button" :disabled="reportLoading" @click="$emit('refresh')">
-                        <AppIcon name="RefreshCw" :class="['size-4', reportLoading ? 'animate-spin' : '']" />
-                        Atualizar
-                    </button>
                 </div>
             </div>
 
-            <p v-if="reportError" class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {{ reportError }}
+            <p v-if="dashboardError" class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ dashboardError }}
+                <button class="ml-2 font-semibold underline underline-offset-2" type="button" @click="$emit('refresh')">
+                    Tentar novamente
+                </button>
             </p>
+
+            <p v-if="dashboardLoading" class="mt-4 text-sm text-[#58635f]">Carregando resumo da dashboard...</p>
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <article
@@ -152,54 +198,73 @@ const accentClasses: Record<Accent, { border: string; icon: string; soft: string
 
         <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-                <div>
-                    <p class="section-kicker">Contexto</p>
-                    <h3 class="mt-1 text-xl font-semibold text-slate-950">Leitura do período</h3>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Próximos Pacientes</h3>
+                    </div>
+
+                    <RouterLink class="btn-secondary h-10" :to="{ name: 'schedule' }">
+                        Ver agenda completa
+                    </RouterLink>
                 </div>
 
-                <div class="mt-5 space-y-3">
-                    <article
-                        v-for="card in insightCards"
-                        :key="card.id"
-                        :class="['rounded-xl border border-[#e2e2e2] p-4', accentClasses[card.accent].soft]"
+                <div v-if="nextPatients.length === 0" class="mt-5 rounded-xl border border-dashed border-[#d7ddd9] bg-[#f9f9f8] p-5 text-sm text-[#58635f]">
+                    Sem próximos pacientes agendados.
+                </div>
+
+                <div v-else class="mt-5 space-y-3">
+                    <RouterLink
+                        v-for="appointment in nextPatients"
+                        :key="appointment.id"
+                        :to="{ name: 'patient-records', params: { id: appointment.patient.id } }"
+                        class="group flex items-center justify-between gap-4 rounded-xl border border-[#e2e2e2] bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-[#c2c7cd] hover:bg-[#f9f9f8] hover:shadow-sm"
                     >
-                        <div class="flex items-start gap-3">
-                            <span :class="['rounded-xl p-2', accentClasses[card.accent].icon]">
-                                <AppIcon :name="card.icon" class="size-5" />
-                            </span>
+                        <div class="flex items-center gap-3">
+                            <div :class="['flex size-12 items-center justify-center rounded-full text-sm font-semibold', accentClasses[appointmentAccent(appointment)].icon]">
+                                {{ patientInitials(appointment.patient.name) }}
+                            </div>
                             <div>
-                                <p class="text-xs font-semibold text-[#73787d]">{{ card.label }}</p>
-                                <h4 class="mt-1 text-base font-semibold text-slate-950">{{ card.title }}</h4>
-                                <p class="mt-1 text-sm leading-5 text-[#58635f]">{{ card.description }}</p>
+                                <h4 class="text-sm font-semibold text-slate-950">{{ appointment.patient.name }}</h4>
+                                <p class="mt-1 text-sm text-[#58635f]">{{ appointment.time_label }} · {{ appointment.modality_label }}</p>
                             </div>
                         </div>
-                    </article>
+
+                        <div class="flex items-center gap-3">
+                            <span :class="['rounded-full px-3 py-1 text-xs font-semibold', accentClasses[appointmentAccent(appointment)].soft, accentClasses[appointmentAccent(appointment)].value]">
+                                {{ appointment.status_label }}
+                            </span>
+                            <AppIcon name="ChevronRight" class="size-4 shrink-0 text-[#73787d] transition group-hover:translate-x-0.5" />
+                        </div>
+                    </RouterLink>
                 </div>
             </section>
 
             <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-                <div>
-                    <p class="section-kicker">Protocolo</p>
-                    <h3 class="mt-1 text-xl font-semibold text-slate-950">Ações operacionais</h3>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Atendimentos Semanais</h3>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs font-semibold text-[#58635f]">
+                        <span class="size-3 rounded-full bg-[#415f76]"></span>
+                        Realizados
+                    </div>
                 </div>
 
-                <div class="mt-5 grid gap-3">
-                    <RouterLink
-                        v-for="link in quickLinks"
-                        :key="link.id"
-                        :to="link.to"
-                        class="group flex items-center gap-3 rounded-xl border border-[#e2e2e2] bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-[#c2c7cd] hover:bg-[#f9f9f8] hover:shadow-sm"
-                    >
-                        <span :class="['rounded-xl p-2 transition group-hover:scale-105', accentClasses[link.accent].icon]">
-                            <AppIcon :name="link.icon" class="size-5" />
-                        </span>
-                        <span class="min-w-0 flex-1">
-                            <span class="block text-xs font-semibold text-[#73787d]">{{ link.label }}</span>
-                            <span class="mt-0.5 block text-sm font-semibold text-slate-950">{{ link.title }}</span>
-                            <span class="mt-0.5 block text-sm leading-5 text-[#58635f]">{{ link.description }}</span>
-                        </span>
-                        <AppIcon name="ChevronRight" class="size-4 shrink-0 text-[#73787d]" />
-                    </RouterLink>
+                <div class="mt-5 flex h-52 items-end justify-between gap-2 px-1">
+                    <div v-for="day in weeklyAttendances.days" :key="day.key" class="flex flex-1 flex-col items-center gap-3">
+                        <div class="flex h-44 w-full items-end rounded-t-lg bg-[#eeeeed] px-2 pb-0.5">
+                            <div class="chart-bar w-full rounded-t-lg bg-[#5a7890]" :style="{ height: barHeight(day.count) }"></div>
+                        </div>
+                        <span class="text-xs font-semibold text-[#73787d]">{{ day.label }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-5 border-t border-[#e2e2e2] pt-4">
+                    <div class="flex items-center justify-between gap-4 text-sm">
+                        <span class="text-[#58635f]">Média Diária</span>
+                        <span class="font-semibold text-[#415f76]">{{ weeklyAverage }} sessões</span>
+                    </div>
                 </div>
             </section>
         </div>

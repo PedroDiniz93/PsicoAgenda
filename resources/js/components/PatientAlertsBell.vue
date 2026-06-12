@@ -213,14 +213,6 @@ const panelClass = computed(() =>
                         <p class="font-semibold text-slate-900">Pacientes sem agendar</p>
                         <p class="text-xs text-slate-500">Há mais de {{ thresholdDays }} dia(s)</p>
                     </div>
-                    <button
-                        class="rounded-full border border-slate-200 p-1 text-xs font-semibold text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-                        type="button"
-                        :disabled="loading"
-                        @click.stop="refreshAlerts"
-                    >
-                        {{ loading ? '...' : 'Atualizar' }}
-                    </button>
                 </div>
 
                 <div v-if="error" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">

@@ -177,14 +177,6 @@ defineEmits<{
                     <h2 class="text-lg font-semibold text-slate-950">Perfis cadastrados</h2>
                     <p class="text-sm text-slate-500">{{ adminPsychologists.length }} perfil(is)</p>
                 </div>
-                <button
-                    class="inline-flex h-10 items-center rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    type="button"
-                    :disabled="adminLoading"
-                    @click="$emit('refresh')"
-                >
-                    Atualizar
-                </button>
             </div>
 
             <div v-if="adminLoading" class="px-5 py-12 text-center text-sm text-slate-500">

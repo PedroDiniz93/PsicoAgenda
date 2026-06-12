@@ -1,62 +1,24 @@
-import { computed } from 'vue';
-import { formatMoney } from '../utils/formatters';
+import { computed, ref } from 'vue';
+import axios from 'axios';
 
-const pluralize = (count, singular, plural) => `${count} ${count === 1 ? singular : plural}`;
-
-const formatAttendancePercent = (rate) => {
-    if (typeof rate !== 'number' || Number.isNaN(rate)) {
-        return null;
-    }
-
-    return Math.round(rate * 1000) / 10;
-};
-
-export function useHomeDashboardModel({ appointmentReport, userName, isAdmin }) {
-    const attendancePercent = computed(() => formatAttendancePercent(appointmentReport.summary.attendanceRate));
-
-    const dashboardHero = computed(() => ({
+export function useHomeDashboardModel({ userName, isAdmin }) {
+    const dashboardLoading = ref(false);
+    const dashboardError = ref('');
+    const dashboardHero = ref({
         kicker: 'Painel do consultório',
         title: `Olá, ${userName.value}`,
-        description:
-            appointmentReport.summary.totalSessions > 0
-                ? `Você tem ${pluralize(appointmentReport.summary.totalSessions, 'sessão registrada', 'sessões registradas')} no período acompanhado.`
-                : 'Acompanhe a rotina clínica e financeira assim que houver sessões no período.',
-    }));
-
-    const dashboardMetrics = computed(() => [
-        {
-            id: 'sessions',
-            label: 'Sessões no período',
-            value: appointmentReport.summary.totalSessions,
-            detail: pluralize(appointmentReport.summary.uniquePatients, 'paciente único', 'pacientes únicos'),
-            icon: 'CalendarCheck2',
-            accent: 'primary',
-        },
-        {
-            id: 'attendance',
-            label: 'Comparecimento',
-            value: attendancePercent.value === null ? 'Sem dados' : `${attendancePercent.value.toFixed(1)}%`,
-            detail: `${appointmentReport.appointments.done} concluídas, ${appointmentReport.appointments.missed} faltas`,
-            icon: 'UserCheck',
-            accent: 'success',
-        },
-        {
-            id: 'ticket',
-            label: 'Ticket médio',
-            value: formatMoney(appointmentReport.summary.avgTicket),
-            detail: 'Média dos atendimentos pagos',
-            icon: 'BadgeDollarSign',
-            accent: 'tertiary',
-        },
-        {
-            id: 'pending',
-            label: 'A receber',
-            value: formatMoney(appointmentReport.payments.pending.value),
-            detail: pluralize(appointmentReport.payments.pending.appointments, 'sessão pendente', 'sessões pendentes'),
-            icon: 'Clock3',
-            accent: 'warning',
-        },
-    ]);
+        description: 'Acompanhe a rotina clínica e financeira assim que houver sessões no período.',
+    });
+    const dashboardMetrics = ref([]);
+    const dashboardNextPatients = ref([]);
+    const dashboardWeeklyAttendances = ref({
+        label: 'Semana atual',
+        from: '',
+        to: '',
+        total: 0,
+        average_daily: 0,
+        days: [],
+    });
 
     const dashboardPrimaryActions = computed(() => [
         {
@@ -74,77 +36,6 @@ export function useHomeDashboardModel({ appointmentReport, userName, isAdmin }) 
             variant: 'secondary',
         },
     ]);
-
-    const dashboardQuickLinks = computed(() => [
-        {
-            id: 'patients',
-            label: 'Pacientes',
-            title: 'Base de pacientes',
-            description: 'Cadastro, histórico e prontuários',
-            icon: 'UsersRound',
-            to: { name: 'patients' },
-            accent: 'primary',
-        },
-        {
-            id: 'schedule',
-            label: 'Agenda',
-            title: 'Sessões e horários',
-            description: 'Planejamento da rotina clínica',
-            icon: 'CalendarClock',
-            to: { name: 'schedule' },
-            accent: 'success',
-        },
-        {
-            id: 'reports',
-            label: 'Relatórios',
-            title: 'Indicadores',
-            description: 'Compare presença, receita e faltas',
-            icon: 'ChartColumn',
-            to: { name: 'reports' },
-            accent: 'warning',
-        },
-        {
-            id: 'finance',
-            label: 'Financeiro',
-            title: 'Recebimentos',
-            description: 'Cobranças, Pix e recibos',
-            icon: 'WalletCards',
-            to: { name: 'finance' },
-            accent: 'primary',
-        },
-        {
-            id: 'exports',
-            label: 'Exportação',
-            title: 'Arquivos clínicos',
-            description: 'Exporte dados para conferência',
-            icon: 'FileArchive',
-            to: { name: 'exports' },
-            accent: 'error',
-        },
-    ]);
-
-    const dashboardInsightCards = computed(() => [
-        {
-            id: 'clinical',
-            label: 'Rotina clínica',
-            title: pluralize(appointmentReport.summary.totalSessions, 'sessão no período', 'sessões no período'),
-            description:
-                attendancePercent.value === null
-                    ? 'Sem dados suficientes para calcular comparecimento.'
-                    : `${attendancePercent.value.toFixed(1)}% de comparecimento nas sessões concluídas ou com falta.`,
-            icon: 'Stethoscope',
-            accent: 'primary',
-        },
-        {
-            id: 'finance',
-            label: 'Recebimentos',
-            title: formatMoney(appointmentReport.payments.paid.value),
-            description: `${pluralize(appointmentReport.payments.paid.appointments, 'sessão paga', 'sessões pagas')} e ${pluralize(appointmentReport.payments.pending.appointments, 'pendência', 'pendências')}.`,
-            icon: 'ReceiptText',
-            accent: 'success',
-        },
-    ]);
-
 
     const shellNavigationItems = computed(() => [
         {
@@ -216,12 +107,48 @@ export function useHomeDashboardModel({ appointmentReport, userName, isAdmin }) 
             : []),
     ]);
 
+    const applyDashboard = (payload = {}) => {
+        const hero = payload.hero ?? {};
+        dashboardHero.value = {
+            kicker: hero.kicker ?? 'Painel do consultório',
+            title: hero.title ?? `Olá, ${userName.value}`,
+            description: hero.description ?? 'Acompanhe a rotina clínica e financeira assim que houver sessões no período.',
+        };
+        dashboardMetrics.value = Array.isArray(payload.metrics) ? payload.metrics : [];
+        dashboardNextPatients.value = Array.isArray(payload.next_patients) ? payload.next_patients : [];
+        dashboardWeeklyAttendances.value = {
+            label: payload.weekly_attendances?.label ?? 'Semana atual',
+            from: payload.weekly_attendances?.from ?? '',
+            to: payload.weekly_attendances?.to ?? '',
+            total: Number(payload.weekly_attendances?.total ?? 0),
+            average_daily: Number(payload.weekly_attendances?.average_daily ?? 0),
+            days: Array.isArray(payload.weekly_attendances?.days) ? payload.weekly_attendances.days : [],
+        };
+    };
+
+    const fetchDashboard = async () => {
+        dashboardLoading.value = true;
+        dashboardError.value = '';
+
+        try {
+            const { data } = await axios.get('/api/home/dashboard');
+            applyDashboard(data ?? {});
+        } catch (error) {
+            dashboardError.value = error?.response?.data?.message ?? 'Não foi possível carregar a dashboard.';
+        } finally {
+            dashboardLoading.value = false;
+        }
+    };
+
     return {
+        dashboardLoading,
+        dashboardError,
         dashboardHero,
         dashboardMetrics,
         dashboardPrimaryActions,
-        dashboardQuickLinks,
-        dashboardInsightCards,
+        dashboardNextPatients,
+        dashboardWeeklyAttendances,
+        fetchDashboard,
         shellNavigationItems,
     };
 }
