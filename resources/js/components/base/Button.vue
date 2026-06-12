@@ -21,12 +21,12 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const variantClasses = {
-  primary: 'bg-[#3f4f46] text-white hover:bg-[#36433c] disabled:bg-[#aab5ae]',
-  secondary: 'border border-[#e2ddd3] text-[#58635f] hover:border-[#c9c1b3] hover:bg-[#fbf8f2] disabled:opacity-60',
-  danger: 'bg-[#9a4f57] text-white hover:bg-[#87464d] disabled:bg-[#c69ba0]',
-  ghost: 'text-[#58635f] hover:bg-[#f3efe7] disabled:opacity-60',
-  success: 'bg-[#4e6655] text-white hover:bg-[#435a4a] disabled:bg-[#9db2a2]',
-  warning: 'bg-[#8b6b3f] text-white hover:bg-[#775d38] disabled:bg-[#bea789]',
+  primary: 'bg-[#415f76] text-white hover:bg-[#2b4a60] disabled:bg-[#abcae5]',
+  secondary: 'border border-[#e2e2e2] bg-white text-[#42474c] hover:border-[#c2c7cd] hover:bg-[#f3f4f3] disabled:opacity-60',
+  danger: 'bg-[#ba1a1a] text-white hover:bg-[#93000a] disabled:bg-[#ffb4ab]',
+  ghost: 'text-[#42474c] hover:bg-[#f3f4f3] disabled:opacity-60',
+  success: 'bg-[#4c6455] text-white hover:bg-[#344c3e] disabled:bg-[#b2cdbb]',
+  warning: 'bg-[#605b55] text-white hover:bg-[#4a4640] disabled:bg-[#ccc5be]',
 };
 
 const sizeClasses = {
@@ -35,7 +35,7 @@ const sizeClasses = {
   lg: 'px-6 py-3 text-base',
 };
 
-const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4ddd5] disabled:cursor-not-allowed';
+const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#cae6ff] disabled:cursor-not-allowed';
 
 const computedClass = computed(() => {
   const classes = [

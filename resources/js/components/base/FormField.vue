@@ -12,7 +12,7 @@ interface Props {
   modelValue?: string | number;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 defineEmits<{
   'update:modelValue': [value: string | number];
 }>();
@@ -23,9 +23,9 @@ const hasHelp = computed(() => Boolean(props.help) && !hasError.value);
 
 <template>
   <div class="flex flex-col gap-1.5">
-    <label v-if="label" class="text-sm font-medium text-neutral-700">
+    <label v-if="label" class="text-sm font-semibold text-[#42474c]">
       {{ label }}
-      <span v-if="required" class="text-error-600">*</span>
+      <span v-if="required" class="text-[#ba1a1a]">*</span>
     </label>
     <input
       :value="modelValue"
@@ -33,16 +33,16 @@ const hasHelp = computed(() => Boolean(props.help) && !hasError.value);
       :placeholder="placeholder"
       :disabled="disabled"
       :class="[
-        'w-full rounded-lg border px-4 py-2 text-sm transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-primary-200',
-        'disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed',
+        'w-full rounded-lg border px-4 py-2 text-sm text-[#1a1c1c] transition-colors',
+        'focus:outline-none focus:ring-2 focus:ring-[#cae6ff]',
+        'disabled:bg-[#f3f4f3] disabled:text-[#73787d] disabled:cursor-not-allowed',
         hasError
-          ? 'border-error-300 bg-error-50 focus:border-error-500'
-          : 'border-neutral-200 bg-white focus:border-primary-500',
+          ? 'border-[#ffb4ab] bg-[#ffdad6] focus:border-[#ba1a1a]'
+          : 'border-[#e2e2e2] bg-white focus:border-[#415f76]',
       ]"
       @input="$emit('update:modelValue', $event.target.value)"
     />
-    <p v-if="hasError" class="text-xs text-error-600">{{ error }}</p>
-    <p v-else-if="hasHelp" class="text-xs text-neutral-500">{{ help }}</p>
+    <p v-if="hasError" class="text-xs text-[#ba1a1a]">{{ error }}</p>
+    <p v-else-if="hasHelp" class="text-xs text-[#73787d]">{{ help }}</p>
   </div>
 </template>

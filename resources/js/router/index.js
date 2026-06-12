@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const LoginView = () => import('../views/LoginView.vue');
+const ForgotPasswordView = () => import('../views/ForgotPasswordView.vue');
+const ResetPasswordView = () => import('../views/ResetPasswordView.vue');
 const EmailVerificationView = () => import('../views/EmailVerificationView.vue');
 const HomeView = () => import('../views/HomeView.vue');
 const ReportsView = () => import('../views/ReportsView.vue');
@@ -20,6 +22,18 @@ const router = createRouter({
             name: 'login',
             component: LoginView,
             meta: { public: true, guest: true, title: 'Entrar' },
+        },
+        {
+            path: '/forgot-password',
+            name: 'forgot-password',
+            component: ForgotPasswordView,
+            meta: { public: true, guest: true, title: 'Recuperar senha' },
+        },
+        {
+            path: '/reset-password',
+            name: 'reset-password',
+            component: ResetPasswordView,
+            meta: { public: true, guest: true, title: 'Criar nova senha' },
         },
         {
             path: '/email-verification',

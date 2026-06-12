@@ -32,21 +32,21 @@ const hasError = computed(() => Boolean(props.error));
 
 <template>
   <div class="flex flex-col gap-1.5">
-    <label v-if="label" class="text-sm font-medium text-neutral-700">
+    <label v-if="label" class="text-sm font-semibold text-[#42474c]">
       {{ label }}
-      <span v-if="required" class="text-error-600">*</span>
+      <span v-if="required" class="text-[#ba1a1a]">*</span>
     </label>
     <div class="relative">
       <button
         type="button"
         :class="[
-          'w-full rounded-lg border px-4 py-2 text-sm text-left transition-colors',
+          'w-full rounded-lg border px-4 py-2 text-left text-sm transition-colors',
           'flex items-center justify-between gap-2',
-          'focus:outline-none focus:ring-2 focus:ring-primary-200',
-          'disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed',
+          'focus:outline-none focus:ring-2 focus:ring-[#cae6ff]',
+          'disabled:bg-[#f3f4f3] disabled:text-[#73787d] disabled:cursor-not-allowed',
           hasError
-            ? 'border-error-300 bg-error-50 focus:border-error-500'
-            : 'border-neutral-200 bg-white focus:border-primary-500',
+            ? 'border-[#ffb4ab] bg-[#ffdad6] focus:border-[#ba1a1a]'
+            : 'border-[#e2e2e2] bg-white text-[#1a1c1c] focus:border-[#415f76]',
         ]"
         :disabled="disabled"
         @click="open = !open"
@@ -56,15 +56,15 @@ const hasError = computed(() => Boolean(props.error));
       </button>
       <div
         v-if="open"
-        class="absolute top-full left-0 right-0 z-dropdown mt-1 rounded-lg border border-neutral-200 bg-white shadow-lg"
+        class="absolute left-0 right-0 top-full z-dropdown mt-1 overflow-hidden rounded-lg border border-[#e2e2e2] bg-white shadow-[0_24px_60px_rgba(65,95,118,0.08)]"
         @click.self="open = false"
       >
         <button
           v-for="option in options"
           :key="option.value"
           type="button"
-          class="w-full px-4 py-2 text-left text-sm hover:bg-primary-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
-          :class="option.value === modelValue ? 'bg-primary-100 text-primary-800 font-medium' : 'text-neutral-700'"
+          class="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-[#f3f4f3]"
+          :class="option.value === modelValue ? 'bg-[#cae6ff] font-semibold text-[#415f76]' : 'text-[#42474c]'"
           @click="
             emit('update:modelValue', option.value);
             open = false;
@@ -74,6 +74,6 @@ const hasError = computed(() => Boolean(props.error));
         </button>
       </div>
     </div>
-    <p v-if="hasError" class="text-xs text-error-600">{{ error }}</p>
+    <p v-if="hasError" class="text-xs text-[#ba1a1a]">{{ error }}</p>
   </div>
 </template>

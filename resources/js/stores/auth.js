@@ -3,6 +3,33 @@ import axios from 'axios';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
+const EXPIRES_AT_KEY = 'auth_expires_at';
+const REMEMBER_KEY = 'auth_remember';
+
+const storageTargets = [localStorage, sessionStorage];
+
+const readStoredSession = () => {
+    for (const storage of storageTargets) {
+        const token = storage.getItem(TOKEN_KEY);
+        const user = storage.getItem(USER_KEY);
+        const expiresAt = storage.getItem(EXPIRES_AT_KEY);
+
+        if (token) {
+            return { storage, token, user, expiresAt };
+        }
+    }
+
+    return { storage: null, token: null, user: null, expiresAt: null };
+};
+
+const clearStoredSession = () => {
+    storageTargets.forEach((storage) => {
+        storage.removeItem(TOKEN_KEY);
+        storage.removeItem(USER_KEY);
+        storage.removeItem(EXPIRES_AT_KEY);
+        storage.removeItem(REMEMBER_KEY);
+    });
+};
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -20,8 +47,13 @@ export const useAuthStore = defineStore('auth', {
         initialize() {
             if (this.initialized) return;
 
-            const token = localStorage.getItem(TOKEN_KEY);
-            const user = localStorage.getItem(USER_KEY);
+            const { token, user, expiresAt } = readStoredSession();
+
+            if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+                this.clearSession();
+                this.initialized = true;
+                return;
+            }
 
             if (token) {
                 this.token = token;
@@ -33,7 +65,7 @@ export const useAuthStore = defineStore('auth', {
                     this.user = JSON.parse(user);
                     this.requiresEmailVerification = this.user?.role === 'psychologist' && !this.user?.email_verified_at;
                 } catch (_) {
-                    localStorage.removeItem(USER_KEY);
+                    clearStoredSession();
                 }
             }
 
@@ -45,7 +77,8 @@ export const useAuthStore = defineStore('auth', {
 
             try {
                 const { data } = await axios.post('/api/auth/login', credentials);
-                this.setSession(data.token, data.user);
+                const remember = Boolean(data.remember ?? credentials.remember);
+                this.setSession(data.token, data.user, { remember, expiresAt: data.expires_at });
                 this.requiresEmailVerification = Boolean(data.requires_email_verification);
             } catch (error) {
                 const message = this.extractErrorMessage(error);
@@ -98,24 +131,36 @@ export const useAuthStore = defineStore('auth', {
                 this.loading = false;
             }
         },
-        setSession(token, user) {
+        setSession(token, user, options = {}) {
+            const remember = Boolean(options.remember);
+            const storage = remember ? localStorage : sessionStorage;
+            const expiresAt = remember ? (options.expiresAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()) : null;
+
+            clearStoredSession();
             this.token = token;
             axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-            localStorage.setItem(TOKEN_KEY, token);
-            this.setUser(user);
+            storage.setItem(TOKEN_KEY, token);
+            storage.setItem(REMEMBER_KEY, remember ? '1' : '0');
+
+            if (expiresAt) {
+                storage.setItem(EXPIRES_AT_KEY, expiresAt);
+            }
+
+            this.setUser(user, storage);
         },
-        setUser(user) {
+        setUser(user, storage = null) {
             this.user = user;
             this.requiresEmailVerification = user?.role === 'psychologist' && !user?.email_verified_at;
-            localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+            const targetStorage = storage ?? readStoredSession().storage ?? localStorage;
+            targetStorage.setItem(USER_KEY, JSON.stringify(user));
         },
         clearSession() {
             this.token = null;
             this.user = null;
             this.requiresEmailVerification = false;
             delete axios.defaults.headers.common.Authorization;
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
+            clearStoredSession();
         },
         extractErrorMessage(error) {
             if (error?.response?.data?.message) {
