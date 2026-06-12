@@ -36,6 +36,7 @@ interface NextPatient {
     };
     start_at: string;
     end_at: string;
+    date_label: string;
     time_label: string;
     modality: string;
     modality_label: string;
@@ -48,6 +49,7 @@ interface WeeklyAttendanceDay {
     key: string;
     label: string;
     full_label: string;
+    date_label: string;
     count: number;
     ratio: number;
 }
@@ -141,7 +143,7 @@ const barHeight = (count: number) => {
 
 <template>
     <section class="space-y-6">
-        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+        <section>
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p class="section-kicker">{{ dashboardHero.kicker }}</p>
@@ -225,7 +227,7 @@ const barHeight = (count: number) => {
                             </div>
                             <div>
                                 <h4 class="text-sm font-semibold text-slate-950">{{ appointment.patient.name }}</h4>
-                                <p class="mt-1 text-sm text-[#58635f]">{{ appointment.time_label }} · {{ appointment.modality_label }}</p>
+                                <p class="mt-1 text-sm text-[#58635f]">{{ appointment.date_label }} · {{ appointment.time_label }} · {{ appointment.modality_label }}</p>
                             </div>
                         </div>
 
@@ -252,11 +254,13 @@ const barHeight = (count: number) => {
                 </div>
 
                 <div class="mt-5 flex h-52 items-end justify-between gap-2 px-1">
-                    <div v-for="day in weeklyAttendances.days" :key="day.key" class="flex flex-1 flex-col items-center gap-3">
-                        <div class="flex h-44 w-full items-end rounded-t-lg bg-[#eeeeed] px-2 pb-0.5">
+                    <div v-for="day in weeklyAttendances.days" :key="day.key" class="flex flex-1 flex-col items-center gap-2">
+                        <div class="flex h-44 w-full flex-col justify-end rounded-t-lg bg-[#eeeeed] px-2 pb-2">
+                            <span class="mb-2 text-center text-xs font-semibold text-[#415f76]">{{ day.count }}</span>
                             <div class="chart-bar w-full rounded-t-lg bg-[#5a7890]" :style="{ height: barHeight(day.count) }"></div>
                         </div>
                         <span class="text-xs font-semibold text-[#73787d]">{{ day.label }}</span>
+                        <span class="text-[11px] text-[#8b8f94]">{{ day.date_label }}</span>
                     </div>
                 </div>
 

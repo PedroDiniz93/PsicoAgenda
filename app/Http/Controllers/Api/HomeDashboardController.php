@@ -78,7 +78,6 @@ class HomeDashboardController extends Controller
 
         return response()->json([
             'hero' => [
-                'kicker' => 'Painel do consultório',
                 'title' => sprintf('Olá, %s', $psychologist->name ?: $request->user()->name ?: 'Psicólogo(a)'),
                 'description' => $totalSessions > 0
                     ? sprintf(
@@ -149,6 +148,7 @@ class HomeDashboardController extends Controller
             ],
             'start_at' => $appointment->start_at?->toIso8601String(),
             'end_at' => $appointment->end_at?->toIso8601String(),
+            'date_label' => $startLocal?->format('d/m/Y') ?? '—',
             'time_label' => $startLocal && $endLocal
                 ? sprintf('%s - %s', $startLocal->format('H:i'), $endLocal->format('H:i'))
                 : '—',
@@ -206,6 +206,7 @@ class HomeDashboardController extends Controller
                     'key' => $day['key'],
                     'label' => $day['label'],
                     'full_label' => $day['full_label'],
+                    'date_label' => $weekStartLocal->copy()->addDays($index)->format('d/m'),
                     'count' => $counts[$index],
                     'ratio' => $maxCount > 0 ? round(($counts[$index] / $maxCount) * 100) : 0,
                 ],

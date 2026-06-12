@@ -5,7 +5,6 @@ export function useHomeDashboardModel({ userName, isAdmin }) {
     const dashboardLoading = ref(false);
     const dashboardError = ref('');
     const dashboardHero = ref({
-        kicker: 'Painel do consultório',
         title: `Olá, ${userName.value}`,
         description: 'Acompanhe a rotina clínica e financeira assim que houver sessões no período.',
     });
@@ -110,7 +109,6 @@ export function useHomeDashboardModel({ userName, isAdmin }) {
     const applyDashboard = (payload = {}) => {
         const hero = payload.hero ?? {};
         dashboardHero.value = {
-            kicker: hero.kicker ?? 'Painel do consultório',
             title: hero.title ?? `Olá, ${userName.value}`,
             description: hero.description ?? 'Acompanhe a rotina clínica e financeira assim que houver sessões no período.',
         };
