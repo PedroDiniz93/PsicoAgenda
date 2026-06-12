@@ -1,10 +1,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import axios from 'axios';
 import PatientsHeader from '../components/patients/PatientsHeader.vue';
 import PatientsFilters from '../components/patients/PatientsFilters.vue';
 import PatientsList from '../components/patients/PatientsList.vue';
 import PatientFormModal from '../components/patients/PatientFormModal.vue';
+
+const route = useRoute();
 
 const patients = ref([]);
 const pagination = reactive({
@@ -313,6 +316,8 @@ const submitForm = async () => {
 };
 
 onMounted(() => {
+    const querySearch = Array.isArray(route.query.q) ? route.query.q[0] : route.query.q;
+    filters.q = typeof querySearch === 'string' ? querySearch : '';
     fetchPatients();
 });
 </script>

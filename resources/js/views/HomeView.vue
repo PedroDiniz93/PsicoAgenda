@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import { useAppointmentReports } from '../composables/useAppointmentReports';
-import { formatMoney } from '../utils/formatters';
-import HomeShellHeader from '../components/home/HomeShellHeader.vue';
-import HomeSectionTabs from '../components/home/HomeSectionTabs.vue';
+import { useHomeDashboardModel } from '../composables/useHomeDashboardModel';
 import HomeOverviewPanel from '../components/home/HomeOverviewPanel.vue';
 import HomeProfilePanel from '../components/home/HomeProfilePanel.vue';
 import HomeSettingsPanel from '../components/home/HomeSettingsPanel.vue';
@@ -24,13 +22,7 @@ const isAdmin = computed(() => authUser.value.role === 'admin');
 const userName = computed(() => authPsychologist.value.name ?? authUser.value.name ?? 'Psicólogo(a)');
 const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.email ?? '');
 
-const tabs = computed(() => [
-    { id: 'overview', label: 'Visão geral' },
-    { id: 'profile', label: 'Perfil' },
-    { id: 'settings', label: 'Configurações' },
-    ...(isAdmin.value ? [{ id: 'admin', label: 'Admin' }] : []),
-]);
-
+const availableTabs = computed(() => ['overview', 'profile', 'settings', ...(isAdmin.value ? ['admin'] : [])]);
 const activeTab = ref('overview');
 const profileForm = reactive({
     name: '',
@@ -120,54 +112,6 @@ const {
     fetchAppointmentReport,
 } = useAppointmentReports();
 
-const quickLinks = computed(() => [
-    {
-        id: 'patients',
-        label: 'Pacientes',
-        title: 'Base de pacientes',
-        description: 'Cadastro, histórico e prontuários',
-        icon: 'UsersRound',
-        to: { name: 'patients' },
-        color: 'primary' as const,
-    },
-    {
-        id: 'schedule',
-        label: 'Agenda',
-        title: 'Sessões e horários',
-        description: 'Planejamento da rotina clínica',
-        icon: 'CalendarClock',
-        to: { name: 'schedule' },
-        color: 'success' as const,
-    },
-    {
-        id: 'reports',
-        label: 'Relatórios',
-        title: 'Indicadores',
-        description: 'Compare presença, receita e faltas',
-        icon: 'ChartColumn',
-        to: { name: 'reports' },
-        color: 'warning' as const,
-    },
-    {
-        id: 'finance',
-        label: 'Financeiro',
-        title: 'Recebimentos',
-        description: 'Cobranças, Pix e recibos',
-        icon: 'WalletCards',
-        to: { name: 'finance' },
-        color: 'primary' as const,
-    },
-    {
-        id: 'exports',
-        label: 'Exportação',
-        title: 'Arquivos clínicos',
-        description: 'Exporte dados para conferência',
-        icon: 'FileArchive',
-        to: { name: 'exports' },
-        color: 'error' as const,
-    },
-]);
-
 const todayLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', {
         weekday: 'long',
@@ -176,41 +120,13 @@ const todayLabel = computed(() =>
     }).format(new Date())
 );
 
-const attendancePercent = computed(() => {
-    const rate = appointmentReport.summary.attendanceRate;
-    return typeof rate === 'number' && !Number.isNaN(rate) ? Math.round(rate * 1000) / 10 : null;
-});
-
-const dashboardMetrics = computed(() => [
-    {
-        id: 'sessions',
-        label: 'Sessões no período',
-        value: appointmentReport.summary.totalSessions,
-        detail: `${appointmentReport.summary.uniquePatients} pacientes únicos`,
-        tone: 'border-[#e2ddd3] bg-white text-slate-900',
-    },
-    {
-        id: 'attendance',
-        label: 'Comparecimento',
-        value: attendancePercent.value === null ? 'Sem dados' : `${attendancePercent.value.toFixed(1)}%`,
-        detail: `${appointmentReport.appointments.done} concluídas e ${appointmentReport.appointments.missed} faltas`,
-        tone: 'border-[#c9d8cd] bg-[#eff4f0] text-[#26362d]',
-    },
-    {
-        id: 'ticket',
-        label: 'Ticket médio',
-        value: formatMoney(appointmentReport.summary.avgTicket),
-        detail: 'Média dos atendimentos pagos',
-        tone: 'border-[#d8d0c4] bg-[#f7f2e9] text-[#40372a]',
-    },
-    {
-        id: 'pending',
-        label: 'A receber',
-        value: formatMoney(appointmentReport.payments.pending.value),
-        detail: `${appointmentReport.payments.pending.appointments} sessões pendentes`,
-        tone: 'border-[#dfd5c3] bg-[#f9f4ea] text-[#4a3f30]',
-    },
-]);
+const {
+    dashboardHero,
+    dashboardMetrics,
+    dashboardPrimaryActions,
+    dashboardQuickLinks,
+    dashboardInsightCards,
+} = useHomeDashboardModel({ appointmentReport, userName });
 
 const integrationItems = computed(() => [
     {
@@ -234,10 +150,16 @@ const integrationItems = computed(() => [
     },
 ]);
 
-const handleLogout = async () => {
-    await auth.logout();
-    router.push({ name: 'login' });
+
+const syncTabFromRoute = () => {
+    const tab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+    activeTab.value = typeof tab === 'string' && availableTabs.value.includes(tab) ? tab : 'overview';
 };
+
+watch(
+    () => [route.query.tab, isAdmin.value],
+    syncTabFromRoute
+);
 
 const hydrateFromAuth = () => {
     if (!authPsychologist.value) return;
@@ -578,6 +500,7 @@ const handleGoogleCallbackStatus = () => {
 };
 
 onMounted(() => {
+    syncTabFromRoute();
     fetchProfile();
     handleGoogleCallbackStatus();
     fetchAppointmentReport();
@@ -586,23 +509,17 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen">
-        <HomeShellHeader
-            :today-label="todayLabel"
-            :user-name="userName"
-            :user-email="userEmail"
-            @logout="handleLogout"
-        />
-
-        <main class="page-shell">
-            <HomeSectionTabs :tabs="tabs" :active-tab="activeTab" @change="activeTab = $event" />
+    <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
             <HomeOverviewPanel
                 v-if="activeTab === 'overview'"
+                :dashboard-hero="dashboardHero"
                 :report-loading="reportLoading"
                 :report-error="reportError"
                 :dashboard-metrics="dashboardMetrics"
-                :quick-links="quickLinks"
+                :primary-actions="dashboardPrimaryActions"
+                :quick-links="dashboardQuickLinks"
+                :insight-cards="dashboardInsightCards"
                 @refresh="fetchAppointmentReport"
             />
 
@@ -655,6 +572,5 @@ onMounted(() => {
                 @reset="resetAdminForm"
                 @refresh="fetchAdminPsychologists"
             />
-        </main>
-    </div>
+    </main>
 </template>

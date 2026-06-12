@@ -6,6 +6,14 @@ import { useAuthStore } from '../stores/auth';
 import AppIcon from './base/AppIcon.vue';
 import { formatDateOnly } from '../utils/formatters';
 
+const props = defineProps({
+    placement: {
+        type: String,
+        default: 'fixed',
+        validator: (value) => ['fixed', 'header'].includes(value),
+    },
+});
+
 const alertsStore = useAlertsStore();
 const authStore = useAuthStore();
 const isPanelOpen = ref(false);
@@ -157,18 +165,36 @@ const formatLastActivityLabel = (patient) => {
 
     return daysLabel;
 };
+
+const containerClass = computed(() =>
+    props.placement === 'header'
+        ? 'relative'
+        : 'fixed bottom-6 right-6 z-50'
+);
+
+const buttonClass = computed(() =>
+    props.placement === 'header'
+        ? 'relative rounded-full p-2 text-[#42474c] transition hover:bg-[#eeeeed] hover:text-[#415f76]'
+        : 'relative inline-flex items-center justify-center rounded-full border border-[#e2ddd3] bg-white p-3 text-[#58635f] shadow-lg shadow-slate-900/5 transition hover:text-[#3f4f46]'
+);
+
+const panelClass = computed(() =>
+    props.placement === 'header'
+        ? 'absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl'
+        : 'absolute bottom-16 right-0 w-80 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl'
+);
 </script>
 
 <template>
-    <div v-if="authStore.isAuthenticated && !authStore.requiresEmailVerification" ref="containerRef" class="fixed bottom-6 right-6 z-50">
+    <div v-if="authStore.isAuthenticated && !authStore.requiresEmailVerification" ref="containerRef" :class="containerClass">
         <button
-            class="relative inline-flex items-center justify-center rounded-full border border-[#e2ddd3] bg-white p-3 text-[#58635f] shadow-lg shadow-slate-900/5 transition hover:text-[#3f4f46]"
+            :class="buttonClass"
             type="button"
             aria-label="Alertas de pacientes sem agendamento"
             :aria-expanded="isPanelOpen"
             @click.stop="togglePanel"
         >
-            <AppIcon name="BellRing" class="size-6" />
+            <AppIcon name="BellRing" :class="placement === 'header' ? 'size-5' : 'size-6'" />
             <span
                 v-if="shouldShowBadge"
                 class="absolute -right-1 -top-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"
@@ -180,7 +206,7 @@ const formatLastActivityLabel = (patient) => {
         <transition name="fade">
             <div
                 v-if="isPanelOpen"
-                class="absolute bottom-16 right-0 w-80 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl"
+                :class="panelClass"
             >
                 <div class="mb-4 flex items-start justify-between gap-2">
                     <div>
