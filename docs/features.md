@@ -25,6 +25,87 @@ Regras:
 
 ## Features
 
+### 2026-06-12 - Editar paciente a partir da busca global
+
+- Status: Implementada
+- Objetivo: abrir a modal de edicao do paciente diretamente pelo autocomplete global.
+- Escopo: `resources/js/components/AppShell.vue`, `resources/js/views/PatientsView.vue`.
+- Comportamento: ao clicar em `Editar`, o sistema carrega os dados completos e abre a modal de edicao por cima da pagina atual, sem redirecionar.
+- Validacao: `npm run build`.
+- Notas: a acao usa o endpoint existente de detalhes do paciente e nao altera o contrato da API.
+
+### 2026-06-12 - Data de nascimento com mascara digitavel
+
+- Status: Implementada
+- Objetivo: permitir digitar a data de nascimento com mascara `dd/mm/aaaa` sem depender apenas do calendario.
+- Escopo: `resources/js/components/patients/PatientFormModal.vue`.
+- Comportamento: o campo visivel aceita digitação manual com mascara e continua abrindo o seletor nativo pelo botao de calendario; o valor enviado ao backend segue em `YYYY-MM-DD`.
+- Validacao: `npm run build`.
+- Notas: nao altera contrato da API.
+
+### 2026-06-12 - Data de nascimento com calendario e formato BR
+
+- Status: Implementada
+- Objetivo: manter o calendario nativo no cadastro de paciente e exibir a data em `dd/mm/aaaa`.
+- Escopo: `resources/js/components/patients/PatientFormModal.vue`.
+- Comportamento: o campo visual mostra data no padrao brasileiro e o botao de calendario abre o seletor nativo; o valor enviado ao backend continua em `YYYY-MM-DD`.
+- Validacao: `npm run build`.
+- Notas: nao altera contrato da API.
+
+### 2026-06-12 - Modal de paciente alinhado ao Stitch
+
+- Status: Implementada
+- Objetivo: adaptar o cadastro e a edicao de paciente ao layout `Edicao de Paciente - TherapyFlow` do Stitch.
+- Escopo: `resources/js/components/patients/PatientFormModal.vue`, `storage/app/stitch/11237689929679384621/patient-edit/`.
+- Comportamento: o formulario abre em modal amplo com secoes visuais no padrao TherapyFlow, mantendo os campos e validacoes existentes.
+- Validacao: `npm run build`.
+- Notas: nenhum campo novo foi enviado ao backend; os artefatos do Stitch ficam em `storage/app/stitch/11237689929679384621/patient-edit/`.
+
+### 2026-06-12 - Sidebar sem deslocar conteudo
+
+- Status: Implementada
+- Objetivo: fazer o sidebar abrir e recolher sem empurrar o conteudo da pagina para a direita.
+- Escopo: `resources/js/components/AppShell.vue`.
+- Comportamento: o sidebar permanece fixo sobre a interface e o conteudo principal nao muda de largura ou posicao quando o menu abre.
+- Validacao: `npm run build`.
+- Notas: sem impacto em API ou permissao; altera apenas o shell global.
+
+### 2026-06-12 - Metricas de pacientes pelo backend
+
+- Status: Implementada
+- Objetivo: calcular no backend os totais exibidos nos cards da base de pacientes.
+- Escopo: `app/Http/Controllers/Api/PatientController.php`, `resources/js/views/PatientsView.vue`, `tests/Feature/PatientIndexTest.php`.
+- Comportamento: `/api/patients` retorna `metrics` com total geral, criados no mes, ativos, pausados e encerrados do psicologo autenticado; os cards usam esses valores.
+- Validacao: `php -l app/Http/Controllers/Api/PatientController.php`, `php -l tests/Feature/PatientIndexTest.php`, `npm run build`; `php artisan test --filter=PatientIndexTest` bloqueado localmente por driver SQLite ausente.
+- Notas: as metricas nao sao filtradas pela busca/status da grid; apenas a lista paginada segue os filtros.
+
+### 2026-06-12 - Grid de pacientes sem observacoes
+
+- Status: Implementada
+- Objetivo: simplificar a tabela de pacientes removendo a coluna de observacoes da grid desktop.
+- Escopo: `resources/js/components/patients/PatientsList.vue`.
+- Comportamento: a tabela passa a exibir paciente, status, cobranca, contato e acoes; as observacoes continuam acessiveis no card mobile.
+- Validacao: `npm run build`.
+- Notas: ajuste visual pequeno, sem mudancas de API.
+
+### 2026-06-12 - Base de Pacientes alinhada ao Stitch
+
+- Status: Implementada
+- Objetivo: reformular a pagina de pacientes com base na tela `Base de Pacientes - TherapyFlow` do Stitch.
+- Escopo: `resources/js/views/PatientsView.vue`, `resources/js/components/patients/PatientsHeader.vue`, `resources/js/components/patients/PatientsFilters.vue`, `resources/js/components/patients/PatientsList.vue`, `storage/app/stitch/11237689929679384621/patients/`.
+- Comportamento: `/patients` exibe cabecalho, cards de status, filtros em pills, tabela desktop e cards mobile no visual TherapyFlow usando apenas dados reais da API.
+- Validacao: `npm run build`.
+- Notas: metricas de status usam a pagina atual; o total usa a paginacao retornada por `/api/patients`.
+
+### 2026-06-12 - Perfil do psicologo em pagina propria
+
+- Status: Implementada
+- Objetivo: tirar a edicao de perfil da Home e disponibilizar uma pagina dedicada no sidebar.
+- Escopo: `resources/js/views/ProfileView.vue`, `resources/js/router/index.js`, `resources/js/components/AppShell.vue`, `resources/js/composables/useHomeDashboardModel.js`, `resources/js/views/HomeView.vue`.
+- Comportamento: `Perfil` abre `/profile` para editar os dados profissionais; a Home nao exibe mais a aba de perfil.
+- Validacao: `npm run build`.
+- Notas: reaproveita `HomeProfilePanel.vue` e os endpoints existentes de perfil.
+
 ### 2026-06-12 - Configuracoes em pagina independente
 
 - Status: Implementada

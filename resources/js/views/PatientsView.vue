@@ -6,6 +6,7 @@ import PatientsHeader from '../components/patients/PatientsHeader.vue';
 import PatientsFilters from '../components/patients/PatientsFilters.vue';
 import PatientsList from '../components/patients/PatientsList.vue';
 import PatientFormModal from '../components/patients/PatientFormModal.vue';
+import AppIcon from '../components/base/AppIcon.vue';
 
 const route = useRoute();
 
@@ -15,6 +16,14 @@ const pagination = reactive({
     lastPage: 1,
     perPage: 10,
     total: 0,
+});
+
+const metrics = reactive({
+    total: 0,
+    createdThisMonth: 0,
+    active: 0,
+    paused: 0,
+    closed: 0,
 });
 
 const filters = reactive({
@@ -68,6 +77,7 @@ const isFormOpen = ref(false);
 const editingPatient = ref(null);
 const formSubmitting = ref(false);
 const formError = ref('');
+const editPatientId = ref(null);
 const formErrors = reactive({
     name: '',
     email: '',
@@ -104,6 +114,43 @@ const canGoNext = computed(() => pagination.currentPage < pagination.lastPage);
 const isEditing = computed(() => Boolean(editingPatient.value));
 const modalTitle = computed(() => (isEditing.value ? 'Editar paciente' : 'Novo paciente'));
 const submitLabel = computed(() => (isEditing.value ? 'Salvar alterações' : 'Cadastrar paciente'));
+
+const patientStats = computed(() => {
+    return [
+        {
+            id: 'total',
+            label: 'Total de pacientes',
+            value: metrics.total,
+            helper: `+${metrics.createdThisMonth} este mês`,
+            icon: 'UsersRound',
+            tone: 'primary',
+        },
+        {
+            id: 'active',
+            label: 'Pacientes ativos',
+            value: metrics.active,
+            helper: '',
+            icon: 'UserCheck',
+            tone: 'secondary',
+        },
+        {
+            id: 'paused',
+            label: 'Pausados',
+            value: metrics.paused,
+            helper: '',
+            icon: 'PauseCircle',
+            tone: 'tertiary',
+        },
+        {
+            id: 'closed',
+            label: 'Encerrados',
+            value: metrics.closed,
+            helper: '',
+            icon: 'Archive',
+            tone: 'primary',
+        },
+    ];
+});
 
 const paginationSummary = computed(() => {
     const total = pagination.total ?? 0;
@@ -142,6 +189,13 @@ const fetchPatients = async (page = 1) => {
         const fallbackPerPage = list.length || pagination.perPage;
         pagination.perPage = meta.per_page ?? fallbackPerPage;
         pagination.total = meta.total ?? list.length;
+
+        const responseMetrics = data?.metrics ?? {};
+        metrics.total = Number(responseMetrics.total ?? pagination.total ?? 0);
+        metrics.createdThisMonth = Number(responseMetrics.created_this_month ?? 0);
+        metrics.active = Number(responseMetrics.active ?? 0);
+        metrics.paused = Number(responseMetrics.paused ?? 0);
+        metrics.closed = Number(responseMetrics.closed ?? 0);
     } catch (error) {
         errorMessage.value = error?.response?.data?.message ?? 'Não foi possível carregar os pacientes.';
         patients.value = [];
@@ -193,6 +247,18 @@ const openEditForm = (patient) => {
     clearFormErrors();
     formError.value = '';
     isFormOpen.value = true;
+};
+
+const openEditFormFromAutocomplete = async (patientId) => {
+    if (!patientId) return;
+
+    try {
+        const { data } = await axios.get(`/api/patients/${patientId}`);
+        openEditForm(data);
+        editPatientId.value = null;
+    } catch {
+        editPatientId.value = null;
+    }
 };
 
 const closeForm = () => {
@@ -318,14 +384,51 @@ const submitForm = async () => {
 onMounted(() => {
     const querySearch = Array.isArray(route.query.q) ? route.query.q[0] : route.query.q;
     filters.q = typeof querySearch === 'string' ? querySearch : '';
+    const queryEdit = Array.isArray(route.query.edit) ? route.query.edit[0] : route.query.edit;
+    editPatientId.value = Number(queryEdit);
     fetchPatients();
+    if (Number.isInteger(editPatientId.value) && editPatientId.value > 0) {
+        openEditFormFromAutocomplete(editPatientId.value);
+    }
 });
 </script>
 
 <template>
     <div class="page-shell">
-        <div class="space-y-4">
+        <div class="space-y-6">
             <PatientsHeader @create="openCreateForm" />
+
+            <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <article
+                    v-for="stat in patientStats"
+                    :key="stat.id"
+                    class="group rounded-xl border border-[#c2c7cd]/20 bg-white p-6 shadow-[0_20px_40px_-10px_rgba(93,123,147,0.06)] transition hover:border-[#415f76]/30"
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div
+                            class="flex size-10 items-center justify-center rounded-lg"
+                            :class="{
+                                'bg-[#abcae5]/20 text-[#415f76]': stat.tone === 'primary',
+                                'bg-[#cbe6d4]/30 text-[#4c6455]': stat.tone === 'secondary',
+                                'bg-[#e8e1d9]/60 text-[#605b55]': stat.tone === 'tertiary',
+                            }"
+                        >
+                            <AppIcon :name="stat.icon" class="size-5" />
+                        </div>
+                        <span v-if="stat.helper" class="rounded bg-[#cbe6d4]/30 px-2 py-1 text-xs font-bold text-[#4c6455]">
+                            {{ stat.helper }}
+                        </span>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#73787d]">
+                            {{ stat.label }}
+                        </p>
+                        <p class="mt-1 font-['Source_Serif_4'] text-3xl font-bold text-[#1a1c1c]">
+                            {{ stat.value }}
+                        </p>
+                    </div>
+                </article>
+            </section>
 
             <PatientsFilters
                 :filters="filters"
@@ -342,6 +445,7 @@ onMounted(() => {
                 :pagination-summary="paginationSummary"
                 :can-go-prev="canGoPrev"
                 :can-go-next="canGoNext"
+                :current-page="pagination.currentPage"
                 :status-badges="statusBadges"
                 :session-fee-label="sessionFeeLabel"
                 :format-currency="formatCurrency"

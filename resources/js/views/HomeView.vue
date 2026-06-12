@@ -20,7 +20,7 @@ const isAdmin = computed(() => authUser.value.role === 'admin');
 const userName = computed(() => authPsychologist.value.name ?? authUser.value.name ?? 'Psicólogo(a)');
 const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.email ?? '');
 
-const availableTabs = computed(() => ['overview', 'profile', ...(isAdmin.value ? ['admin'] : [])]);
+const availableTabs = computed(() => ['overview', ...(isAdmin.value ? ['admin'] : [])]);
 const activeTab = ref('overview');
 const profileForm = reactive({
     name: '',

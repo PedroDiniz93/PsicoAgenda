@@ -12,6 +12,7 @@ const ScheduleView = () => import('../views/ScheduleView.vue');
 const PatientRecordView = () => import('../views/PatientRecordView.vue');
 const ExportsView = () => import('../views/ExportsView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
+const ProfileView = () => import('../views/ProfileView.vue');
 
 const defaultTitle = document.title;
 
@@ -77,6 +78,12 @@ const router = createRouter({
             name: 'reports',
             component: ReportsView,
             meta: { requiresAuth: true, title: 'Relatórios' },
+        },
+        {
+            path: '/profile',
+            name: 'profile',
+            component: ProfileView,
+            meta: { requiresAuth: true, title: 'Perfil' },
         },
         {
             path: '/finance',

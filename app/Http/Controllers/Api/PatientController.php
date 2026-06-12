@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\PatientAlert;
 use App\Models\PatientRecord;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -47,8 +48,10 @@ class PatientController extends Controller
     {
         $psychologistId = $this->psychologistId($request);
 
-        $query = Patient::query()
+        $baseQuery = Patient::query()
             ->where('psychologist_id', $psychologistId);
+
+        $query = (clone $baseQuery);
 
         if ($request->filled('status')) {
             $status = $request->string('status')->toString();
@@ -70,9 +73,29 @@ class PatientController extends Controller
         $perPage = (int) $request->integer('per_page', 10);
         $perPage = max(1, min($perPage, 1000));
 
+        $paginator = $query->orderByDesc('id')->paginate($perPage);
+
         return response()->json(
-            $query->orderByDesc('id')->paginate($perPage)
+            $paginator->toArray() + [
+                'metrics' => $this->patientMetrics($baseQuery),
+            ]
         );
+    }
+
+    private function patientMetrics(Builder $baseQuery): array
+    {
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+
+        return [
+            'total' => (clone $baseQuery)->count(),
+            'created_this_month' => (clone $baseQuery)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->count(),
+            'active' => (clone $baseQuery)->where('status', 'active')->count(),
+            'paused' => (clone $baseQuery)->where('status', 'paused')->count(),
+            'closed' => (clone $baseQuery)->where('status', 'closed')->count(),
+        ];
     }
 
     public function store(PatientStoreRequest $request)

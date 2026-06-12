@@ -83,8 +83,8 @@ export function useHomeDashboardModel({ userName, isAdmin }) {
             id: 'profile',
             label: 'Perfil',
             icon: 'UserRoundCog',
-            kind: 'tab',
-            tab: 'profile',
+            kind: 'route',
+            to: { name: 'profile' },
         },
         ...(isAdmin.value
             ? [

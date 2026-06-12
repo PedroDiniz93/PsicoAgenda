@@ -6,24 +6,32 @@ defineEmits(['create']);
 </script>
 
 <template>
-    <header class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <header>
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="section-kicker">Cadastro clínico</p>
-                <h1 class="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Pacientes</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-[#58635f]">
-                    Organize dados de contato, status de acompanhamento, valores combinados e acesso rápido ao prontuário.
+                <h1 class="font-['Source_Serif_4'] text-3xl font-semibold tracking-[-0.02em] text-[#1a1c1c] lg:text-4xl">
+                    Base de Pacientes
+                </h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-[#73787d]">
+                    Gerencie seus pacientes, prontuários e dados de acompanhamento.
                 </p>
             </div>
 
             <div class="flex flex-wrap gap-2">
-                <RouterLink :to="{ name: 'home' }" class="btn-secondary h-10">
+                <RouterLink
+                    :to="{ name: 'home' }"
+                    class="inline-flex h-11 items-center gap-2 rounded-xl border border-[#c2c7cd]/30 bg-[#eeeeed] px-4 text-sm font-semibold text-[#415f76] transition hover:bg-[#e8e8e7]"
+                >
                     <AppIcon name="ChevronLeft" class="size-4" />
                     Dashboard
                 </RouterLink>
-                <button class="btn-primary h-10" type="button" @click="$emit('create')">
+                <button
+                    class="inline-flex h-11 items-center gap-2 rounded-xl bg-[#4c6455] px-4 text-sm font-semibold text-white shadow-[0_20px_40px_-10px_rgba(93,123,147,0.12)] transition hover:bg-[#3f5648]"
+                    type="button"
+                    @click="$emit('create')"
+                >
                     <AppIcon name="UserRoundPlus" class="size-4" />
-                    Novo paciente
+                    Cadastrar paciente
                 </button>
             </div>
         </div>
