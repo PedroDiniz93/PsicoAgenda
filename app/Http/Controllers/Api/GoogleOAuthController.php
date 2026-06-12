@@ -60,7 +60,8 @@ class GoogleOAuthController extends Controller
         $error = $request->query('error');
         $code = $request->query('code');
         $frontend = rtrim(config('app.frontend_url', config('app.url')), '/');
-        $redirectUrl = $frontend ?: url('/');
+        $redirectBaseUrl = $frontend ?: url('/');
+        $redirectUrl = rtrim($redirectBaseUrl, '/') . '/settings';
 
         $userId = $state ? Cache::pull($this->cacheKey($state)) : null;
 

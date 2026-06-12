@@ -86,13 +86,6 @@ export function useHomeDashboardModel({ userName, isAdmin }) {
             kind: 'tab',
             tab: 'profile',
         },
-        {
-            id: 'settings',
-            label: 'Configurações',
-            icon: 'Settings',
-            kind: 'tab',
-            tab: 'settings',
-        },
         ...(isAdmin.value
             ? [
                 {

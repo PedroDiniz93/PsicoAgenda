@@ -75,7 +75,7 @@ const navigationItems = computed(() => [
         id: 'settings',
         label: 'Configurações',
         icon: 'Settings',
-        to: { name: 'home', query: { tab: 'settings' } },
+        to: { name: 'settings' },
     },
     ...(isAdmin.value
         ? [

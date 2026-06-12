@@ -11,6 +11,7 @@ const PatientsView = () => import('../views/PatientsView.vue');
 const ScheduleView = () => import('../views/ScheduleView.vue');
 const PatientRecordView = () => import('../views/PatientRecordView.vue');
 const ExportsView = () => import('../views/ExportsView.vue');
+const SettingsView = () => import('../views/SettingsView.vue');
 
 const defaultTitle = document.title;
 
@@ -82,6 +83,12 @@ const router = createRouter({
             name: 'finance',
             component: FinanceView,
             meta: { requiresAuth: true, title: 'Financeiro' },
+        },
+        {
+            path: '/settings',
+            name: 'settings',
+            component: SettingsView,
+            meta: { requiresAuth: true, title: 'Configurações' },
         },
     ],
 });

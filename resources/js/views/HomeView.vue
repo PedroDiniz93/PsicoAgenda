@@ -6,7 +6,6 @@ import { useAuthStore } from '../stores/auth';
 import { useHomeDashboardModel } from '../composables/useHomeDashboardModel';
 import HomeOverviewPanel from '../components/home/HomeOverviewPanel.vue';
 import HomeProfilePanel from '../components/home/HomeProfilePanel.vue';
-import HomeSettingsPanel from '../components/home/HomeSettingsPanel.vue';
 import HomeAdminPanel from '../components/home/HomeAdminPanel.vue';
 
 const router = useRouter();
@@ -21,7 +20,7 @@ const isAdmin = computed(() => authUser.value.role === 'admin');
 const userName = computed(() => authPsychologist.value.name ?? authUser.value.name ?? 'Psicólogo(a)');
 const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.email ?? '');
 
-const availableTabs = computed(() => ['overview', 'profile', 'settings', ...(isAdmin.value ? ['admin'] : [])]);
+const availableTabs = computed(() => ['overview', 'profile', ...(isAdmin.value ? ['admin'] : [])]);
 const activeTab = ref('overview');
 const profileForm = reactive({
     name: '',
@@ -521,23 +520,6 @@ onMounted(() => {
                 :timezone-options="timezoneOptions"
                 :session-duration-options="sessionDurationOptions"
                 @submit="submitProfile"
-            />
-
-            <HomeSettingsPanel
-                v-else-if="activeTab === 'settings'"
-                :integration-items="integrationItems"
-                :google-connected="googleConnected"
-                :google-processing="googleProcessing"
-                :google-error="googleError"
-                :google-status-message="googleStatusMessage"
-                :google-status-type="googleStatusType"
-                :reminder-settings="reminderSettings"
-                :reminder-message="reminderMessage"
-                :reminder-message-type="reminderMessageType"
-                :reminder-saving="reminderSaving"
-                @connect-google="connectGoogle"
-                @disconnect-google="disconnectGoogle"
-                @submit-reminders="submitReminderSettings"
             />
 
             <HomeAdminPanel
