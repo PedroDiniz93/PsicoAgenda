@@ -13,6 +13,7 @@
 /.zed
 /.claude
 /.claude-flow
+/.superpowers
 .mcp.json
 state.json
 /auth.json
