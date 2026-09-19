@@ -117,6 +117,7 @@ const scheduleLoading = ref(false);
 const scheduleError = ref('');
 const appointments = ref([]);
 const externalEvents = ref([]);
+const externalEventsLoading = ref(false);
 const autoFillEndEnabled = ref(true);
 const nowTick = ref(Date.now());
 let nowInterval = null;
@@ -124,6 +125,9 @@ let nowInterval = null;
 const appointmentModalOpen = ref(false);
 const appointmentSubmitting = ref(false);
 const editingAppointment = ref(null);
+const externalEventModalOpen = ref(false);
+const selectedExternalEvent = ref(null);
+const externalEventDeleting = ref(false);
 
 const appointmentForm = reactive({
     patientId: '',
@@ -591,9 +595,38 @@ const openEditAppointment = (appointment) => {
     fetchPatientOptions(appointment.patient?.name ?? '');
 };
 
-const openCalendarItem = (appointment) => {
-    if (appointment?.source === 'google') return;
+const openCalendarItem = async (appointment) => {
+    if (appointment?.source === 'google') {
+        selectedExternalEvent.value = appointment;
+        externalEventModalOpen.value = true;
+        return;
+    }
+
     openEditAppointment(appointment);
+};
+
+const closeExternalEventModal = () => {
+    if (externalEventDeleting.value) return;
+    externalEventModalOpen.value = false;
+    selectedExternalEvent.value = null;
+};
+
+const deleteExternalEvent = async () => {
+    if (!selectedExternalEvent.value?.id || externalEventDeleting.value) return;
+    const confirmed = window.confirm('Excluir este evento também do Google Calendar?');
+    if (!confirmed) return;
+
+    externalEventDeleting.value = true;
+    try {
+        await axios.delete('/api/google/calendar/events/' + encodeURIComponent(selectedExternalEvent.value.id));
+        externalEventModalOpen.value = false;
+        selectedExternalEvent.value = null;
+        await fetchExternalEvents();
+    } catch (error) {
+        window.alert(error?.response?.data?.message ?? 'Não foi possível excluir o evento do Google Calendar.');
+    } finally {
+        externalEventDeleting.value = false;
+    }
 };
 
 const calendarItemStyle = (item) => ({
@@ -810,6 +843,7 @@ const fetchAppointments = async () => {
 
 const fetchExternalEvents = async () => {
     if (privacyMode.value) return;
+    externalEventsLoading.value = true;
 
     try {
         const { data } = await axios.get('/api/google/calendar/events', {
@@ -820,6 +854,8 @@ const fetchExternalEvents = async () => {
         }
     } catch {
         if (!privacyMode.value) externalEvents.value = [];
+    } finally {
+        externalEventsLoading.value = false;
     }
 };
 
@@ -946,7 +982,10 @@ const handlePatientSearchInput = () => {
 
 const performAppointmentAction = async (appointment, action) => {
     if (!appointment?.id) return;
-    if (action === 'cancel') {
+    if (action === 'delete') {
+        const confirmed = window.confirm('Excluir este agendamento definitivamente?');
+        if (!confirmed) return;
+    } else if (action === 'cancel') {
         const confirmed = window.confirm('Deseja cancelar este agendamento?');
         if (!confirmed) return;
     } else if (action === 'missed') {
@@ -959,7 +998,9 @@ const performAppointmentAction = async (appointment, action) => {
 
     try {
         let endpoint = '';
-        if (action === 'done') {
+        if (action === 'delete') {
+            endpoint = '/api/appointments/' + appointment.id;
+        } else if (action === 'done') {
             endpoint = `/api/appointments/${appointment.id}/mark-done`;
         } else if (action === 'missed') {
             endpoint = `/api/appointments/${appointment.id}/mark-missed`;
@@ -967,7 +1008,12 @@ const performAppointmentAction = async (appointment, action) => {
             endpoint = `/api/appointments/${appointment.id}/cancel`;
         }
 
-        await axios.post(endpoint);
+        if (action === 'delete') {
+            await axios.delete(endpoint);
+            closeAppointmentModal();
+        } else {
+            await axios.post(endpoint);
+        }
         await fetchAppointments();
     } catch (error) {
         window.alert(error?.response?.data?.message ?? 'Não foi possível atualizar o agendamento.');
@@ -1024,6 +1070,8 @@ watch(
 watch(privacyMode, (enabled) => {
     if (enabled) {
         closeAppointmentModal();
+        externalEventModalOpen.value = false;
+        selectedExternalEvent.value = null;
         appointments.value = [];
         externalEvents.value = [];
         scheduleBlocks.value = [];
@@ -1152,7 +1200,10 @@ onBeforeUnmount(() => {
                     </div>
 
                     <template v-else>
-                        <div class="hidden overflow-x-auto lg:block">
+                        <div
+                            class="relative hidden overflow-x-auto lg:block"
+                            :class="{ 'blur-[2px]': externalEventsLoading }"
+                        >
                             <div class="min-w-[1080px] rounded-2xl border border-[#e7e1d6]">
                                 <div class="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-[#ece6db] bg-[#f8f5ef] text-xs font-semibold uppercase tracking-wide text-[#58635f]">
                                     <div class="px-2 py-3 text-center">Horário</div>
@@ -1294,9 +1345,23 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
                             </div>
+                            <div
+                                v-if="externalEventsLoading"
+                                class="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-white/45 backdrop-blur-[1px]"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <span class="inline-flex items-center gap-2 rounded-full border border-[#dce6de] bg-[#f3f7f3] px-4 py-2 text-xs font-semibold text-[#4e6655] shadow-sm">
+                                    <AppIcon name="LoaderCircle" class="size-4 animate-spin" />
+                                    Sincronizando eventos do Google...
+                                </span>
+                            </div>
                         </div>
 
-                        <div class="space-y-3 lg:hidden">
+                        <div
+                            class="relative space-y-3 lg:hidden"
+                            :class="{ 'blur-[2px]': externalEventsLoading }"
+                        >
                             <article
                                 v-for="day in weekDays"
                                 :key="`mobile-${day.date}`"
@@ -1348,6 +1413,17 @@ onBeforeUnmount(() => {
                                     Sem agendamentos para este dia.
                                 </p>
                             </article>
+                            <div
+                                v-if="externalEventsLoading"
+                                class="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-white/45 backdrop-blur-[1px]"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <span class="inline-flex items-center gap-2 rounded-full border border-[#dce6de] bg-[#f3f7f3] px-4 py-2 text-xs font-semibold text-[#4e6655] shadow-sm">
+                                    <AppIcon name="LoaderCircle" class="size-4 animate-spin" />
+                                    Sincronizando eventos do Google...
+                                </span>
+                            </div>
                         </div>
 
                         <div
@@ -1660,6 +1736,15 @@ onBeforeUnmount(() => {
                     </p>
 
                     <div class="flex justify-end gap-3">
+                        <button
+                            v-if="editingAppointment"
+                            class="mr-auto rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                            type="button"
+                            :disabled="appointmentActionLoading.id === editingAppointment.id"
+                            @click="performAppointmentAction(editingAppointment, 'delete')"
+                        >
+                            Excluir agendamento
+                        </button>
                         <button class="btn-secondary" type="button" @click="closeAppointmentModal">Cancelar</button>
                         <button class="btn-primary px-5 py-2.5" type="submit" :disabled="appointmentSubmitting">
                             <AppIcon v-if="appointmentSubmitting" name="LoaderCircle" class="-ms-1 me-2 size-4 animate-spin" />
@@ -1667,6 +1752,61 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div
+            v-if="externalEventModalOpen && selectedExternalEvent"
+            class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-6 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalhes do evento externo"
+            @click.self="closeExternalEventModal"
+        >
+            <div class="w-full max-w-md rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-5 shadow-[var(--spa-shadow)] sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p class="section-kicker">Google Calendar</p>
+                        <h2 class="mt-1 truncate text-xl font-semibold text-[var(--spa-ink)]">
+                            {{ selectedExternalEvent.title }}
+                        </h2>
+                    </div>
+                    <button
+                        class="rounded-full border border-[var(--spa-border-soft)] p-2 text-[var(--spa-ink-muted)] transition hover:border-[var(--spa-border)] hover:text-[var(--spa-ink)]"
+                        type="button"
+                        :disabled="externalEventDeleting"
+                        @click="closeExternalEventModal"
+                    >
+                        <AppIcon name="X" class="size-5" />
+                    </button>
+                </div>
+
+                <div class="mt-5 space-y-3 rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface-muted)] p-4 text-sm">
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-[var(--spa-ink-muted)]">Início</span>
+                        <span class="font-semibold text-[var(--spa-ink)]">{{ formatDateTimeLabel(selectedExternalEvent.start_at) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-[var(--spa-ink-muted)]">Fim</span>
+                        <span class="font-semibold text-[var(--spa-ink)]">{{ formatDateTimeLabel(selectedExternalEvent.end_at) }}</span>
+                    </div>
+                    <p class="pt-1 text-xs text-[var(--spa-ink-muted)]">Evento somente leitura sincronizado do Google Calendar.</p>
+                </div>
+
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="btn-secondary" type="button" :disabled="externalEventDeleting" @click="closeExternalEventModal">
+                        Fechar
+                    </button>
+                    <button
+                        class="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        type="button"
+                        :disabled="externalEventDeleting"
+                        @click="deleteExternalEvent"
+                    >
+                        <AppIcon v-if="externalEventDeleting" name="LoaderCircle" class="me-2 inline size-4 animate-spin" />
+                        {{ externalEventDeleting ? 'Excluindo...' : 'Excluir no Google' }}
+                    </button>
+                </div>
             </div>
         </div>
         </template>

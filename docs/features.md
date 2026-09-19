@@ -25,6 +25,31 @@ Regras:
 
 ## Features
 
+### 2026-09-19 - Modal para eventos externos
+
+- Status: Implementada
+- Objetivo: permitir consultar e excluir um evento externo sem ação imediata ao clicar no card.
+- Escopo: ScheduleView.vue e fluxo de exclusão do Google Calendar.
+- Comportamento: o clique abre uma modal somente leitura com título, início e fim; a modal oferece “Excluir no Google” com confirmação e estado de carregamento.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Loader da sincronização externa
+
+- Status: Implementada
+- Objetivo: sinalizar o carregamento dos eventos do Google antes de atualizar a grade.
+- Escopo: ScheduleView.vue.
+- Comportamento: a grade recebe uma camada translúcida com blur e spinner “Sincronizando eventos do Google...” enquanto a consulta está em andamento, preservando os agendamentos internos ao fundo.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Exclusão de eventos internos e externos
+
+- Status: Implementada
+- Objetivo: permitir remover um agendamento do PsicoAgenda ou um evento importado do Google Calendar.
+- Escopo: endpoints de exclusão, serviço GoogleCalendarService e ações da ScheduleView.
+- Comportamento: agendamentos internos podem ser excluídos com confirmação e removem o vínculo correspondente no Google; eventos externos são excluídos no Google após confirmação.
+- Segurança: consultas e exclusões ficam restritas ao psicólogo autenticado; eventos sincronizados pelo PsicoAgenda não podem ser removidos pelo endpoint de eventos externos.
+- Validação: npm run build, php -l dos controllers/serviço, php artisan route:list e git diff --check.
+
 ### 2026-09-19 - Indicadores de pacientes em uma linha
 
 - Status: Implementada

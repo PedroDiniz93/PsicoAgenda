@@ -45,6 +45,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::get('/google/oauth/url', [GoogleOAuthController::class, 'generateUrl']);
     Route::post('/google/oauth/disconnect', [GoogleOAuthController::class, 'disconnect']);
     Route::get('/google/calendar/events', [GoogleCalendarController::class, 'events']);
+    Route::delete('/google/calendar/events/{eventId}', [GoogleCalendarController::class, 'destroy']);
     Route::get('/home/dashboard', [HomeDashboardController::class, 'show']);
 
     Route::get('/patients', [PatientController::class, 'index']);
@@ -69,6 +70,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::get('/appointments', [AppointmentController::class, 'index']);
     Route::post('/appointments', [AppointmentController::class, 'store']);
     Route::put('/appointments/{id}', [AppointmentController::class, 'update'])->whereNumber('id');
+    Route::delete('/appointments/{id}', [AppointmentController::class, 'destroy'])->whereNumber('id');
     Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed'])->whereNumber('id');

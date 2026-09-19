@@ -161,18 +161,18 @@ class GoogleCalendarService
         $this->storeEventMetadata($appointment, $response->json() ?? [], $eventId);
     }
 
-    public function deleteAppointment(Appointment $appointment): void
+    public function deleteAppointment(Appointment $appointment): bool
     {
         $appointment->loadMissing('psychologist');
         $psychologist = $appointment->psychologist;
 
         if (!$psychologist || !$appointment->google_event_id) {
-            return;
+            return true;
         }
 
         $token = $this->resolveToken($psychologist);
         if (!$token) {
-            return;
+            return false;
         }
 
         $response = $this->request(
@@ -187,7 +187,26 @@ class GoogleCalendarService
                 'meeting_url' => null,
                 'meeting_provider' => null,
             ])->save();
+            return true;
         }
+
+        return false;
+    }
+
+    public function deleteExternalEvent(Psychologist $psychologist, string $eventId): bool
+    {
+        $token = $this->resolveToken($psychologist);
+        if (!$token || $eventId === '') {
+            return false;
+        }
+
+        $response = $this->request(
+            $token,
+            'delete',
+            $this->eventUrl($eventId)
+        );
+
+        return $response && ($response->successful() || $response->status() === 404);
     }
 
     private function buildEventPayload(Appointment $appointment, Psychologist $psychologist, ?Patient $patient): array

@@ -169,6 +169,19 @@ class AppointmentController extends Controller
         return response()->json($appointment->refresh()->load('patient', 'recurrence'));
     }
 
+    public function destroy(Request $request, int $id)
+    {
+        $appointment = $this->findOwnedAppointment($request, $id);
+        abort_if(
+            $appointment->google_event_id && !$this->googleCalendarService->deleteAppointment($appointment),
+            502,
+            'Não foi possível excluir o evento sincronizado no Google Calendar.'
+        );
+        $appointment->delete();
+
+        return response()->json(['status' => 'deleted']);
+    }
+
     public function markDone(Request $request, int $id)
     {
         $appointment = $this->findOwnedAppointment($request, $id);

@@ -26,6 +26,28 @@ class GoogleCalendarController extends Controller
         ]);
     }
 
+    public function destroy(Request $request, string $eventId)
+    {
+        $psychologist = $request->user()->loadMissing('psychologist')->psychologist;
+        abort_if(!$psychologist, 403, 'Perfil de psicólogo não encontrado.');
+
+        $eventId = str_starts_with($eventId, 'google:') ? substr($eventId, 7) : $eventId;
+        abort_if($eventId === '', 422, 'Evento do Google inválido.');
+
+        $owned = $psychologist->appointments()
+            ->where('google_event_id', $eventId)
+            ->exists();
+        abort_if($owned, 403, 'Eventos do PsicoAgenda devem ser excluídos pela agenda interna.');
+
+        abort_unless(
+            $this->googleCalendarService->deleteExternalEvent($psychologist, $eventId),
+            502,
+            'Não foi possível excluir o evento no Google Calendar.'
+        );
+
+        return response()->json(['status' => 'deleted']);
+    }
+
     private function parseRange(Request $request): array
     {
         $fromValue = $request->query('from');
