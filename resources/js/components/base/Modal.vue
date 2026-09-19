@@ -19,13 +19,13 @@ const closeButton = ref<HTMLElement | null>(null);
     <transition name="fade">
       <div
         v-show="modelValue"
-        class="fixed inset-0 z-modal-backdrop bg-[#2f3130]/40 backdrop-blur-sm"
+        class="fixed inset-0 z-modal-backdrop bg-[#0f1418]/45 backdrop-blur-sm"
         @click="$emit('update:modelValue', false)"
       />
     </transition>
     <transition name="modal">
-      <div v-show="modelValue" class="fixed inset-0 z-modal flex items-start justify-center px-4 py-10">
-        <div class="w-full max-w-2xl rounded-2xl border border-[#e2e2e2] bg-white shadow-[0_24px_60px_rgba(65,95,118,0.12)]" @click.stop>
+      <div v-show="modelValue" class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto px-4 py-4 sm:items-center sm:py-8" role="dialog" aria-modal="true">
+        <div class="my-auto max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] shadow-[var(--spa-shadow)] sm:max-h-[calc(100vh-4rem)]" @click.stop>
           <slot />
         </div>
       </div>

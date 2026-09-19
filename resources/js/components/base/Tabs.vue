@@ -31,7 +31,7 @@ const selectTab = (tabId: string) => {
 
 <template>
   <div>
-    <div class="flex gap-4 border-b border-[#e2e2e2]">
+    <div class="flex gap-4 overflow-x-auto border-b border-[var(--spa-border-soft)]">
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -39,8 +39,8 @@ const selectTab = (tabId: string) => {
         :class="[
           'px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px',
           active === tab.id
-            ? 'border-[#415f76] text-[#415f76]'
-            : 'border-transparent text-[#73787d] hover:text-[#1a1c1c]',
+            ? 'border-[var(--spa-accent)] text-[var(--spa-accent)]'
+            : 'border-transparent text-[var(--spa-ink-muted)] hover:text-[var(--spa-ink)]',
         ]"
         @click="selectTab(tab.id)"
       >

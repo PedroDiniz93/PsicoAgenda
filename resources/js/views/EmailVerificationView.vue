@@ -46,11 +46,11 @@ const logout = async () => {
 </script>
 
 <template>
-    <div class="flex min-h-screen items-center justify-center px-4 py-12">
-        <div class="w-full max-w-md rounded-lg bg-white p-8 shadow-xl">
+    <div class="auth-screen">
+        <div class="auth-card max-w-md p-8 sm:p-10">
             <div class="mb-8">
-                <p class="text-sm font-medium text-cyan-700">Validação de e-mail</p>
-                <h1 class="mt-2 text-2xl font-semibold text-slate-950">Digite o código recebido</h1>
+                <p class="section-kicker">Validação de e-mail</p>
+                <h1 class="mt-2 text-3xl font-semibold text-slate-950">Digite o código recebido</h1>
                 <p class="mt-2 text-sm text-slate-500">
                     Enviamos um código de 6 dígitos para {{ email }}. Ele expira em 24 horas.
                 </p>
@@ -81,7 +81,7 @@ const logout = async () => {
                 </p>
 
                 <button
-                    class="flex h-11 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="btn-primary h-11 w-full"
                     :disabled="isSubmitting"
                     type="submit"
                 >

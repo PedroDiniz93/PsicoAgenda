@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlertsStore } from '../stores/alerts';
 import { useAuthStore } from '../stores/auth';
@@ -20,6 +20,7 @@ const isPanelOpen = ref(false);
 const containerRef = ref(null);
 const route = useRoute();
 const router = useRouter();
+const privacyMode = inject('privacyMode', ref(false));
 
 const inactivePatients = computed(() => alertsStore.inactivePatients ?? []);
 const inactiveCount = computed(() => alertsStore.inactiveCount);
@@ -27,7 +28,7 @@ const loading = computed(() => alertsStore.loadingInactivePatients);
 const error = computed(() => alertsStore.inactivePatientsError);
 const thresholdDays = computed(() => alertsStore.thresholdDays);
 const shouldShowBadge = computed(
-    () => inactiveCount.value > 0 && alertsStore.hasUnreadInactivePatients
+    () => !privacyMode.value && inactiveCount.value > 0 && alertsStore.hasUnreadInactivePatients
 );
 const acknowledgingAlerts = ref(false);
 
@@ -41,6 +42,7 @@ const badgeLabel = computed(() => {
 const dateFormatter = (value) => formatDateOnly(value, 'America/Sao_Paulo');
 
 const fetchAlerts = () => {
+    if (privacyMode.value) return;
     if (!authStore.isAuthenticated) return;
     if (authStore.requiresEmailVerification) return;
     alertsStore.fetchInactivePatients();
@@ -69,8 +71,8 @@ const acknowledgeAlerts = async () => {
 
     try {
         await alertsStore.acknowledgeInactivePatients();
-    } catch (error) {
-        console.error(error);
+    } catch {
+        // O feedback da store é suficiente; respostas clínicas não devem ir para o console.
     } finally {
         acknowledgingAlerts.value = false;
     }
@@ -105,6 +107,16 @@ watch(
         }
     }
 );
+
+watch(privacyMode, (enabled) => {
+    if (enabled) {
+        alertsStore.reset();
+        closePanel();
+        return;
+    }
+
+    fetchAlerts();
+});
 
 watch(
     () => authStore.requiresEmailVerification,
@@ -174,14 +186,14 @@ const containerClass = computed(() =>
 
 const buttonClass = computed(() =>
     props.placement === 'header'
-        ? 'relative rounded-full p-2 text-[#42474c] transition hover:bg-[#eeeeed] hover:text-[#415f76]'
-        : 'relative inline-flex items-center justify-center rounded-full border border-[#e2ddd3] bg-white p-3 text-[#58635f] shadow-lg shadow-slate-900/5 transition hover:text-[#3f4f46]'
+        ? 'app-focus relative rounded-lg p-2 text-[var(--spa-ink-soft)] transition hover:bg-[var(--spa-surface-muted)] hover:text-[var(--spa-accent)]'
+        : 'app-focus relative inline-flex items-center justify-center rounded-full border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-3 text-[var(--spa-ink-soft)] shadow-lg shadow-slate-900/5 transition hover:text-[var(--spa-accent)]'
 );
 
 const panelClass = computed(() =>
     props.placement === 'header'
-        ? 'absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl'
-        : 'absolute bottom-16 right-0 w-80 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-2xl'
+        ? 'absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-4 text-sm text-[var(--spa-ink-soft)] shadow-[var(--spa-shadow)]'
+        : 'absolute bottom-16 right-0 w-80 rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-4 text-sm text-[var(--spa-ink-soft)] shadow-[var(--spa-shadow)]'
 );
 </script>
 
@@ -215,7 +227,10 @@ const panelClass = computed(() =>
                     </div>
                 </div>
 
-                <div v-if="error" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">
+                <div v-if="privacyMode" class="surface-subtle p-4 text-xs text-[var(--spa-ink-muted)]">
+                    Alertas ocultos no modo privacidade.
+                </div>
+                <div v-else-if="error" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">
                     <p>{{ error }}</p>
                     <button
                         class="mt-2 w-full rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100"

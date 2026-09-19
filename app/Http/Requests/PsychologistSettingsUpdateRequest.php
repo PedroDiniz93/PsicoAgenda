@@ -20,6 +20,7 @@ class PsychologistSettingsUpdateRequest extends FormRequest
             'whatsapp_sender_phone_id' => ['nullable', 'string', 'max:100', 'regex:/^\d+$/'],
             'whatsapp_sender_display_number' => ['nullable', 'string', 'max:30'],
             'email_confirm_enabled' => ['sometimes', 'boolean'],
+            'theme_mode' => ['sometimes', 'string', 'in:light,dark'],
         ];
     }
 

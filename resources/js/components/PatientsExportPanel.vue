@@ -182,7 +182,7 @@ onMounted(fetchExportPatients);
 
 <template>
     <div class="space-y-5">
-        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+        <section class="surface-panel p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="section-kicker">Arquivos CSV</p>
@@ -192,15 +192,6 @@ onMounted(fetchExportPatients);
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button
-                        class="btn-secondary disabled:opacity-50"
-                        type="button"
-                        :disabled="exportPatientsLoading"
-                        @click="fetchExportPatients"
-                    >
-                        <AppIcon name="RefreshCcw" class="size-4" />
-                        {{ exportPatientsLoading ? 'Carregando...' : 'Recarregar' }}
-                    </button>
                     <button
                         class="btn-primary px-5 shadow-sm disabled:bg-[#aab5ae]"
                         type="button"
@@ -214,7 +205,7 @@ onMounted(fetchExportPatients);
             </div>
         </section>
 
-        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+        <section class="surface-panel p-6">
             <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h3 class="text-base font-semibold text-slate-950">Tipos de informação</h3>
@@ -249,7 +240,7 @@ onMounted(fetchExportPatients);
             </div>
         </section>
 
-        <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 shadow-sm">
+        <section class="surface-panel overflow-hidden">
             <div class="border-b border-slate-100 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>

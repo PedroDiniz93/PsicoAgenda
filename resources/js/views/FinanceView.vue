@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import axios from 'axios';
 import Alert from '../components/base/Alert.vue';
 import Modal from '../components/base/Modal.vue';
 import AppIcon from '../components/base/AppIcon.vue';
 import { formatDateOnly, formatDateTime, formatMoney } from '../utils/formatters';
+
+const privacyMode = inject('privacyMode', ref(false));
 
 const toLocalMonth = (date = new Date()) => {
     const year = date.getFullYear();
@@ -298,6 +300,7 @@ const methodLabel = (value?: string) => {
 };
 
 const fetchDashboard = async () => {
+    if (privacyMode.value) return;
     loading.value = true;
     errorMessage.value = '';
     successMessage.value = '';
@@ -306,10 +309,12 @@ const fetchDashboard = async () => {
         const { data } = await axios.get('/api/finance/dashboard', {
             params: { month: selectedMonth.value },
         });
+        if (privacyMode.value) return;
         dashboard.value = data;
         selectedMonth.value = data?.period?.month ?? selectedMonth.value;
         syncSettingsForm();
     } catch (error: any) {
+        if (privacyMode.value) return;
         errorMessage.value = error?.response?.data?.message ?? 'Não foi possível carregar o financeiro.';
     } finally {
         loading.value = false;
@@ -550,24 +555,44 @@ const printReceipt = () => {
     receiptWindow.document.close();
 };
 
-onMounted(() => {
+watch(privacyMode, (enabled) => {
+    if (enabled) {
+        closeReceivable();
+        dashboard.value = {};
+        return;
+    }
+
     fetchDashboard();
+});
+
+onMounted(() => {
+    if (!privacyMode.value) {
+        fetchDashboard();
+    }
 });
 </script>
 
 <template>
     <div class="page-shell">
-        <header class="mb-5 rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section v-if="privacyMode" class="empty-state">
+            <AppIcon name="EyeOff" class="mx-auto mb-3 size-7 text-[var(--spa-accent)]" />
+            <h1 class="text-2xl font-semibold text-[var(--spa-ink)]">Financeiro protegido</h1>
+            <p class="mx-auto mt-2 max-w-lg text-sm">Desative o modo privacidade na barra superior para visualizar valores, cobranças e recibos.</p>
+        </section>
+
+        <template v-else>
+        <header class="page-header">
+            <div class="page-header__content">
                 <div>
                     <p class="section-kicker">Financeiro</p>
-                    <h1 class="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Recebimentos, cobranças e previsão</h1>
-                    <p class="mt-1 max-w-2xl text-sm leading-6 text-[#58635f]">
+                    <h1 class="page-header__title">Recebimentos e cobranças</h1>
+                    <p class="page-header__description">
                         Controle pagamentos por sessão, acompanhe inadimplência e emita recibos sem sair do fluxo da agenda.
                     </p>
                 </div>
+            </div>
 
-                <div class="flex flex-wrap items-center gap-2">
+            <div class="page-header__actions">
                     <RouterLink
                         :to="{ name: 'home' }"
                         class="btn-secondary"
@@ -575,17 +600,7 @@ onMounted(() => {
                         <AppIcon name="ChevronLeft" class="size-4" />
                         Dashboard
                     </RouterLink>
-                    <button
-                        class="btn-primary disabled:opacity-60"
-                        type="button"
-                        :disabled="loading"
-                        @click="fetchDashboard"
-                    >
-                        <AppIcon name="RefreshCcw" class="size-4" :class="{ 'animate-spin': loading }" />
-                        Atualizar
-                    </button>
                 </div>
-            </div>
         </header>
 
         <div class="space-y-5">
@@ -597,15 +612,15 @@ onMounted(() => {
             </section>
 
             <template v-else>
-                <section class="sticky top-0 z-10 -mx-4 border-y border-[#e2ddd3] bg-[#f4f1eb]/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:rounded-2xl lg:border lg:bg-white/95 lg:shadow-sm">
+                <section class="sticky top-16 z-20 -mx-4 border-y border-[#e2ddd3] bg-[#f4f1eb]/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:rounded-2xl lg:border lg:bg-white/95 lg:shadow-sm">
                     <div class="flex gap-2 overflow-x-auto pb-1 lg:pb-0" role="tablist" aria-label="Categorias financeiras">
                         <button
                             v-for="section in financeSections"
                             :key="section.id"
                             class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition"
                             :class="activeSection === section.id
-                                ? 'border-[#3f4f46] bg-[#3f4f46] text-white shadow-sm'
-                                : 'border-[#e2ddd3] bg-white text-[#58635f] hover:border-[#c9c1b3] hover:bg-[#f8f5ef] hover:text-[#1f2522]'"
+                                ? 'border-[var(--spa-accent)] bg-[var(--spa-accent)] text-white shadow-sm'
+                                : 'border-[var(--spa-border-soft)] bg-[var(--spa-surface-raised)] text-[var(--spa-ink-soft)] hover:border-[var(--spa-accent)] hover:bg-[var(--spa-accent-soft)] hover:text-[var(--spa-accent-hover)]'"
                             type="button"
                             role="tab"
                             :aria-selected="activeSection === section.id"
@@ -615,7 +630,9 @@ onMounted(() => {
                             <span
                                 v-if="section.count !== null"
                                 class="rounded-full px-2 py-0.5 text-xs"
-                                :class="activeSection === section.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'"
+                                :class="activeSection === section.id
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-[var(--spa-accent-soft)] text-[var(--spa-accent-hover)]'"
                             >
                                 {{ section.count }}
                             </span>
@@ -623,7 +640,7 @@ onMounted(() => {
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-lg font-semibold text-slate-950">{{ sectionTitle.title }}</p>
@@ -640,7 +657,7 @@ onMounted(() => {
                         <article
                             v-for="card in summaryCards"
                             :key="card.id"
-                            :class="['rounded-xl border p-4 shadow-sm', card.tone]"
+                            :class="['metric-card', card.tone]"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
@@ -1054,5 +1071,6 @@ Obrigado(a).</p>
                 </section>
             </div>
         </Modal>
+        </template>
     </div>
 </template>

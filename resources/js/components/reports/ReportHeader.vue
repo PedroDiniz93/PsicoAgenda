@@ -23,19 +23,19 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-      <div>
+  <div class="surface-panel p-5 sm:p-6">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div class="page-header__content">
         <p class="section-kicker">Relatórios</p>
-        <h1 class="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Indicadores do consultório</h1>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-[#58635f]">
+        <h1 class="page-header__title">Indicadores do consultório</h1>
+        <p class="page-header__description">
           Analise presença, faltas, cancelamentos e recebimentos em um período específico.
         </p>
         <p class="mt-2 text-sm text-slate-500">
           <slot name="info" />
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="page-header__actions">
         <RouterLink
           :to="{ name: 'home' }"
           class="btn-secondary h-10"

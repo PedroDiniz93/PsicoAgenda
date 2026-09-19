@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, provide, readonly, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
@@ -13,6 +13,7 @@ const auth = useAuthStore();
 
 const sidebarCollapsed = ref(false);
 const mobileSidebarOpen = ref(false);
+const privacyMode = ref(false);
 const patientSearch = ref('');
 const patientAutocompleteResults = ref([]);
 const patientAutocompleteLoading = ref(false);
@@ -70,6 +71,7 @@ const authPsychologist = computed(() => authUser.value.psychologist ?? {});
 const isAdmin = computed(() => authUser.value.role === 'admin');
 const userName = computed(() => authPsychologist.value.name ?? authUser.value.name ?? 'Psicólogo(a)');
 const userEmail = computed(() => authUser.value.email ?? authPsychologist.value.email ?? '');
+const themeMode = computed(() => authPsychologist.value.theme_mode === 'dark' ? 'dark' : 'light');
 
 const todayLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', {
@@ -82,51 +84,59 @@ const todayLabel = computed(() =>
 const navigationItems = computed(() => [
     {
         id: 'dashboard',
-        label: 'Dashboard',
+        label: 'Visão geral',
         icon: 'LayoutDashboard',
         to: { name: 'home' },
-    },
-    {
-        id: 'patients',
-        label: 'Pacientes',
-        icon: 'UsersRound',
-        to: { name: 'patients' },
+        group: 'Consultório',
     },
     {
         id: 'schedule',
         label: 'Agenda',
         icon: 'CalendarDays',
         to: { name: 'schedule' },
+        group: 'Consultório',
+    },
+    {
+        id: 'patients',
+        label: 'Pacientes',
+        icon: 'UsersRound',
+        to: { name: 'patients' },
+        group: 'Consultório',
     },
     {
         id: 'reports',
         label: 'Relatórios',
         icon: 'ChartColumn',
         to: { name: 'reports' },
+        group: 'Gestão',
     },
     {
         id: 'finance',
         label: 'Financeiro',
         icon: 'WalletCards',
         to: { name: 'finance' },
+        group: 'Gestão',
     },
     {
         id: 'exports',
         label: 'Exportação',
         icon: 'FolderArchive',
         to: { name: 'exports' },
+        group: 'Gestão',
     },
     {
         id: 'profile',
         label: 'Perfil',
         icon: 'UserRoundCog',
         to: { name: 'profile' },
+        group: 'Conta',
     },
     {
         id: 'settings',
         label: 'Configurações',
         icon: 'Settings',
         to: { name: 'settings' },
+        group: 'Conta',
     },
     ...(isAdmin.value
         ? [
@@ -135,10 +145,13 @@ const navigationItems = computed(() => [
                 label: 'Admin',
                 icon: 'ShieldCheck',
                 to: { name: 'home', query: { tab: 'admin' } },
+                group: 'Administração',
             },
         ]
         : []),
 ]);
+
+provide('privacyMode', readonly(privacyMode));
 
 
 const resetPatientAutocomplete = () => {
@@ -175,6 +188,12 @@ const fetchPatientAutocomplete = async (term) => {
     }
 };
 
+const applyThemeMode = (mode) => {
+    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = normalizedMode;
+    document.documentElement.style.colorScheme = normalizedMode;
+};
+
 watch(patientSearch, (value) => {
     const term = value.trim();
 
@@ -182,7 +201,7 @@ watch(patientSearch, (value) => {
         clearTimeout(patientSearchTimeoutId);
     }
 
-    if (term.length < 3) {
+    if (privacyMode.value || term.length < 3) {
         patientSearchRequestId += 1;
         resetPatientAutocomplete();
         return;
@@ -192,8 +211,25 @@ watch(patientSearch, (value) => {
     patientSearchTimeoutId = window.setTimeout(() => fetchPatientAutocomplete(term), 250);
 });
 
+watch(privacyMode, (enabled) => {
+    if (!enabled) return;
+    patientSearch.value = '';
+    patientSearchRequestId += 1;
+    resetPatientAutocomplete();
+    closePatientEditForm();
+    resetPatientForm();
+});
+
+watch(themeMode, (mode) => {
+    applyThemeMode(mode);
+}, { immediate: true });
+
 const closePatientAutocomplete = () => {
     patientAutocompleteOpen.value = false;
+};
+
+const togglePrivacyMode = () => {
+    privacyMode.value = !privacyMode.value;
 };
 
 const clearPatientFormErrors = () => {
@@ -370,7 +406,10 @@ const submitPatientEdit = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-[#f9f9f8]">
+    <div
+        class="min-h-screen bg-[var(--spa-bg)]"
+        :class="{ 'privacy-mode': privacyMode }"
+    >
         <HomeAppSidebar
             :items="navigationItems"
             :collapsed="sidebarCollapsed"
@@ -381,7 +420,10 @@ const submitPatientEdit = async () => {
             @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
         />
 
-        <div class="min-h-screen">
+        <div
+            class="min-h-screen transition-[padding] duration-200"
+            :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'"
+        >
             <HomeTopBar
                 v-model:search-term="patientSearch"
                 :today-label="todayLabel"
@@ -392,12 +434,14 @@ const submitPatientEdit = async () => {
                 :patient-autocomplete-loading="patientAutocompleteLoading"
                 :patient-autocomplete-error="patientAutocompleteError"
                 :show-patient-autocomplete="patientAutocompleteOpen"
+                :privacy-mode="privacyMode"
                 @search-patients="searchPatients"
                 @close-patient-autocomplete="closePatientAutocomplete"
                 @edit-patient="editPatientFromAutocomplete"
                 @open-patient-record="openPatientRecordFromAutocomplete"
                 @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
                 @open-mobile-sidebar="mobileSidebarOpen = true"
+                @toggle-privacy-mode="togglePrivacyMode"
             />
 
             <slot />

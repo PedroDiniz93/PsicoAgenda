@@ -64,7 +64,7 @@ export function useAppointmentReports() {
         if (to) {
             return `Filtrando até ${to}.`;
         }
-        return 'Sem filtros de data aplicados.';
+        return '';
     });
 
     const attendanceRateDisplay = computed(() => {

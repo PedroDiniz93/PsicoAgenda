@@ -112,7 +112,7 @@ onMounted(() => {
                         :format-date-time="formatDateTime"
                     />
 
-                    <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="grid items-stretch gap-6 lg:grid-cols-2">
                         <PaymentTable
                             title="Clientes que pagaram"
                             subtitle="Pagamentos recebidos no período"

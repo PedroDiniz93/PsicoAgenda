@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import HomeProfilePanel from '../components/home/HomeProfilePanel.vue';
+import AppPageHeader from '../components/layout/AppPageHeader.vue';
 
 const auth = useAuthStore();
 const defaultTimezone = 'America/Sao_Paulo';
@@ -133,14 +134,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <section class="mb-6 rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#6c6b60]">Perfil</p>
-            <h1 class="mt-2 text-2xl font-semibold text-[#1f2522]">Editar perfil profissional</h1>
-            <p class="mt-2 max-w-3xl text-sm text-[#58635f]">
-                Atualize os dados usados nos agendamentos, na comunicação com pacientes e na configuração da agenda.
-            </p>
-        </section>
+    <main class="page-shell">
+        <AppPageHeader
+            kicker="Conta"
+            title="Perfil profissional"
+            description="Atualize os dados usados nos agendamentos, na comunicação com pacientes e na configuração da agenda."
+        />
 
         <HomeProfilePanel
             :profile-form="profileForm"

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\PsychologistController;
 use App\Http\Controllers\Api\GoogleOAuthController;
+use App\Http\Controllers\Api\GoogleCalendarController;
 use App\Http\Controllers\Api\PatientRecordController;
 use App\Http\Controllers\Api\HomeDashboardController;
 use App\Http\Controllers\Api\RecurringAppointmentController;
@@ -43,6 +44,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::put('/psychologist/settings', [PsychologistController::class, 'updateSettings']);
     Route::get('/google/oauth/url', [GoogleOAuthController::class, 'generateUrl']);
     Route::post('/google/oauth/disconnect', [GoogleOAuthController::class, 'disconnect']);
+    Route::get('/google/calendar/events', [GoogleCalendarController::class, 'events']);
     Route::get('/home/dashboard', [HomeDashboardController::class, 'show']);
 
     Route::get('/patients', [PatientController::class, 'index']);

@@ -398,34 +398,32 @@ onMounted(() => {
         <div class="space-y-6">
             <PatientsHeader @create="openCreateForm" />
 
-            <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Resumo de pacientes">
                 <article
                     v-for="stat in patientStats"
                     :key="stat.id"
-                    class="group rounded-xl border border-[#c2c7cd]/20 bg-white p-6 shadow-[0_20px_40px_-10px_rgba(93,123,147,0.06)] transition hover:border-[#415f76]/30"
+                    class="metric-card group flex items-center gap-3 p-3"
                 >
-                    <div class="flex items-start justify-between gap-4">
-                        <div
-                            class="flex size-10 items-center justify-center rounded-lg"
-                            :class="{
-                                'bg-[#abcae5]/20 text-[#415f76]': stat.tone === 'primary',
-                                'bg-[#cbe6d4]/30 text-[#4c6455]': stat.tone === 'secondary',
-                                'bg-[#e8e1d9]/60 text-[#605b55]': stat.tone === 'tertiary',
-                            }"
-                        >
-                            <AppIcon :name="stat.icon" class="size-5" />
-                        </div>
-                        <span v-if="stat.helper" class="rounded bg-[#cbe6d4]/30 px-2 py-1 text-xs font-bold text-[#4c6455]">
-                            {{ stat.helper }}
-                        </span>
+                    <div
+                        class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                        :class="{
+                            'bg-[#abcae5]/20 text-[#415f76]': stat.tone === 'primary',
+                            'bg-[#cbe6d4]/30 text-[#4c6455]': stat.tone === 'secondary',
+                            'bg-[#e8e1d9]/60 text-[#605b55]': stat.tone === 'tertiary',
+                        }"
+                    >
+                        <AppIcon :name="stat.icon" class="size-4" />
                     </div>
-                    <div class="mt-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#73787d]">
+                    <div class="flex min-w-0 flex-1 items-baseline justify-between gap-2">
+                        <p class="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[#73787d]">
                             {{ stat.label }}
                         </p>
-                        <p class="mt-1 font-['Source_Serif_4'] text-3xl font-bold text-[#1a1c1c]">
+                        <p class="shrink-0 font-['Source_Serif_4'] text-2xl font-bold text-[#1a1c1c]">
                             {{ stat.value }}
                         </p>
+                        <span v-if="stat.helper" class="hidden shrink-0 rounded bg-[#cbe6d4]/30 px-1.5 py-0.5 text-[11px] font-bold text-[#4c6455] sm:inline">
+                            {{ stat.helper }}
+                        </span>
                     </div>
                 </article>
             </section>

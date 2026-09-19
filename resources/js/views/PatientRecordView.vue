@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import axios from 'axios';
 import AppIcon from '../components/base/AppIcon.vue';
@@ -7,6 +7,7 @@ import { formatDateOnly, formatDateTime } from '../utils/formatters';
 
 const route = useRoute();
 const router = useRouter();
+const privacyMode = inject('privacyMode', ref(false));
 
 const patientId = computed(() => Number(route.params.id));
 const patient = ref(null);
@@ -325,6 +326,7 @@ const buildRecordFormData = () => {
 };
 
 const fetchPatient = async () => {
+    if (privacyMode.value) return;
     patientLoading.value = true;
     patientError.value = '';
     patient.value = null;
@@ -338,8 +340,10 @@ const fetchPatient = async () => {
 
     try {
         const { data } = await axios.get(`/api/patients/${id}`);
+        if (privacyMode.value) return;
         patient.value = data;
     } catch (error) {
+        if (privacyMode.value) return;
         const message = error?.response?.data?.message ?? 'Não foi possível carregar o paciente.';
         patientError.value = message;
     } finally {
@@ -356,6 +360,7 @@ const buildRecordFiltersParams = (page) => {
 };
 
 const fetchRecords = async (page = 1) => {
+    if (privacyMode.value) return;
     recordsLoading.value = true;
     recordsError.value = '';
 
@@ -364,6 +369,7 @@ const fetchRecords = async (page = 1) => {
         const { data } = await axios.get(`/api/patients/${patientId.value}/records`, {
             params,
         });
+        if (privacyMode.value) return;
         const list = Array.isArray(data?.data) ? data.data : [];
         records.value = list;
         const meta = data?.meta ?? data ?? {};
@@ -372,6 +378,7 @@ const fetchRecords = async (page = 1) => {
         recordPagination.perPage = meta.per_page ?? list.length ?? 10;
         recordPagination.total = meta.total ?? list.length;
     } catch (error) {
+        if (privacyMode.value) return;
         records.value = [];
         recordsError.value = error?.response?.data?.message ?? 'Não foi possível carregar o prontuário.';
     } finally {
@@ -466,35 +473,62 @@ watch(
     () => {
         closeRecordForm();
         resetRecordFiltersState();
-        fetchPatient();
-        fetchRecords();
+        if (!privacyMode.value) {
+            fetchPatient();
+            fetchRecords();
+        }
     }
 );
 
-onMounted(() => {
+watch(privacyMode, (enabled) => {
+    if (enabled) {
+        closeRecordForm();
+        patient.value = null;
+        records.value = [];
+        recordPagination.currentPage = 1;
+        recordPagination.lastPage = 1;
+        recordPagination.total = 0;
+        return;
+    }
+
     fetchPatient();
     fetchRecords();
+});
+
+onMounted(() => {
+    if (!privacyMode.value) {
+        fetchPatient();
+        fetchRecords();
+    }
 });
 </script>
 
 <template>
-    <div class="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 lg:px-8">
-        <header class="mb-5 flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div class="page-shell">
+        <section v-if="privacyMode" class="empty-state">
+            <AppIcon name="EyeOff" class="mx-auto mb-3 size-7 text-[var(--spa-accent)]" />
+            <h1 class="text-2xl font-semibold text-[var(--spa-ink)]">Prontuário protegido</h1>
+            <p class="mx-auto mt-2 max-w-lg text-sm">Desative o modo privacidade na barra superior para acessar dados cadastrais e registros clínicos.</p>
+            <RouterLink :to="{ name: 'patients' }" class="btn-secondary mt-5">Voltar para pacientes</RouterLink>
+        </section>
+
+        <template v-else>
+        <header class="page-header">
             <div class="flex items-center gap-4">
-                <div class="flex size-14 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-lg font-semibold text-white">
+                <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--spa-accent)] text-lg font-semibold text-white">
                     {{ patientInitials }}
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-cyan-700">Prontuário do paciente</p>
-                    <h1 class="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
+                    <p class="section-kicker">Prontuário</p>
+                    <h1 class="page-header__title">
                         {{ patient ? patient.name : 'Paciente' }}
                     </h1>
-                    <p class="mt-1 text-sm text-slate-500">Histórico clínico, plano terapêutico e materiais vinculados.</p>
+                    <p class="page-header__description">Histórico clínico, plano terapêutico e materiais vinculados.</p>
                 </div>
             </div>
             <RouterLink
                 :to="{ name: 'patients' }"
-                class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                class="btn-secondary h-10"
             >
                 Voltar para pacientes
             </RouterLink>
@@ -516,7 +550,7 @@ onMounted(() => {
 
         <div v-else class="grid gap-5 lg:grid-cols-[320px_1fr]">
             <aside class="space-y-4">
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase text-slate-500">Status</p>
@@ -533,7 +567,9 @@ onMounted(() => {
                         </button>
                     </div>
 
-                    <div class="mt-5 space-y-4 text-sm">
+                    <details class="mt-5 rounded-xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface-muted)] p-4">
+                        <summary class="cursor-pointer text-sm font-semibold text-[var(--spa-ink)]">Dados pessoais</summary>
+                    <div class="mt-4 space-y-4 text-sm">
                         <div>
                             <p class="text-xs font-semibold uppercase text-slate-500">Contato</p>
                             <p class="mt-2 text-slate-900">{{ patient.email ?? 'E-mail não informado' }}</p>
@@ -566,9 +602,10 @@ onMounted(() => {
                             <p class="mt-2 leading-6 text-slate-600">{{ patient.notes ?? 'Sem observações adicionais.' }}</p>
                         </div>
                     </div>
+                    </details>
                 </section>
 
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <p class="text-sm font-semibold text-slate-950">Resumo do prontuário</p>
                     <div class="mt-4 grid grid-cols-3 gap-2">
                         <article v-for="stat in recordStats" :key="stat.label" class="rounded-lg bg-slate-50 px-3 py-3 text-center">
@@ -578,7 +615,7 @@ onMounted(() => {
                     </div>
                 </section>
 
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-sm font-semibold text-slate-950">Filtros</p>
                         <button class="text-xs font-semibold text-cyan-700 hover:text-cyan-900" type="button" @click="recordFiltersOpen = !recordFiltersOpen">
@@ -629,7 +666,7 @@ onMounted(() => {
             </aside>
 
             <main class="space-y-4">
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-xl font-semibold text-slate-950">Linha do tempo clínica</h2>
@@ -645,7 +682,7 @@ onMounted(() => {
                     </div>
                 </section>
 
-                <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <section class="surface-panel p-5">
                     <div v-if="recordsLoading" class="flex items-center gap-3 rounded-lg border border-slate-100 px-4 py-6 text-sm text-slate-500">
                         <AppIcon name="LoaderCircle" class="size-5 animate-spin text-cyan-700" />
                         Carregando anotações...
@@ -879,5 +916,6 @@ onMounted(() => {
                 </form>
             </div>
         </div>
+        </template>
     </div>
 </template>

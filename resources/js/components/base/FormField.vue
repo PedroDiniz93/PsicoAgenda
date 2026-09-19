@@ -23,9 +23,9 @@ const hasHelp = computed(() => Boolean(props.help) && !hasError.value);
 
 <template>
   <div class="flex flex-col gap-1.5">
-    <label v-if="label" class="text-sm font-semibold text-[#42474c]">
+    <label v-if="label" class="text-sm font-semibold text-[var(--spa-ink-soft)]">
       {{ label }}
-      <span v-if="required" class="text-[#ba1a1a]">*</span>
+      <span v-if="required" class="text-[var(--spa-error)]">*</span>
     </label>
     <input
       :value="modelValue"
@@ -33,16 +33,16 @@ const hasHelp = computed(() => Boolean(props.help) && !hasError.value);
       :placeholder="placeholder"
       :disabled="disabled"
       :class="[
-        'w-full rounded-lg border px-4 py-2 text-sm text-[#1a1c1c] transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-[#cae6ff]',
-        'disabled:bg-[#f3f4f3] disabled:text-[#73787d] disabled:cursor-not-allowed',
+        'w-full rounded-lg border px-4 py-2 text-sm text-[var(--spa-ink)] transition-colors',
+        'focus:outline-none focus:ring-2 focus:ring-[var(--spa-focus)]',
+        'disabled:bg-[var(--spa-surface-muted)] disabled:text-[var(--spa-ink-muted)] disabled:cursor-not-allowed',
         hasError
-          ? 'border-[#ffb4ab] bg-[#ffdad6] focus:border-[#ba1a1a]'
-          : 'border-[#e2e2e2] bg-white focus:border-[#415f76]',
+          ? 'border-[var(--spa-error)] bg-[var(--spa-error-soft)] focus:border-[var(--spa-error)]'
+          : 'border-[var(--spa-border-soft)] bg-[var(--spa-surface)] focus:border-[var(--spa-accent)]',
       ]"
       @input="$emit('update:modelValue', $event.target.value)"
     />
-    <p v-if="hasError" class="text-xs text-[#ba1a1a]">{{ error }}</p>
-    <p v-else-if="hasHelp" class="text-xs text-[#73787d]">{{ help }}</p>
+    <p v-if="hasError" class="text-xs text-[var(--spa-error)]">{{ error }}</p>
+    <p v-else-if="hasHelp" class="text-xs text-[var(--spa-ink-muted)]">{{ help }}</p>
   </div>
 </template>

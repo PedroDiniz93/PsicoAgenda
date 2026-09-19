@@ -32,12 +32,12 @@ const iconColor = {
 </script>
 
 <template>
-  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
     <article
       v-for="card in cards"
       :key="card.id"
       :class="[
-        'rounded-lg border p-5 shadow-sm transition hover:shadow-md',
+        'metric-card min-w-0',
         colorClasses[card.color || 'primary'],
       ]"
     >

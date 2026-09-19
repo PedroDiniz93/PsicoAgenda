@@ -18,7 +18,7 @@ defineEmits<{
 </script>
 
 <template>
-    <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+    <section class="surface-panel p-6">
         <div class="flex flex-col gap-1 border-b border-slate-100 pb-5">
             <h2 class="text-xl font-semibold text-slate-950">Perfil profissional</h2>
             <p class="text-sm text-[#58635f]">Dados usados nos agendamentos e comunicações com pacientes.</p>
@@ -123,7 +123,7 @@ defineEmits<{
 
             <div class="flex justify-end">
                 <button
-                    class="inline-flex h-10 items-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="btn-primary h-10"
                     type="submit"
                     :disabled="profileSaving"
                 >

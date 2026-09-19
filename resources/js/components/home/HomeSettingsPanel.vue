@@ -12,18 +12,20 @@ defineProps<{
     reminderMessage: string;
     reminderMessageType: string;
     reminderSaving: boolean;
+    themeMode: string;
 }>();
 
 defineEmits<{
     connectGoogle: [];
     disconnectGoogle: [];
     submitReminders: [];
+    updateThemeMode: [mode: string];
 }>();
 </script>
 
 <template>
     <section class="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+        <aside class="surface-panel p-6">
             <h2 class="text-lg font-semibold text-slate-950">Status das integrações</h2>
             <div class="mt-4 space-y-3">
                 <div v-for="item in integrationItems" :key="item.label" class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
@@ -34,7 +36,7 @@ defineEmits<{
         </aside>
 
         <div class="space-y-4">
-            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+            <section class="surface-panel p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-slate-950">Google Calendar</h2>
@@ -44,7 +46,7 @@ defineEmits<{
                     </div>
                     <button
                         v-if="googleConnected"
-                        class="inline-flex h-10 items-center justify-center rounded-lg border border-rose-200 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="inline-flex h-10 items-center justify-center rounded-lg border border-[var(--spa-error)] px-4 text-sm font-semibold text-[var(--spa-error)] transition hover:bg-[var(--spa-error-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
                         :disabled="googleProcessing"
                         @click="$emit('disconnectGoogle')"
@@ -54,7 +56,7 @@ defineEmits<{
                     </button>
                     <button
                         v-else
-                        class="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="btn-primary h-10"
                         type="button"
                         :disabled="googleProcessing"
                         @click="$emit('connectGoogle')"
@@ -79,19 +81,18 @@ defineEmits<{
                 </p>
             </section>
 
-            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+            <section class="surface-panel p-6">
                 <div>
                     <h2 class="text-lg font-semibold text-slate-950">Lembretes automáticos</h2>
                     <p class="mt-1 text-sm text-slate-500">Canais e antecedência para confirmação de sessões.</p>
                 </div>
-
                 <form class="mt-5 space-y-4" @submit.prevent="$emit('submitReminders')">
                     <label class="block text-sm font-semibold text-slate-700" for="reminder-days-before">
                         Dias antes
                         <input
                             id="reminder-days-before"
                             v-model.number="reminderSettings.daysBefore"
-                            class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 sm:max-w-xs"
+                            class="mt-2 h-10 w-14 rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                             type="number"
                             min="0"
                             max="30"
@@ -152,7 +153,7 @@ defineEmits<{
 
                     <div class="flex justify-end">
                         <button
-                            class="inline-flex h-10 items-center rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="btn-primary h-10"
                             type="submit"
                             :disabled="reminderSaving"
                         >

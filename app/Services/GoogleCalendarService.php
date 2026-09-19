@@ -16,6 +16,101 @@ class GoogleCalendarService
 {
     private const BASE_URL = 'https://www.googleapis.com/calendar/v3';
 
+    /**
+     * Returns a privacy-safe projection of events from the connected primary calendar.
+     * External events are intentionally not persisted as clinical appointments.
+     */
+    public function listExternalEvents(Psychologist $psychologist, Carbon $from, Carbon $to): array
+    {
+        $token = $this->resolveToken($psychologist);
+        if (!$token) {
+            return [];
+        }
+
+        $ownedGoogleEventIds = Appointment::query()
+            ->where('psychologist_id', $psychologist->id)
+            ->whereNotNull('google_event_id')
+            ->pluck('google_event_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        $timezone = $psychologist->timezone ?? config('app.timezone', 'UTC');
+        $pageToken = null;
+        $events = [];
+
+        do {
+            $query = [
+                'timeMin' => $from->copy()->setTimezone($timezone)->toIso8601String(),
+                'timeMax' => $to->copy()->setTimezone($timezone)->toIso8601String(),
+                'singleEvents' => 'true',
+                'orderBy' => 'startTime',
+                'showDeleted' => 'false',
+                'maxResults' => 250,
+            ];
+
+            if ($pageToken) {
+                $query['pageToken'] = $pageToken;
+            }
+
+            $response = $this->request(
+                $token,
+                'get',
+                self::BASE_URL . '/calendars/primary/events?' . http_build_query($query)
+            );
+
+            if (!$response || !$response->successful()) {
+                if ($response) {
+                    Log::warning('Falha ao listar eventos externos do Google Calendar.', [
+                        'psychologist_id' => $psychologist->id,
+                        'status' => $response->status(),
+                    ]);
+                }
+
+                return [];
+            }
+
+            foreach ((array) $response->json('items', []) as $event) {
+                $eventId = $event['id'] ?? null;
+                $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
+                $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
+
+                if (!$eventId || !$start || !$end || ($event['status'] ?? null) === 'cancelled') {
+                    continue;
+                }
+
+                if (in_array($eventId, $ownedGoogleEventIds, true)) {
+                    continue;
+                }
+
+                try {
+                    $startAt = Carbon::parse($start, $timezone);
+                    $endAt = Carbon::parse($end, $timezone);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if ($startAt->gte($endAt)) {
+                    continue;
+                }
+
+                $events[] = [
+                    'id' => 'google:' . $eventId,
+                    'source' => 'google',
+                    'title' => trim((string) ($event['summary'] ?? '')) ?: 'Evento do Google',
+                    'start_at' => $startAt->toIso8601String(),
+                    'end_at' => $endAt->toIso8601String(),
+                    'all_day' => isset($event['start']['date']),
+                    'read_only' => true,
+                ];
+            }
+
+            $pageToken = $response->json('nextPageToken');
+        } while ($pageToken);
+
+        return $events;
+    }
+
     public function syncAppointment(Appointment $appointment): void
     {
         $appointment->loadMissing(['patient', 'psychologist']);

@@ -21,12 +21,12 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const variantClasses = {
-  primary: 'bg-[#415f76] text-white hover:bg-[#2b4a60] disabled:bg-[#abcae5]',
-  secondary: 'border border-[#e2e2e2] bg-white text-[#42474c] hover:border-[#c2c7cd] hover:bg-[#f3f4f3] disabled:opacity-60',
-  danger: 'bg-[#ba1a1a] text-white hover:bg-[#93000a] disabled:bg-[#ffb4ab]',
-  ghost: 'text-[#42474c] hover:bg-[#f3f4f3] disabled:opacity-60',
-  success: 'bg-[#4c6455] text-white hover:bg-[#344c3e] disabled:bg-[#b2cdbb]',
-  warning: 'bg-[#605b55] text-white hover:bg-[#4a4640] disabled:bg-[#ccc5be]',
+  primary: 'bg-[var(--spa-accent)] text-white hover:bg-[var(--spa-accent-hover)]',
+  secondary: 'border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] text-[var(--spa-ink-soft)] hover:border-[var(--spa-border)] hover:bg-[var(--spa-surface-muted)]',
+  danger: 'bg-[var(--spa-error)] text-white hover:brightness-90',
+  ghost: 'text-[var(--spa-ink-soft)] hover:bg-[var(--spa-surface-muted)]',
+  success: 'bg-[var(--spa-secondary)] text-white hover:brightness-90',
+  warning: 'bg-[var(--spa-warning)] text-white hover:brightness-90',
 };
 
 const sizeClasses = {
@@ -35,7 +35,7 @@ const sizeClasses = {
   lg: 'px-6 py-3 text-base',
 };
 
-const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#cae6ff] disabled:cursor-not-allowed';
+const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--spa-focus)] disabled:cursor-not-allowed disabled:opacity-60';
 
 const computedClass = computed(() => {
   const classes = [

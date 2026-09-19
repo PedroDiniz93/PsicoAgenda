@@ -1,4 +1,5 @@
 <script setup>
+import { inject, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppIcon from '../base/AppIcon.vue';
 
@@ -50,6 +51,8 @@ defineProps({
 });
 
 defineEmits(['retry', 'edit', 'previous', 'next']);
+
+const privacyMode = inject('privacyMode', ref(false));
 
 const getInitials = (name) => {
     const parts = String(name ?? '')
@@ -107,14 +110,18 @@ const avatarClasses = (status) => {
         </div>
 
         <template v-else>
-            <div v-if="patients.length" class="hidden overflow-x-auto lg:block">
+            <div v-if="privacyMode" class="empty-state m-5">
+                <AppIcon name="EyeOff" class="mx-auto mb-3 size-6 text-[var(--spa-accent)]" />
+                <p class="font-semibold text-[var(--spa-ink)]">Lista protegida</p>
+                <p class="mt-1 text-sm">Desative o modo privacidade para visualizar pacientes.</p>
+            </div>
+
+            <div v-else-if="patients.length" class="hidden overflow-x-auto lg:block">
                 <table class="w-full border-collapse">
                     <thead class="bg-[#f3f4f3] text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#73787d]">
                         <tr>
                             <th class="px-6 py-4">Paciente</th>
                             <th class="px-6 py-4">Status</th>
-                            <th class="px-6 py-4">Cobrança</th>
-                            <th class="px-6 py-4">Contato</th>
                             <th class="px-6 py-4 text-right">Ações</th>
                         </tr>
                     </thead>
@@ -132,8 +139,6 @@ const avatarClasses = (status) => {
                                         <p class="truncate font-semibold text-[#1a1c1c]">{{ patient.name }}</p>
                                         <div class="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-[#73787d]">
                                             <span v-if="patient.id">#{{ patient.id }}</span>
-                                            <span v-if="patient.cpf">CPF {{ patient.cpf }}</span>
-                                            <span v-if="patient.birth_date">Nasc. {{ formatDate(patient.birth_date) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -145,21 +150,6 @@ const avatarClasses = (status) => {
                                 >
                                     {{ statusBadges[patient.status]?.label ?? 'Desconhecido' }}
                                 </span>
-                            </td>
-                            <td class="px-6 py-5">
-                                <p class="font-semibold text-[#42474c]">{{ sessionFeeLabel(patient.session_fee_type) }}</p>
-                                <p v-if="patient.session_fee_value" class="mt-1 text-xs text-[#73787d]">
-                                    {{ formatCurrency(patient.session_fee_value) }}
-                                </p>
-                                <p v-else class="mt-1 text-xs text-[#73787d]">Valor não definido</p>
-                            </td>
-                            <td class="px-6 py-5">
-                                <p v-if="patient.email" class="text-sm text-[#42474c]">{{ patient.email }}</p>
-                                <p v-if="patient.phone" class="mt-1 text-sm text-[#73787d]">{{ patient.phone }}</p>
-                                <p v-if="patient.emergency_contacts?.length" class="mt-1 text-xs text-[#73787d]">
-                                    Emergência: {{ patient.emergency_contacts[0].name }} · {{ patient.emergency_contacts[0].phone }}
-                                </p>
-                                <p v-if="!patient.email && !patient.phone" class="text-sm text-[#73787d]">Sem contato</p>
                             </td>
                             <td class="px-6 py-5 text-right">
                                 <div class="flex justify-end gap-2">
@@ -185,7 +175,7 @@ const avatarClasses = (status) => {
                 </table>
             </div>
 
-            <div v-if="patients.length" class="divide-y divide-[#c2c7cd]/10 lg:hidden">
+            <div v-if="!privacyMode && patients.length" class="divide-y divide-[#c2c7cd]/10 lg:hidden">
                 <article v-for="patient in patients" :key="patient.id" class="p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex min-w-0 items-center gap-3">
@@ -208,22 +198,6 @@ const avatarClasses = (status) => {
                         </span>
                     </div>
 
-                    <div class="mt-4 grid gap-3 text-sm text-[#42474c]">
-                        <p v-if="patient.cpf">CPF {{ patient.cpf }}</p>
-                        <p v-if="patient.birth_date">Nasc. {{ formatDate(patient.birth_date) }}</p>
-                        <p>{{ patient.email || 'Sem e-mail' }}</p>
-                        <p>{{ patient.phone || 'Sem telefone' }}</p>
-                        <p v-if="patient.emergency_contacts?.length">
-                            Emergência: {{ patient.emergency_contacts[0].name }} · {{ patient.emergency_contacts[0].phone }}
-                        </p>
-                        <p>
-                            <span class="font-semibold text-[#1a1c1c]">{{ sessionFeeLabel(patient.session_fee_type) }}</span>
-                            <span v-if="patient.session_fee_value"> · {{ formatCurrency(patient.session_fee_value) }}</span>
-                        </p>
-                    </div>
-
-                    <p class="mt-4 text-sm text-[#73787d]">{{ patient.notes ?? 'Sem observações cadastradas.' }}</p>
-
                     <div class="mt-4 flex gap-2">
                         <RouterLink
                             class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#415f76]/10 px-3 py-2 text-center text-xs font-semibold text-[#415f76] transition hover:bg-[#415f76]/20"
@@ -244,13 +218,13 @@ const avatarClasses = (status) => {
                 </article>
             </div>
 
-            <div v-else class="px-8 py-16 text-center">
+            <div v-else-if="!privacyMode" class="px-8 py-16 text-center">
                 <p class="text-sm font-semibold text-[#42474c]">Nenhum paciente encontrado</p>
                 <p class="mt-1 text-sm text-[#73787d]">Ajuste os filtros ou cadastre um novo paciente.</p>
             </div>
         </template>
 
-        <div v-if="!errorMessage" class="flex flex-wrap items-center justify-between gap-4 border-t border-[#c2c7cd]/20 bg-[#f3f4f3]/20 px-6 py-4 text-sm text-[#73787d]">
+        <div v-if="!errorMessage && !privacyMode" class="flex flex-wrap items-center justify-between gap-4 border-t border-[#c2c7cd]/20 bg-[#f3f4f3]/20 px-6 py-4 text-sm text-[#73787d]">
             <p>{{ paginationSummary }}</p>
             <div class="flex items-center gap-2">
                 <button

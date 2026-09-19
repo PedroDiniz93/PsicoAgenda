@@ -27,8 +27,8 @@ const submit = async () => {
 </script>
 
 <template>
-    <div class="login-screen flex min-h-screen items-center justify-center px-4 py-8 text-[#1a1c1c]">
-        <main class="w-full max-w-md rounded-xl border border-[#e2e2e2] bg-white p-8 shadow-[0_20px_40px_-10px_rgba(93,123,147,0.08)]">
+    <div class="auth-screen">
+        <main class="auth-card max-w-md p-8 sm:p-10">
             <RouterLink class="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-[#415f76] hover:underline" :to="{ name: 'login' }">
                 <AppIcon name="ArrowLeft" class="size-4" />
                 Voltar ao login
@@ -71,12 +71,3 @@ const submit = async () => {
         </main>
     </div>
 </template>
-
-<style scoped>
-.login-screen {
-    background-color: #f9f9f8;
-    background-image:
-        radial-gradient(at 0% 0%, rgba(202, 230, 255, 0.15) 0, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(206, 233, 214, 0.15) 0, transparent 50%);
-}
-</style>

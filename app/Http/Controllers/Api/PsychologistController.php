@@ -73,6 +73,10 @@ class PsychologistController extends Controller
             $psychologist->email_confirm_enabled = (bool) $data['email_confirm_enabled'];
         }
 
+        if (array_key_exists('theme_mode', $data)) {
+            $psychologist->theme_mode = $data['theme_mode'] === 'dark' ? 'dark' : 'light';
+        }
+
         $psychologist->save();
 
         return response()->json([

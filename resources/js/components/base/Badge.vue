@@ -10,11 +10,11 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const statusClasses = {
-  success: 'bg-[#cbe6d4] text-[#4c6455]',
-  warning: 'bg-[#e8e1d9] text-[#605b55]',
-  error: 'bg-[#ffdad6] text-[#ba1a1a]',
-  info: 'bg-[#f3f4f3] text-[#42474c]',
-  primary: 'bg-[#cae6ff] text-[#415f76]',
+  success: 'bg-[var(--spa-secondary-soft)] text-[var(--spa-secondary)]',
+  warning: 'bg-[var(--spa-warning-soft)] text-[var(--spa-warning)]',
+  error: 'bg-[var(--spa-error-soft)] text-[var(--spa-error)]',
+  info: 'bg-[var(--spa-surface-muted)] text-[var(--spa-ink-soft)]',
+  primary: 'bg-[var(--spa-accent-soft)] text-[var(--spa-accent)]',
 };
 
 const computedClass = computed(() => ['px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-2', statusClasses[props.status]].join(' '));

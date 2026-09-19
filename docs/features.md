@@ -25,6 +25,84 @@ Regras:
 
 ## Features
 
+### 2026-09-19 - Indicadores de pacientes em uma linha
+
+- Status: Implementada
+- Objetivo: deixar os cards de resumo mais compactos e escaneáveis.
+- Escopo: PatientsView.vue.
+- Comportamento: ícone, rótulo, valor e indicador mensal ficam alinhados em uma única linha no desktop, com truncamento seguro para telas estreitas.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Cards compactos de pacientes
+
+- Status: Implementada
+- Objetivo: reduzir o peso visual dos indicadores de pacientes.
+- Escopo: PatientsView.vue.
+- Comportamento: cards, ícones, espaçamentos e números passam a usar uma escala mais compacta, mantendo os quatro indicadores legíveis.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Cabeçalho financeiro alinhado
+
+- Status: Implementada
+- Objetivo: manter o botão Dashboard dentro do enquadramento do cabeçalho financeiro.
+- Escopo: FinanceView.vue.
+- Comportamento: título, descrição e ação usam as regiões semânticas do cabeçalho, com alinhamento consistente em desktop e mobile.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Cores das abas financeiras
+
+- Status: Implementada
+- Objetivo: alinhar as abas Resumo, Cobranças, Carteira e Configurações à paleta global do aplicativo.
+- Escopo: FinanceView.vue.
+- Comportamento: o estado ativo usa o azul de ação da interface e o estado inativo usa superfícies e bordas semânticas, com contraste consistente nos temas claro e escuro.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Campo de antecedência dos lembretes
+
+- Status: Implementada
+- Objetivo: ajustar a proporção do campo numérico de dias antes do lembrete.
+- Escopo: HomeSettingsPanel.vue.
+- Comportamento: o campo passa a ter largura compacta, adequada ao valor numérico, sem ocupar toda a linha.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Eventos externos do Google na agenda
+
+- Status: Implementada
+- Objetivo: mostrar na agenda os eventos existentes no Google Calendar conectado.
+- Escopo: endpoint autenticado de leitura, GoogleCalendarService e grade/lista responsiva da ScheduleView.
+- Comportamento: eventos externos são consultados apenas no intervalo visível, exibem o título do evento, não bloqueiam horários, não viram agendamentos locais e dividem a coluna quando há sobreposição.
+- Privacidade: apenas o título é exposto; descrições, convidados, locais, links e tokens do Google permanecem ocultos; eventos criados pelo PsicoAgenda não são duplicados.
+- Validação: npm run build, php -l dos arquivos PHP alterados, php artisan route:list e git diff --check.
+- Notas: a leitura é sob demanda e não persiste eventos externos; webhooks, múltiplos calendários e sincronização bidirecional permanecem fora do escopo.
+
+### 2026-09-19 - Redesign Clínica Serena
+
+- Status: Implementada
+- Objetivo: unificar toda a interface em uma experiência moderna, calma e adequada à rotina de psicólogos.
+- Escopo: shell autenticado, navegação, componentes base, dashboard, pacientes, prontuário, agenda, relatórios, financeiro, exportações, perfil, configurações e telas públicas de acesso.
+- Comportamento: a navegação passa a ser agrupada por rotina, o conteúdo acompanha a largura da sidebar, cabeçalhos e superfícies seguem tokens semânticos, e as telas mantêm composição responsiva para desktop e mobile.
+- Privacidade: a busca global deixa de exibir contatos, a listagem de pacientes mostra apenas informações essenciais, dados cadastrais do prontuário ficam recolhidos e um modo transitório oculta busca, alertas, prontuário e financeiro.
+- Validação: `npm run build` e `php artisan route:list` concluídos; `php artisan test` executado, com os testes de banco bloqueados pela ausência do driver `pdo_sqlite` no ambiente.
+- Notas: APIs, autenticação, payloads clínicos e regras de escopo por psicólogo foram preservados; o redesign integra o modo claro/escuro já existente.
+
+### 2026-06-12 - Refinamento visual do modo escuro
+
+- Status: Implementada
+- Objetivo: corrigir superficies claras e elementos desconexos no tema escuro.
+- Escopo: `resources/css/app.css`, `resources/js/components/AppShell.vue`.
+- Comportamento: o fundo global, cards, topbar, sidebar, campos, bordas e textos com cores fixas passam a seguir os tokens escuros da interface.
+- Validacao: `npm run build`.
+- Notas: ajuste visual sem mudanca no contrato da API.
+
+### 2026-06-12 - Modo escuro por usuario
+
+- Status: Implementada
+- Objetivo: permitir que cada psicologo habilite ou desabilite o modo escuro com preferencia salva na conta.
+- Escopo: `database/migrations/2026_06_12_000001_add_theme_mode_to_psychologists_table.php`, `app/Http/Controllers/Api/PsychologistController.php`, `app/Http/Requests/PsychologistSettingsUpdateRequest.php`, `app/Models/Psychologist.php`, `resources/js/views/SettingsView.vue`, `resources/js/components/home/HomeSettingsPanel.vue`, `resources/js/components/AppShell.vue`, `resources/css/app.css`.
+- Comportamento: a tela de configuracoes exibe um toggle de tema; a escolha fica salva por usuario, abre em claro por padrao e aplica o tema em toda a interface ao recarregar ou trocar de rota.
+- Validacao: `npm run build`.
+- Notas: a preferencia usa `light` como valor default para usuarios sem configuracao salva.
+
 ### 2026-06-12 - Editar paciente a partir da busca global
 
 - Status: Implementada

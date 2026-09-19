@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppIcon from '../base/AppIcon.vue';
+
+const privacyMode = inject('privacyMode', ref(false));
 
 type Accent = 'primary' | 'success' | 'warning' | 'tertiary' | 'error';
 
@@ -142,16 +144,22 @@ const barHeight = (count: number) => {
 </script>
 
 <template>
-    <section class="space-y-6">
+    <section v-if="privacyMode" class="empty-state">
+        <AppIcon name="EyeOff" class="mx-auto mb-3 size-7 text-[var(--spa-accent)]" />
+        <h2 class="text-2xl font-semibold text-[var(--spa-ink)]">Visão geral protegida</h2>
+        <p class="mx-auto mt-2 max-w-lg text-sm">Desative o modo privacidade para consultar agenda, indicadores e próximos atendimentos.</p>
+    </section>
+
+    <section v-else class="space-y-6">
         <section>
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
+            <div class="page-header !mb-0">
+                <div class="page-header__content">
                     <p class="section-kicker">{{ dashboardHero.kicker }}</p>
-                    <h2 class="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{{ dashboardHero.title }}</h2>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-[#58635f]">{{ dashboardHero.description }}</p>
+                    <h2 class="page-header__title">{{ dashboardHero.title }}</h2>
+                    <p class="page-header__description">{{ dashboardHero.description }}</p>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="page-header__actions">
                     <RouterLink
                         v-for="action in primaryActions"
                         :key="action.id"
@@ -178,7 +186,7 @@ const barHeight = (count: number) => {
                     v-for="metric in dashboardMetrics"
                     :key="metric.id"
                     :class="[
-                        'rounded-xl border border-[#e2e2e2] border-l-4 bg-white p-4 shadow-sm',
+                        'metric-card border-l-4',
                         accentClasses[metric.accent].border,
                     ]"
                 >
@@ -199,7 +207,7 @@ const barHeight = (count: number) => {
         </section>
 
         <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+            <section class="surface-panel p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="mt-1 text-xl font-semibold text-slate-950">Próximos Pacientes</h3>
@@ -210,7 +218,7 @@ const barHeight = (count: number) => {
                     </RouterLink>
                 </div>
 
-                <div v-if="nextPatients.length === 0" class="mt-5 rounded-xl border border-dashed border-[#d7ddd9] bg-[#f9f9f8] p-5 text-sm text-[#58635f]">
+                <div v-if="nextPatients.length === 0" class="empty-state mt-5 !py-8 text-sm">
                     Sem próximos pacientes agendados.
                 </div>
 
@@ -241,7 +249,7 @@ const barHeight = (count: number) => {
                 </div>
             </section>
 
-            <section class="rounded-2xl border border-[#e2ddd3] bg-white/95 p-6 shadow-sm">
+            <section class="surface-panel p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="mt-1 text-xl font-semibold text-slate-950">Atendimentos Semanais</h3>

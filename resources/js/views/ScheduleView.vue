@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
@@ -7,6 +7,7 @@ import AppIcon from '../components/base/AppIcon.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
+const privacyMode = inject('privacyMode', ref(false));
 
 const getWeekStart = (date) => {
     const cloned = new Date(date);
@@ -115,6 +116,7 @@ const scheduleCategory = ref('agenda');
 const scheduleLoading = ref(false);
 const scheduleError = ref('');
 const appointments = ref([]);
+const externalEvents = ref([]);
 const autoFillEndEnabled = ref(true);
 const nowTick = ref(Date.now());
 let nowInterval = null;
@@ -262,9 +264,11 @@ const scheduleWeekLabel = computed(() => {
     return `${formatter.format(start)} – ${formatter.format(end)}`;
 });
 
+const allCalendarEvents = computed(() => [...appointments.value, ...externalEvents.value]);
+
 const appointmentsByDay = computed(() => {
     const grouped = Object.fromEntries(weekDays.value.map((day) => [day.date, []]));
-    appointments.value.forEach((appointment) => {
+    allCalendarEvents.value.forEach((appointment) => {
         const start = new Date(appointment.start_at ?? appointment.startAt);
         if (Number.isNaN(start.getTime())) {
             return;
@@ -277,7 +281,7 @@ const appointmentsByDay = computed(() => {
     return grouped;
 });
 
-const appointmentsEmpty = computed(() => appointments.value.length === 0);
+const appointmentsEmpty = computed(() => allCalendarEvents.value.length === 0);
 const enabledAvailabilityRulesCount = computed(() =>
     availabilityRules.value.filter((rule) => rule.enabled).length
 );
@@ -301,7 +305,7 @@ const calendarDayAppointments = computed(() => {
     const slotHeight = calendarConfig.slotHeight;
 
     weekDays.value.forEach((day) => {
-        const items = (appointmentsByDay.value[day.date] ?? []).map((appointment, index) => {
+        const items = (appointmentsByDay.value[day.date] ?? []).map((appointment) => {
             const start = new Date(appointment.start_at ?? appointment.startAt);
             const end = new Date(appointment.end_at ?? appointment.endAt);
             if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
@@ -316,6 +320,7 @@ const calendarDayAppointments = computed(() => {
             const top = (minutesFromStart / calendarConfig.slotMinutes) * slotHeight;
             const rawHeight = (durationMinutes / calendarConfig.slotMinutes) * slotHeight;
             const height = Math.max(calendarConfig.minAppointmentHeight, rawHeight);
+            const isGoogleEvent = appointment.source === 'google';
 
             const statusKey = appointment.status ?? 'scheduled';
             const statusLabel =
@@ -335,17 +340,68 @@ const calendarDayAppointments = computed(() => {
                 appointment,
                 top,
                 height,
-                offset: 0,
+                startMs: start.getTime(),
+                endMs: end.getTime(),
+                column: 0,
+                columns: 1,
                 statusKey,
-                badgeLabel,
-                badgeClass,
-                isPaid,
-                typeLabel,
+                badgeLabel: isGoogleEvent ? 'Google' : badgeLabel,
+                badgeClass: isGoogleEvent
+                    ? 'border-[#b8cdbd] bg-[#edf4ef] text-[#4e6655]'
+                    : badgeClass,
+                isPaid: isGoogleEvent ? false : isPaid,
+                typeLabel: isGoogleEvent ? 'Evento externo' : typeLabel,
                 meetingUrl,
             };
         });
 
-        columns[day.date] = items.filter(Boolean);
+        const validItems = items.filter(Boolean).sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs);
+        const groups = [];
+        let currentGroup = [];
+        let currentGroupEnd = -Infinity;
+        validItems.forEach((item) => {
+            if (currentGroup.length && item.startMs >= currentGroupEnd) {
+                groups.push(currentGroup);
+                currentGroup = [];
+            }
+            currentGroup.push(item);
+            currentGroupEnd = Math.max(currentGroupEnd, item.endMs);
+        });
+        if (currentGroup.length) groups.push(currentGroup);
+
+        groups.forEach((group) => {
+            if (group.length > 1) {
+                const groupTop = Math.min(...group.map((item) => item.top));
+                const groupBottom = Math.max(...group.map((item) => item.top + item.height));
+                const rowHeight = Math.max(42, Math.min(64, (groupBottom - groupTop) / group.length));
+                const stackHeight = Math.max(groupBottom - groupTop, rowHeight * group.length);
+
+                group.forEach((item, index) => {
+                    item.stacked = true;
+                    item.compact = true;
+                    item.stackTop = groupTop + index * rowHeight;
+                    item.stackHeight = stackHeight / group.length;
+                    item.columns = 1;
+                });
+
+                return;
+            }
+
+            const lanes = [];
+            group.forEach((item) => {
+                let lane = 0;
+                while (lanes[lane]?.some((entry) => entry.endMs > item.startMs && entry.startMs < item.endMs)) {
+                    lane += 1;
+                }
+                item.column = lane;
+                lanes[lane] = [...(lanes[lane] ?? []), item];
+            });
+            group.forEach((item) => {
+                item.columns = lanes.length;
+            });
+        });
+
+        columns[day.date] = validItems;
     });
 
     return columns;
@@ -535,6 +591,23 @@ const openEditAppointment = (appointment) => {
     fetchPatientOptions(appointment.patient?.name ?? '');
 };
 
+const openCalendarItem = (appointment) => {
+    if (appointment?.source === 'google') return;
+    openEditAppointment(appointment);
+};
+
+const calendarItemStyle = (item) => ({
+    top: String(item.stacked ? item.stackTop : item.top) + 'px',
+    height: String(item.stacked ? item.stackHeight : item.height) + 'px',
+    left: item.stacked ? '6px' : 'calc(' + ((item.column / item.columns) * 100) + '% + 6px)',
+    width: item.stacked ? 'calc(100% - 12px)' : 'calc(' + (100 / item.columns) + '% - 12px)',
+});
+
+const calendarTimeLabel = (item) =>
+    item.compact
+        ? formatTimeLabel(item.appointment.start_at)
+        : formatTimeLabel(item.appointment.start_at) + ' - ' + formatTimeLabel(item.appointment.end_at);
+
 const calculatePatientFeeValue = (patient) => {
     const baseValue = Number(patient?.session_fee_value);
     if (Number.isNaN(baseValue) || baseValue <= 0) {
@@ -603,13 +676,17 @@ const applyAvailability = (payload = {}) => {
 };
 
 const fetchAvailability = async () => {
+    if (privacyMode.value) return;
     availabilityLoading.value = true;
 
     try {
         const params = { from: scheduleDate.value, to: addDays(scheduleDate.value, 6) };
         const { data } = await axios.get('/api/availability', { params });
-        applyAvailability(data ?? {});
+        if (!privacyMode.value) {
+            applyAvailability(data ?? {});
+        }
     } catch (error) {
+        if (privacyMode.value) return;
         availabilityMessageType.value = 'error';
         availabilityMessage.value = error?.response?.data?.message ?? 'Não foi possível carregar a disponibilidade.';
     } finally {
@@ -692,6 +769,7 @@ const deleteScheduleBlock = async (block) => {
 
 const refreshSchedule = () => {
     fetchAppointments();
+    fetchExternalEvents();
     fetchAvailability();
 };
 
@@ -712,18 +790,36 @@ const formatDateTimeLabel = (value) => {
 
 
 const fetchAppointments = async () => {
+    if (privacyMode.value) return;
     scheduleLoading.value = true;
     scheduleError.value = '';
 
     try {
         const params = { from: scheduleDate.value, to: addDays(scheduleDate.value, 6) };
         const { data } = await axios.get('/api/appointments', { params });
+        if (privacyMode.value) return;
         appointments.value = Array.isArray(data) ? data : [];
     } catch (error) {
+        if (privacyMode.value) return;
         scheduleError.value = error?.response?.data?.message ?? 'Não foi possível carregar a agenda.';
         appointments.value = [];
     } finally {
         scheduleLoading.value = false;
+    }
+};
+
+const fetchExternalEvents = async () => {
+    if (privacyMode.value) return;
+
+    try {
+        const { data } = await axios.get('/api/google/calendar/events', {
+            params: { from: scheduleDate.value, to: addDays(scheduleDate.value, 6) },
+        });
+        if (!privacyMode.value) {
+            externalEvents.value = Array.isArray(data?.events) ? data.events : [];
+        }
+    } catch {
+        if (!privacyMode.value) externalEvents.value = [];
     }
 };
 
@@ -925,10 +1021,27 @@ watch(
     }
 );
 
+watch(privacyMode, (enabled) => {
+    if (enabled) {
+        closeAppointmentModal();
+        appointments.value = [];
+        externalEvents.value = [];
+        scheduleBlocks.value = [];
+        return;
+    }
+
+    fetchAppointments();
+    fetchExternalEvents();
+    fetchAvailability();
+});
+
 onMounted(() => {
     fetchProfile();
-    fetchAppointments();
-    fetchAvailability();
+    if (!privacyMode.value) {
+        fetchAppointments();
+        fetchExternalEvents();
+        fetchAvailability();
+    }
     nowInterval = setInterval(() => {
         nowTick.value = Date.now();
     }, 60000);
@@ -944,25 +1057,30 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="page-shell space-y-6">
-        <header class="surface-panel p-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <p class="section-kicker">Agenda</p>
-                    <h1 class="mt-2 text-2xl font-semibold text-slate-900">Planejamento clínico semanal</h1>
-                    <p class="mt-2 max-w-3xl text-sm text-[#58635f]">
-                        Visualize sessões, organize disponibilidade e controle bloqueios em áreas separadas para manter o fluxo limpo.
-                    </p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <RouterLink :to="{ name: 'home' }" class="btn-secondary">
-                        <AppIcon name="ChevronLeft" class="size-4" />
-                        Dashboard
-                    </RouterLink>
-                    <button class="btn-primary" type="button" @click="openCreateAppointment">
-                        <AppIcon name="CalendarPlus2" class="size-4" />
-                        Novo agendamento
-                    </button>
-                </div>
+        <section v-if="privacyMode" class="empty-state">
+            <AppIcon name="EyeOff" class="mx-auto mb-3 size-7 text-[var(--spa-accent)]" />
+            <h1 class="text-2xl font-semibold text-[var(--spa-ink)]">Agenda protegida</h1>
+            <p class="mx-auto mt-2 max-w-lg text-sm">Desative o modo privacidade para visualizar sessões, disponibilidade e bloqueios.</p>
+        </section>
+
+        <template v-else>
+        <header class="page-header">
+            <div class="page-header__content">
+                <p class="section-kicker">Agenda</p>
+                <h1 class="page-header__title">Agenda clínica</h1>
+                <p class="page-header__description">
+                    Visualize sessões, organize disponibilidade e controle bloqueios em áreas separadas para manter o fluxo limpo.
+                </p>
+            </div>
+            <div class="page-header__actions">
+                <RouterLink :to="{ name: 'home' }" class="btn-secondary h-10">
+                    <AppIcon name="ChevronLeft" class="size-4" />
+                    Dashboard
+                </RouterLink>
+                <button class="btn-primary h-10" type="button" @click="openCreateAppointment">
+                    <AppIcon name="CalendarPlus2" class="size-4" />
+                    Novo agendamento
+                </button>
             </div>
         </header>
 
@@ -981,16 +1099,16 @@ onBeforeUnmount(() => {
                         <AppIcon name="CalendarCheck2" class="size-4" />
                         Esta semana
                     </button>
-                    <input
-                        v-model="scheduleDate"
-                        class="field-input min-w-[11rem]"
-                        type="date"
-                        @change="handleScheduleDateChange"
-                    />
                     <button class="btn-secondary" type="button" @click="changeWeek(1)">
                         Próxima semana
                         <AppIcon name="ChevronRight" class="size-4" />
                     </button>
+                    <input
+                        v-model="scheduleDate"
+                        class="field-input h-10 w-36"
+                        type="date"
+                        @change="handleScheduleDateChange"
+                    />
                 </div>
             </div>
 
@@ -1012,21 +1130,6 @@ onBeforeUnmount(() => {
             </nav>
 
             <section v-if="scheduleCategory === 'agenda'" class="space-y-4">
-                <div class="grid gap-3 md:grid-cols-3">
-                    <article class="surface-subtle px-4 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Sessões na semana</p>
-                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ appointments.length }}</p>
-                    </article>
-                    <article class="surface-subtle px-4 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Dias com disponibilidade</p>
-                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ enabledAvailabilityRulesCount }}</p>
-                    </article>
-                    <article class="surface-subtle px-4 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-[#58635f]">Bloqueios na semana</p>
-                        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ scheduleBlocks.length }}</p>
-                    </article>
-                </div>
-
                 <div v-if="scheduleError" class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <p>{{ scheduleError }}</p>
@@ -1086,7 +1189,7 @@ onBeforeUnmount(() => {
                                     <div
                                         v-for="day in weekDays"
                                         :key="day.date"
-                                        class="relative border-l border-[#ece6db] transition"
+                                        class="relative min-w-0 overflow-hidden border-l border-[#ece6db] transition"
                                         :class="day.isToday ? 'bg-[#eef3ee]' : 'bg-white hover:bg-[#fcfaf6]'"
                                         :style="{ height: `${calendarColumnHeight}px` }"
                                     >
@@ -1130,23 +1233,32 @@ onBeforeUnmount(() => {
                                             <div
                                                 v-for="item in calendarDayAppointments[day.date] ?? []"
                                                 :key="item.appointment.id"
-                                                class="group absolute z-20 w-[94%] cursor-pointer overflow-hidden rounded-2xl border border-[#d7d2c7] bg-[#f8f4ec] px-3 py-2 text-left text-xs text-[#39423e] shadow transition hover:border-[#bcb39f] hover:bg-[#f3ede2] focus:outline-none"
-                                                :class="{ 'border-[#c7c0dc] bg-[#f1eef9] text-[#473f61]': item.appointment.recurrence_id }"
-                                                :style="{ top: `${item.top}px`, height: `${item.height}px`, left: '3%' }"
-                                                role="button"
-                                                tabindex="0"
-                                                @click.stop="openEditAppointment(item.appointment)"
-                                                @keydown.enter.prevent="openEditAppointment(item.appointment)"
+                                                class="group absolute z-20 box-border overflow-hidden border text-left text-xs shadow transition focus:outline-none"
+                                                :class="[
+                                                    item.compact ? 'rounded-xl px-2 py-1.5' : 'rounded-2xl px-3 py-2',
+                                                    item.appointment.source === 'google'
+                                                        ? 'cursor-default border-dashed border-[#b8cdbd] bg-[#edf4ef] text-[#40574c] hover:bg-[#e5f0e8]'
+                                                        : 'cursor-pointer border-[#d7d2c7] bg-[#f8f4ec] text-[#39423e] hover:border-[#bcb39f] hover:bg-[#f3ede2] focus:ring-2 focus:ring-[#9a4f57]/30',
+                                                ]"
+                                                :style="calendarItemStyle(item)"
+                                                :title="item.appointment.source === 'google' ? item.appointment.title : (item.appointment.patient?.name ?? 'Paciente removido')"
+                                                :role="item.appointment.source === 'google' ? undefined : 'button'"
+                                                :tabindex="item.appointment.source === 'google' ? -1 : 0"
+                                                @click.stop="openCalendarItem(item.appointment)"
+                                                @keydown.enter.prevent="openCalendarItem(item.appointment)"
                                             >
-                                                <div class="flex h-full flex-col justify-between overflow-hidden">
-                                                    <div class="space-y-1">
-                                                        <p class="text-[11px] font-semibold text-[#6f7a75]">
-                                                            {{ formatTimeLabel(item.appointment.start_at) }} - {{ formatTimeLabel(item.appointment.end_at) }}
+                                                <div class="flex h-full min-w-0 flex-col justify-between overflow-hidden">
+                                                    <div
+                                                        class="min-w-0"
+                                                        :class="item.compact ? 'flex items-center gap-2' : 'space-y-1'"
+                                                    >
+                                                        <p class="shrink-0 whitespace-nowrap text-[10px] font-semibold text-[#6f7a75]">
+                                                            {{ calendarTimeLabel(item) }}
                                                         </p>
-                                                        <p class="truncate text-sm font-semibold text-[#2d3531]">
-                                                            {{ item.appointment.patient?.name ?? 'Paciente removido' }}
+                                                        <p class="truncate text-sm font-semibold" :class="item.appointment.source === 'google' ? 'text-[#40574c]' : 'text-[#2d3531]'">
+                                                            {{ item.appointment.source === 'google' ? item.appointment.title : (item.appointment.patient?.name ?? 'Paciente removido') }}
                                                         </p>
-                                                        <div class="flex items-center justify-between gap-1">
+                                                        <div v-if="!item.compact" class="flex min-w-0 items-center justify-between gap-1">
                                                             <p class="text-[10px] uppercase tracking-wide text-[#89948f]">
                                                                 {{ item.typeLabel }}
                                                             </p>
@@ -1165,7 +1277,7 @@ onBeforeUnmount(() => {
                                                             </a>
                                                         </div>
                                                     </div>
-                                                    <div class="mt-1 flex flex-wrap gap-1">
+                                                    <div v-if="!item.compact" class="mt-1 flex flex-wrap gap-1">
                                                         <span class="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold" :class="item.badgeClass">
                                                             <span class="truncate">{{ item.badgeLabel }}</span>
                                                         </span>
@@ -1209,22 +1321,25 @@ onBeforeUnmount(() => {
                                     <button
                                         v-for="appointment in appointmentsByDay[day.date] ?? []"
                                         :key="`mobile-appointment-${appointment.id}`"
-                                        class="w-full rounded-xl border border-[#e7e1d6] bg-[#fcfaf6] px-3 py-2 text-left transition hover:border-[#c9c1b3]"
+                                        class="w-full rounded-xl border px-3 py-2 text-left transition"
+                                        :class="appointment.source === 'google'
+                                            ? 'border-dashed border-[#b8cdbd] bg-[#edf4ef]'
+                                            : 'border-[#e7e1d6] bg-[#fcfaf6] hover:border-[#c9c1b3]'"
                                         type="button"
-                                        @click="openEditAppointment(appointment)"
+                                        @click="openCalendarItem(appointment)"
                                     >
-                                        <p class="text-sm font-semibold text-slate-900">
-                                            {{ appointment.patient?.name ?? 'Paciente removido' }}
+                                        <p class="text-sm font-semibold" :class="appointment.source === 'google' ? 'text-[#40574c]' : 'text-slate-900'">
+                                            {{ appointment.source === 'google' ? appointment.title : (appointment.patient?.name ?? 'Paciente removido') }}
                                         </p>
                                         <p class="mt-1 text-xs text-[#58635f]">
                                             {{ formatTimeLabel(appointment.start_at) }} - {{ formatTimeLabel(appointment.end_at) }}
                                         </p>
                                         <div class="mt-2 flex flex-wrap gap-2">
                                             <span class="rounded-full border border-[#e2ddd3] px-2 py-0.5 text-[11px] font-semibold text-[#58635f]">
-                                                {{ appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ?? 'Sessão' }}
+                                                {{ appointment.source === 'google' ? 'Evento externo' : (appointmentTypeOptions.find((option) => option.value === appointment.type)?.label ?? 'Sessão') }}
                                             </span>
                                             <span class="rounded-full border border-[#e2ddd3] px-2 py-0.5 text-[11px] font-semibold text-[#58635f]">
-                                                {{ appointmentStatusLabel(appointment.status) }}
+                                                {{ appointment.source === 'google' ? 'Google' : appointmentStatusLabel(appointment.status) }}
                                             </span>
                                         </div>
                                     </button>
@@ -1383,11 +1498,14 @@ onBeforeUnmount(() => {
 
         <div
             v-if="appointmentModalOpen"
-            class="fixed inset-0 z-20 flex items-start justify-center bg-slate-900/40 px-4 py-10 backdrop-blur-sm"
+            class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-900/40 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-8"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="appointmentModalTitle"
             @click.self="closeAppointmentModal"
         >
-            <div class="w-full max-w-3xl rounded-3xl border border-[#e2ddd3] bg-white p-6 shadow-2xl">
-                <div class="mb-6 flex items-center justify-between">
+            <div class="my-auto w-full max-w-3xl overflow-y-auto rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-5 shadow-[var(--spa-shadow)] sm:max-h-[calc(100vh-4rem)] sm:p-6">
+                <div class="mb-6 flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">{{ appointmentModalTitle }}</h2>
                         <p class="text-sm text-[#58635f]">Preencha os campos para organizar a sua agenda.</p>
@@ -1551,5 +1669,6 @@ onBeforeUnmount(() => {
                 </form>
             </div>
         </div>
+        </template>
     </div>
 </template>

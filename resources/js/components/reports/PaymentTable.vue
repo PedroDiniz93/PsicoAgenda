@@ -33,7 +33,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <Card>
+  <Card class="flex h-full flex-col">
     <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
       <div>
         <p class="text-lg font-semibold text-slate-950">{{ title }}</p>
@@ -47,7 +47,7 @@ withDefaults(defineProps<Props>(), {
       </div>
     </div>
 
-    <div v-if="items.length > 0" class="space-y-4">
+    <div v-if="items.length > 0" class="flex flex-1 flex-col space-y-4">
       <div class="overflow-x-auto">
         <table class="min-w-full text-left text-sm">
           <thead class="border-b border-slate-200 bg-slate-50">
@@ -82,7 +82,7 @@ withDefaults(defineProps<Props>(), {
         Mostrando os 10 mais recentes de {{ items.length }} total.
       </p>
     </div>
-    <div v-else class="py-8 text-center">
+    <div v-else class="flex flex-1 items-center justify-center py-8 text-center">
       <p class="text-sm text-slate-500">
         {{
           color === 'success'

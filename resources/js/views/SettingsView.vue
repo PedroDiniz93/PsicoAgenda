@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import HomeSettingsPanel from '../components/home/HomeSettingsPanel.vue';
+import AppPageHeader from '../components/layout/AppPageHeader.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -12,6 +13,7 @@ const auth = useAuthStore();
 const authUser = computed(() => auth.user ?? {});
 const authPsychologist = computed(() => authUser.value.psychologist ?? {});
 const googleConnected = computed(() => Boolean(authPsychologist.value?.google_calendar_connected));
+const themeMode = ref('light');
 
 const googleError = ref('');
 const googleProcessing = ref(false);
@@ -61,13 +63,21 @@ const setReminderSettings = (psychologist: any = {}) => {
     reminderSettings.emailEnabled = Boolean(psychologist?.email_confirm_enabled);
 };
 
+const applyThemeMode = (mode: string) => {
+    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
+    themeMode.value = normalizedMode;
+    document.documentElement.dataset.theme = normalizedMode;
+    document.documentElement.style.colorScheme = normalizedMode;
+};
+
 const fetchProfile = async () => {
     try {
         const { data } = await axios.get('/api/psychologist/profile');
         const psychologist = data?.psychologist ?? data ?? {};
         setReminderSettings(psychologist);
+        applyThemeMode(psychologist?.theme_mode ?? 'light');
         if (auth.user) {
-            auth.user = { ...auth.user, psychologist };
+            auth.setUser({ ...auth.user, psychologist });
         }
     } catch (error: any) {
         reminderMessageType.value = 'error';
@@ -125,11 +135,13 @@ const submitReminderSettings = async () => {
             whatsapp_sender_phone_id: reminderSettings.whatsappSenderPhoneId.trim() || null,
             whatsapp_sender_display_number: reminderSettings.whatsappSenderDisplayNumber.trim() || null,
             email_confirm_enabled: Boolean(reminderSettings.emailEnabled),
+            theme_mode: themeMode.value,
         });
         const psychologist = data?.psychologist ?? data ?? {};
         setReminderSettings(psychologist);
+        applyThemeMode(psychologist?.theme_mode ?? themeMode.value);
         if (auth.user) {
-            auth.user = { ...auth.user, psychologist };
+            auth.setUser({ ...auth.user, psychologist });
         }
         reminderMessageType.value = 'success';
         reminderMessage.value = 'Preferências de lembrete atualizadas com sucesso.';
@@ -179,9 +191,28 @@ const handleGoogleCallbackStatus = () => {
     clearGoogleQueryParam();
 };
 
+const handleThemeModeUpdate = async (mode: string) => {
+    applyThemeMode(mode);
+    try {
+        const { data } = await axios.put('/api/psychologist/settings', {
+            theme_mode: themeMode.value,
+        });
+        const psychologist = data?.psychologist ?? data ?? {};
+        if (auth.user) {
+            auth.setUser({ ...auth.user, psychologist });
+        }
+    } catch (error: any) {
+        const fallbackMode = themeMode.value === 'dark' ? 'light' : 'dark';
+        applyThemeMode(fallbackMode);
+        reminderMessageType.value = 'error';
+        reminderMessage.value = error?.response?.data?.message ?? 'Não foi possível salvar o tema.';
+    }
+};
+
 onMounted(() => {
     fetchProfile();
     handleGoogleCallbackStatus();
+    applyThemeMode(authPsychologist.value?.theme_mode ?? 'light');
 });
 
 onBeforeUnmount(() => {
@@ -192,7 +223,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <main class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <main class="page-shell">
+        <AppPageHeader
+            kicker="Conta"
+            title="Configurações"
+            description="Gerencie integrações, lembretes e preferências da interface."
+        />
         <HomeSettingsPanel
             :integration-items="integrationItems"
             :google-connected="googleConnected"
@@ -204,9 +240,11 @@ onBeforeUnmount(() => {
             :reminder-message="reminderMessage"
             :reminder-message-type="reminderMessageType"
             :reminder-saving="reminderSaving"
+            :theme-mode="themeMode"
             @connect-google="connectGoogle"
             @disconnect-google="disconnectGoogle"
             @submit-reminders="submitReminderSettings"
+            @update-theme-mode="handleThemeModeUpdate"
         />
     </main>
 </template>

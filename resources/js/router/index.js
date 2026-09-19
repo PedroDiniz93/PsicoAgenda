@@ -47,7 +47,7 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: HomeView,
-            meta: { requiresAuth: true, title: 'Dashboard' },
+            meta: { requiresAuth: true, title: 'Visão geral' },
         },
         {
             path: '/patients',
