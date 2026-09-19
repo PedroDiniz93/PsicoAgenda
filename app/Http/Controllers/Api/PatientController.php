@@ -115,6 +115,7 @@ class PatientController extends Controller
         $psychologistId = $this->psychologistId($request);
 
         $patient = Patient::where('psychologist_id', $psychologistId)
+            ->with(['gamekitSessions' => fn ($query) => $query->with(['responses.card'])->withCount('responses')])
             ->findOrFail($id);
 
         return response()->json($patient);

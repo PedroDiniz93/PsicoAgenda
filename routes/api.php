@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\PsychologistController;
 use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\GoogleCalendarController;
+use App\Http\Controllers\Api\GameKitController;
+use App\Http\Controllers\Api\GameKitAiController;
+use App\Http\Controllers\Api\GameKitMemoryController;
 use App\Http\Controllers\Api\PatientRecordController;
 use App\Http\Controllers\Api\HomeDashboardController;
 use App\Http\Controllers\Api\RecurringAppointmentController;
@@ -47,6 +50,34 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::get('/google/calendar/events', [GoogleCalendarController::class, 'events']);
     Route::delete('/google/calendar/events/{eventId}', [GoogleCalendarController::class, 'destroy']);
     Route::get('/home/dashboard', [HomeDashboardController::class, 'show']);
+    Route::post('/gamekit/ai/generate', [GameKitAiController::class, 'generate']);
+    Route::post('/gamekit/default-model', [GameKitAiController::class, 'defaultModel']);
+    Route::get('/gamekit/templates', [GameKitAiController::class, 'index']);
+    Route::post('/gamekit/templates', [GameKitAiController::class, 'store']);
+    Route::get('/gamekit/templates/{id}', [GameKitAiController::class, 'show'])->whereNumber('id');
+    Route::put('/gamekit/templates/{id}', [GameKitAiController::class, 'update'])->whereNumber('id');
+    Route::patch('/gamekit/templates/{id}', [GameKitAiController::class, 'rename'])->whereNumber('id');
+    Route::post('/gamekit/templates/{id}/duplicate', [GameKitAiController::class, 'duplicate'])->whereNumber('id');
+    Route::delete('/gamekit/templates/{id}', [GameKitAiController::class, 'destroy'])->whereNumber('id');
+    Route::post('/gamekit/templates/{id}/session', [GameKitAiController::class, 'createSession'])->whereNumber('id');
+    Route::post('/gamekit/templates/{id}/generate-card', [GameKitAiController::class, 'generateCard'])->whereNumber('id');
+    Route::get('/gamekit/memory/games', [GameKitMemoryController::class, 'index']);
+    Route::post('/gamekit/memory/games', [GameKitMemoryController::class, 'store']);
+    Route::post('/gamekit/memory/ai-generate', [GameKitMemoryController::class, 'generateWithAi']);
+    Route::get('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'show'])->whereNumber('id');
+    Route::put('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'update'])->whereNumber('id');
+    Route::delete('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'destroy'])->whereNumber('id');
+    Route::post('/gamekit/memory/games/{id}/duplicate', [GameKitMemoryController::class, 'duplicate'])->whereNumber('id');
+    Route::post('/gamekit/memory/games/{id}/sessions', [GameKitMemoryController::class, 'createSession'])->whereNumber('id');
+    Route::get('/gamekit/memory/sessions/{id}', [GameKitMemoryController::class, 'session'])->whereNumber('id');
+    Route::post('/gamekit/memory/sessions/{id}/link', [GameKitMemoryController::class, 'link'])->whereNumber('id');
+    Route::get('/gamekit/sessions', [GameKitController::class, 'index']);
+    Route::post('/gamekit/sessions', [GameKitController::class, 'store']);
+    Route::get('/gamekit/sessions/{id}', [GameKitController::class, 'show'])->whereNumber('id');
+    Route::put('/gamekit/sessions/{id}', [GameKitController::class, 'update'])->whereNumber('id');
+    Route::post('/gamekit/sessions/{id}/link', [GameKitController::class, 'link'])->whereNumber('id');
+    Route::post('/gamekit/sessions/{id}/finish', [GameKitController::class, 'finish'])->whereNumber('id');
+    Route::post('/gamekit/sessions/{id}/review', [GameKitController::class, 'review'])->whereNumber('id');
 
     Route::get('/patients', [PatientController::class, 'index']);
     Route::post('/patients', [PatientController::class, 'store']);
@@ -89,4 +120,12 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
         ->whereNumber('appointment');
     Route::post('/finance/appointments/{appointment}/receipt', [FinanceController::class, 'issueReceipt'])
         ->whereNumber('appointment');
+});
+
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/gamekit/play/{token}', [GameKitController::class, 'play']);
+    Route::post('/gamekit/play/{token}/responses', [GameKitController::class, 'respond']);
+    Route::post('/gamekit/play/{token}/finish', [GameKitController::class, 'finishPublic']);
+    Route::get('/gamekit/memory/play/{token}', [GameKitMemoryController::class, 'play']);
+    Route::post('/gamekit/memory/play/{token}/result', [GameKitMemoryController::class, 'result']);
 });

@@ -157,6 +157,8 @@ const formatRecordDate = (value) => {
     return formatDateTime(value);
 };
 
+const activityStatusLabel = (status) => ({ draft: 'Rascunho', active: 'Em andamento', finished: 'Finalizado' }[status] ?? status);
+
 const toInputDateValue = (value) => {
     if (!value) return '';
     const date = value instanceof Date ? value : new Date(value);
@@ -602,6 +604,17 @@ onMounted(() => {
                             <p class="mt-2 leading-6 text-slate-600">{{ patient.notes ?? 'Sem observações adicionais.' }}</p>
                         </div>
                     </div>
+                    </details>
+                    <details class="mt-3 rounded-xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface-muted)] p-4">
+                        <summary class="cursor-pointer text-sm font-semibold text-[var(--spa-ink)]">Atividades terapêuticas</summary>
+                        <div v-if="patient.gamekit_sessions?.length" class="mt-4 space-y-3">
+                            <details v-for="activity in patient.gamekit_sessions" :key="activity.id" class="rounded-xl border border-[var(--spa-border-soft)] bg-white p-3">
+                                <summary class="cursor-pointer"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-semibold text-[var(--spa-ink)]">{{ activity.theme }}</p><p class="mt-1 text-xs text-slate-500">{{ formatRecordDate(activity.created_at) }} · {{ activity.responses_count ?? activity.responses?.length ?? 0 }} respostas</p></div><span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{{ activityStatusLabel(activity.status) }}</span></div></summary>
+                                <div v-if="activity.responses?.length" class="mt-3 space-y-2 border-t border-slate-100 pt-3"><div v-for="response in activity.responses" :key="response.id" class="rounded-lg bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-700">{{ response.card?.prompt_b ?? response.card?.prompt_a }}</p><p class="mt-1 text-sm text-slate-600">{{ response.answer }}</p></div></div>
+                                <p v-else class="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">Nenhuma resposta registrada.</p>
+                            </details>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-500">Nenhuma atividade vinculada a este paciente.</p>
                     </details>
                 </section>
 

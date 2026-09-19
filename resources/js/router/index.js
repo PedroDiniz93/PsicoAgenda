@@ -13,6 +13,10 @@ const PatientRecordView = () => import('../views/PatientRecordView.vue');
 const ExportsView = () => import('../views/ExportsView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
 const ProfileView = () => import('../views/ProfileView.vue');
+const GameKitView = () => import('../views/GameKitView.vue');
+const GameKitPlayerView = () => import('../views/GameKitPlayerView.vue');
+const GameKitMemoryView = () => import('../views/GameKitMemoryView.vue');
+const GameKitMemoryPlayerView = () => import('../views/GameKitMemoryPlayerView.vue');
 
 const defaultTitle = document.title;
 
@@ -96,6 +100,30 @@ const router = createRouter({
             name: 'settings',
             component: SettingsView,
             meta: { requiresAuth: true, title: 'Configurações' },
+        },
+        {
+            path: '/gamekit',
+            name: 'gamekit',
+            component: GameKitView,
+            meta: { requiresAuth: true, title: 'GameKit Psi' },
+        },
+        {
+            path: '/gamekit/memory',
+            name: 'gamekit-memory',
+            component: GameKitMemoryView,
+            meta: { requiresAuth: true, title: 'Jogo da memória · GameKit Psi' },
+        },
+        {
+            path: '/gamekit/play/:token',
+            name: 'gamekit-player',
+            component: GameKitPlayerView,
+            meta: { public: true, title: 'GameKit Psi' },
+        },
+        {
+            path: '/gamekit/memory/play/:token',
+            name: 'gamekit-memory-player',
+            component: GameKitMemoryPlayerView,
+            meta: { public: true, title: 'Jogo da memória · GameKit Psi' },
         },
     ],
 });

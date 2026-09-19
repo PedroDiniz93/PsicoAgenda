@@ -25,6 +25,241 @@ Regras:
 
 ## Features
 
+### 2026-09-19 - Ícones semânticos nos pares do Jogo da Memória
+
+- Status: Implementada
+- Objetivo: tornar a combinação dos pares mais clara e memorável para o paciente.
+- Escopo: migration de ícone, `GameKitMemoryPair`, `GameKitMemoryController`, `GameKitAiService` e `GameKitMemoryPlayerView.vue`.
+- Comportamento: cada par recebe um ícone semântico validado; a IA escolhe apenas ícones permitidos, e o player destaca pares encontrados com ícone grande, cor compartilhada, borda reforçada e selo de confirmação.
+- Validação: `npm run build`, PHP lint, `php artisan migrate --force` e rotas do GameKit.
+- Notas: cartas fechadas continuam neutras para não revelar a combinação antes da jogada.
+
+### 2026-09-19 - Fluxo unificado do Jogo da Memória
+
+- Status: Implementada
+- Objetivo: alinhar a criação do Jogo da Memória ao mesmo fluxo do primeiro jogo do GameKit.
+- Escopo: `resources/js/views/GameKitMemoryView.vue`.
+- Comportamento: o psicólogo configura os parâmetros em um único formulário, escolhe modelo padrão ou IA, revisa os pares, salva o modelo e depois inicia uma sessão a partir da biblioteca.
+- Validação: `npm run build`.
+
+### 2026-09-19 - Geração por IA no Jogo da Memória
+
+- Status: Implementada
+- Objetivo: permitir que o psicólogo gere pares terapêuticos personalizados para o jogo.
+- Escopo: `GameKitAiService`, `GameKitMemoryController`, migration de idade exata, `GameKitMemoryView.vue` e rotas de memória.
+- Comportamento: a IA recebe tema, faixa etária, dificuldade e quantidade de pares; gera lados, conceito e feedback para cada par, que permanece editável antes do salvamento.
+- Validação: `npm run build`, `php -l` nos arquivos PHP alterados, `php artisan route:list --path=gamekit` e `php artisan migrate --force`.
+- Notas: a IA não recebe dados de pacientes e não salva o jogo automaticamente antes da revisão do psicólogo.
+
+### 2026-09-19 - Jogo da Memória terapêutico do GameKit
+
+- Status: Implementada
+- Objetivo: adicionar um segundo jogo ao catálogo do GameKit Psi, com pares visuais e feedback terapêutico.
+- Escopo: migration `2026_09_19_000005_create_gamekit_memory_tables.php`, modelos e `GameKitMemoryController`, rotas de memória, `GameKitMemoryView.vue`, `GameKitMemoryPlayerView.vue` e router.
+- Comportamento: o psicólogo cria, edita, duplica, exclui e reutiliza jogos com 6, 8 ou 12 pares; o paciente recebe um link temporário, encontra os pares em uma grade responsiva e envia somente o resultado agregado da sessão.
+- Validação: `npm run build`, `php -l` nos arquivos PHP novos, `php artisan route:list --path=gamekit` e `php artisan migrate --force`.
+- Notas: a funcionalidade usa tabelas próprias e não altera o jogo Associação e Memória.
+
+### 2026-09-19 - Catálogo inicial de jogos do GameKit
+
+- Status: Implementada
+- Objetivo: preparar o GameKit para crescer como um pack de jogos terapêuticos.
+- Escopo: `resources/js/views/GameKitView.vue`.
+- Comportamento: ao abrir o GameKit, o psicólogo vê o catálogo e escolhe o jogo disponível; a tela de configuração, modelos salvos e histórico aparecem somente após essa escolha. O catálogo inicial contém Associação e memória.
+- Validação: `npm run build`.
+- Notas: novos jogos podem ser adicionados ao catálogo sem alterar o fluxo de geração e reutilização de modelos.
+
+### 2026-09-19 - Gerador padrão como modelo reutilizável
+
+- Status: Implementada
+- Objetivo: separar a criação de um modelo padrão da abertura de uma sessão.
+- Escopo: GameKitService, GameKitAiController, routes/api.php e GameKitView.vue.
+- Comportamento: “Gerar modelo padrão” cria seis cartas com contexto, pergunta e três opções coerentes, abre a revisão e permite salvar o resultado como novo modelo reutilizável.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Modal e mini grid do histórico do GameKit
+
+- Status: Implementada
+- Objetivo: facilitar a navegação entre sessões respondidas e reduzir a área ocupada pelo histórico.
+- Escopo: GameKitController, GameKitAiController e GameKitView.vue.
+- Comportamento: o histórico aparece em mini grid com até seis sessões; clicar em uma sessão abre uma modal com respostas e vínculo ao paciente.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Retorno do editor de sessão do GameKit
+
+- Status: Implementada
+- Objetivo: permitir voltar da revisão de cartas para o configurador.
+- Escopo: GameKitView.vue.
+- Comportamento: a tela da sessão possui botão “Voltar”, que limpa o link temporário e retorna ao estado de criação/modelos.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Finalização automática das atividades do GameKit
+
+- Status: Implementada
+- Objetivo: eliminar a necessidade de finalizar manualmente uma sessão após a última resposta.
+- Escopo: GameKitController, GameKitPlayerView, GameKitView e PatientRecordView.
+- Comportamento: ao registrar a resposta da última carta, o backend marca a sessão como finalizada; os status são exibidos em português e o botão manual foi removido.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Atividades terapêuticas no prontuário do paciente
+
+- Status: Implementada
+- Objetivo: tornar visíveis as sessões GameKit vinculadas ao paciente.
+- Escopo: Patient, PatientController e PatientRecordView.
+- Comportamento: abaixo de “Dados pessoais” há uma seção “Atividades terapêuticas”; cada sessão pode ser expandida para consultar respostas, data, status e quantidade de respostas.
+- Segurança: as atividades vêm da consulta do paciente autenticado e permanecem restritas ao psicólogo proprietário.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Histórico somente com sessões respondidas
+
+- Status: Implementada
+- Objetivo: evitar que rascunhos e sessões sem respostas poluam o histórico.
+- Escopo: GameKitController e GameKitView.vue.
+- Comportamento: o histórico consulta `with_responses=1` e exibe somente sessões que possuem ao menos uma resposta registrada.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Histórico e vínculo opcional das respostas do GameKit
+
+- Status: Parcial
+- Objetivo: permitir consultar respostas de sessões e associá-las a um paciente.
+- Escopo: migration de `patient_id` em gamekit_responses, GameKitResponse, GameKitController e GameKitView.
+- Comportamento: o psicólogo consulta sessões anteriores, visualiza resposta por carta e escolhe opcionalmente um paciente do próprio consultório uma única vez para toda a sessão; não há lançamento automático no prontuário.
+- Segurança: paciente e sessão são validados no escopo do psicólogo autenticado.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Remoção da duração da configuração do GameKit
+
+- Status: Implementada
+- Objetivo: simplificar a criação de atividades removendo um parâmetro que não participa da dinâmica do jogo.
+- Escopo: GameKitView, GameKitController e GameKitAiController.
+- Comportamento: a duração não aparece mais no formulário nem é exigida nas requisições; sessões antigas continuam usando seu valor e novas sessões usam 45 minutos como padrão interno.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Atualização imediata de título e cartas do modelo
+
+- Status: Implementada
+- Objetivo: manter a tela sincronizada logo após salvar uma edição.
+- Escopo: GameKitAiController.
+- Comportamento: alterações de título, contexto, pergunta e opções são gravadas na nova versão e a resposta retorna essa versão como `cards`, atualizando a lista sem recarregar a página.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Modal de edição dos modelos do GameKit
+
+- Status: Implementada
+- Objetivo: melhorar o foco da edição de um modelo salvo.
+- Escopo: GameKitView.vue.
+- Comportamento: clicar no modelo abre uma modal centralizada com título, cartas, contexto, pergunta e opções; a modal possui rolagem própria e botão para fechar sem alterar.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - Correção do uso de modelos em sessões
+
+- Status: Implementada
+- Objetivo: garantir que um modelo salvo carregue suas cartas na nova sessão.
+- Escopo: GameKitAiController.
+- Comportamento: a versão atual das cartas é filtrada explicitamente, sem depender da relação Eloquent dinâmica que retornava coleção vazia; a sessão passa a iniciar com contexto, pergunta e opções.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Player do GameKit com contexto e pergunta separados
+
+- Status: Implementada
+- Objetivo: evitar que a pergunta do paciente pareça uma opção de resposta.
+- Escopo: GameKitController e GameKitPlayerView.vue.
+- Comportamento: o link público exibe Contexto, Pergunta e, em seguida, as três opções selecionáveis.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Unificação do formato de cartas do GameKit
+
+- Status: Implementada
+- Objetivo: alinhar geração padrão, IA, edição e link do paciente.
+- Escopo: GameKitService, GameKitController e GameKitView.vue.
+- Comportamento: toda carta possui contexto, pergunta e exatamente três opções; a edição da sessão usa esses campos e o link recupera as cartas do servidor quando necessário.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Correção da contagem de cartas nos modelos salvos
+
+- Status: Implementada
+- Objetivo: exibir e editar as cartas da versão atual de um modelo salvo.
+- Escopo: GameKitAiController e GameKitView.vue.
+- Comportamento: a API retorna explicitamente as cartas da versão vigente no campo `cards`; a tela usa esse campo para contar e abrir as cartas para edição.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Edição do título de modelos vazios
+
+- Status: Implementada
+- Objetivo: permitir renomear um modelo mesmo quando ele ainda não possui cartas.
+- Escopo: GameKitAiController, rotas de templates e GameKitView.vue.
+- Comportamento: ao clicar no modelo, o campo de título aparece; a alteração pode ser salva separadamente das cartas.
+- Validação: npm run build, php -l e git diff --check.
+- Observação: a atualização somente do título usa o endpoint PUT principal e, após sucesso, o editor retorna ao estado inicial.
+
+### 2026-09-19 - Edição e exclusão de modelos do GameKit
+
+- Status: Implementada
+- Objetivo: permitir administrar cartas e modelos já salvos.
+- Escopo: GameKitAiController e GameKitView.vue.
+- Comportamento: modelos exibem a quantidade atual de cartas, podem ser abertos para edição, atualizados, ter cartas removidas ou ser excluídos; a exclusão exige confirmação.
+- Validação: npm run build, php -l e git diff --check.
+
+### 2026-09-19 - Correção do carregamento inicial do GameKit
+
+- Status: Implementada
+- Objetivo: evitar erro de renderização ao abrir o GameKit sem uma sessão criada.
+- Escopo: GameKitView.vue.
+- Comportamento: o painel da sessão só é renderizado quando `session` existe; a configuração permanece visível enquanto a sessão não foi criada.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - GameKit: configuração unificada de atividade
+
+- Status: Implementada
+- Objetivo: remover a duplicação dos formulários de geração padrão e por IA.
+- Escopo: GameKitView.vue.
+- Comportamento: uma única configuração alimenta os botões “Gerar jogo padrão” e “Gerar com IA”; modelos salvos continuam disponíveis para reutilização.
+- Validação: npm run build e git diff --check.
+
+### 2026-09-19 - GameKit Psi com geração assistida por IA
+
+- Status: Parcial
+- Objetivo: gerar cartas terapêuticas editáveis e salvar modelos reutilizáveis.
+- Escopo: GameKitAiService, GameKitAiController, modelos/migration de templates, GameKitView e configuração OpenAI.
+- Comportamento: o psicólogo informa parâmetros da atividade, recebe cartas com contexto, pergunta e três opções, revisa/edita e salva um modelo versionado; nenhum dado de paciente é enviado à IA.
+- Segurança: chave somente no backend, `store:false`, schema estrito e validação local da resposta; prompts e respostas não são registrados.
+- Validação: npm run build, php -l dos arquivos PHP alterados, php artisan route:list e git diff --check.
+- Notas: requer `OPENAI_API_KEY`; a geração por IA não substitui revisão clínica.
+
+### 2026-09-19 - Correção da primeira resposta do GameKit
+
+- Status: Implementada
+- Objetivo: permitir que a primeira resposta pública seja enviada sem identificador prévio.
+- Escopo: GameKitController.
+- Comportamento: o sistema gera o participant_key anônimo quando ele ainda não foi enviado pelo player.
+- Validação: php -l e git diff --check.
+
+### 2026-09-19 - Correção da chave das cartas do GameKit
+
+- Status: Implementada
+- Objetivo: alinhar a relação entre sessões, cartas e respostas com as colunas reais da migration.
+- Escopo: modelo GameKitSession.
+- Comportamento: a criação de cartas passa a gravar em gamekit_session_id, sem depender da convenção automática que gerava game_kit_session_id.
+- Validação: php -l e git diff --check.
+
+### 2026-09-19 - Correção das tabelas do GameKit
+
+- Status: Implementada
+- Objetivo: corrigir o nome de tabela inferido pelo Eloquent nas sessões, cartas e respostas do GameKit.
+- Escopo: modelos GameKit.
+- Comportamento: os modelos passam a usar explicitamente as tabelas criadas pela migration, evitando erro de tabela inexistente no MySQL.
+- Validação: php -l dos modelos e git diff --check.
+
+### 2026-09-19 - GameKit Psi (MVP)
+
+- Status: Parcial
+- Objetivo: oferecer uma atividade terapêutica de Associação e Memória para uso presencial ou por link anônimo temporário.
+- Escopo: migrations e modelos GameKit, serviço de templates, API autenticada/pública, telas GameKit Psi e player público.
+- Comportamento: o psicólogo configura um jogo, revisa cartas, gera um link sem login para o paciente e finaliza a sessão; respostas ficam vinculadas à sessão e não são lançadas automaticamente no prontuário.
+- Segurança: token público com hash e expiração, rate limit público, isolamento por psicólogo e ausência de dados identificáveis no player.
+- Validação: npm run build, php -l dos arquivos PHP alterados, php artisan route:list e git diff --check.
+- Notas: o catálogo inicial é determinístico; IA, impressão e integração efetiva de respostas selecionadas ao prontuário permanecem etapas posteriores.
+
 ### 2026-09-19 - Modal para eventos externos
 
 - Status: Implementada

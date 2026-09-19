@@ -51,6 +51,11 @@ return [
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'gamekit_model' => env('OPENAI_GAMEKIT_MODEL', 'gpt-4o-mini'),
+    ],
+
     'sms' => [
         'endpoint' => env('SMS_ENDPOINT'),
         'token' => env('SMS_TOKEN'),

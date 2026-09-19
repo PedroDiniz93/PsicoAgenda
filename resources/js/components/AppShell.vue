@@ -97,6 +97,13 @@ const navigationItems = computed(() => [
         group: 'Consultório',
     },
     {
+        id: 'gamekit',
+        label: 'GameKit Psi',
+        icon: 'Brain',
+        to: { name: 'gamekit' },
+        group: 'Consultório',
+    },
+    {
         id: 'patients',
         label: 'Pacientes',
         icon: 'UsersRound',
