@@ -17,6 +17,12 @@ const GameKitView = () => import('../views/GameKitView.vue');
 const GameKitPlayerView = () => import('../views/GameKitPlayerView.vue');
 const GameKitMemoryView = () => import('../views/GameKitMemoryView.vue');
 const GameKitMemoryPlayerView = () => import('../views/GameKitMemoryPlayerView.vue');
+const GameKitRoutineView = () => import('../views/GameKitRoutineView.vue');
+const GameKitRoutinePlayerView = () => import('../views/GameKitRoutinePlayerView.vue');
+const GameKitTicTacToeView = () => import('../views/GameKitTicTacToeView.vue');
+const GameKitTicTacToePlayerView = () => import('../views/GameKitTicTacToePlayerView.vue');
+const GameKitHangmanView = () => import('../views/GameKitHangmanView.vue');
+const GameKitHangmanPlayerView = () => import('../views/GameKitHangmanPlayerView.vue');
 
 const defaultTitle = document.title;
 
@@ -125,6 +131,22 @@ const router = createRouter({
             component: GameKitMemoryPlayerView,
             meta: { public: true, title: 'Jogo da memória · GameKit Psi' },
         },
+        {
+            path: '/gamekit/routine',
+            name: 'gamekit-routine',
+            component: GameKitRoutineView,
+            meta: { requiresAuth: true, title: 'Organizador de rotina · GameKit Psi' },
+        },
+        {
+            path: '/gamekit/routine/play/:token',
+            name: 'gamekit-routine-player',
+            component: GameKitRoutinePlayerView,
+            meta: { public: true, title: 'Rotina diária · GameKit Psi' },
+        },
+        { path: '/gamekit/tictactoe', name: 'gamekit-tictactoe', component: GameKitTicTacToeView, meta: { requiresAuth: true, title: 'Jogo da Velha · GameKit Psi' } },
+        { path: '/gamekit/tictactoe/play/:token', name: 'gamekit-tictactoe-player', component: GameKitTicTacToePlayerView, meta: { public: true, title: 'Jogo da Velha · GameKit Psi' } },
+        { path: '/gamekit/hangman', name: 'gamekit-hangman', component: GameKitHangmanView, meta: { requiresAuth: true, title: 'Jogo da Forca · GameKit Psi' } },
+        { path: '/gamekit/hangman/play/:token', name: 'gamekit-hangman-player', component: GameKitHangmanPlayerView, meta: { public: true, title: 'Jogo da Forca · GameKit Psi' } },
     ],
 });
 

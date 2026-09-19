@@ -132,6 +132,89 @@ class GameKitAiService
         return $this->validateMemoryPairs($payload['pairs'] ?? [], $count);
     }
 
+    public function generateRoutine(array $params): array
+    {
+        $apiKey = (string) config('services.openai.api_key');
+        if ($apiKey === '') {
+            throw new RuntimeException('A geração por IA ainda não está configurada no servidor.');
+        }
+
+        $count = max(4, min(12, (int) ($params['block_count'] ?? 6)));
+        $input = [
+            'faixa_etaria' => (string) ($params['age_group'] ?? ''),
+            'tema' => (string) ($params['theme'] ?? ''),
+            'resumo' => (string) ($params['summary'] ?? ''),
+            'quantidade_de_momentos' => $count,
+            'idioma' => 'pt-BR',
+        ];
+
+        $response = Http::withToken($apiKey)
+            ->acceptJson()
+            ->timeout(30)
+            ->post('https://api.openai.com/v1/responses', [
+                'model' => config('services.openai.gamekit_model', 'gpt-4o-mini'),
+                'store' => false,
+                'instructions' => 'Você cria uma rotina diária terapêutica educativa para ser construída por um psicólogo junto com seu paciente. Gere momentos realistas, acolhedores e flexíveis, equilibrando estudo ou trabalho, descanso, lazer e autocuidado. Respeite a faixa etária e o tema. Não faça diagnóstico, não prescreva tratamento, não use nomes reais ou dados pessoais. Use horários entre 06:00 e 23:00, sem sobreposição, e descrições curtas em português. Responda somente no JSON solicitado.',
+                'input' => json_encode($input, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                'text' => [
+                    'format' => [
+                        'type' => 'json_schema',
+                        'name' => 'gamekit_routine',
+                        'strict' => true,
+                        'schema' => $this->routineSchema($count),
+                    ],
+                ],
+            ]);
+
+        if ($response->failed()) {
+            if ($response->status() === 401) {
+                throw new RuntimeException('A chave da OpenAI é inválida ou expirou.');
+            }
+            if ($response->status() === 429) {
+                throw new RuntimeException('A conta da OpenAI está sem créditos ou atingiu o limite. Verifique o faturamento da API.');
+            }
+            throw new RuntimeException('Não foi possível gerar a rotina agora.');
+        }
+
+        $text = $response->json('output_text') ?: data_get($response->json(), 'output.0.content.0.text');
+        if (! is_string($text) || trim($text) === '') {
+            throw new RuntimeException('A resposta da IA veio vazia.');
+        }
+
+        try {
+            $payload = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new RuntimeException('A resposta da IA não pôde ser validada.');
+        }
+
+        return $this->validateRoutineBlocks($payload['blocks'] ?? [], $count);
+    }
+
+    public function generateHangmanWords(array $params): array
+    {
+        $apiKey = (string) config('services.openai.api_key');
+        if ($apiKey === '') {
+            throw new RuntimeException('A geração por IA ainda não está configurada no servidor.');
+        }
+        $count = max(4, min(20, (int) ($params['word_count'] ?? 8)));
+        $input = ['faixa_etaria' => (string) ($params['age_group'] ?? ''), 'tema' => (string) ($params['theme'] ?? ''), 'quantidade' => $count, 'idioma' => 'pt-BR'];
+        $response = Http::withToken($apiKey)->acceptJson()->timeout(25)->post('https://api.openai.com/v1/responses', [
+            'model' => config('services.openai.gamekit_model', 'gpt-4o-mini'), 'store' => false,
+            'instructions' => 'Você cria palavras simples e divertidas para um jogo da forca infantil usado por psicólogos em contexto recreativo. Respeite a faixa etária e o tema. Use apenas palavras comuns em português, sem nomes reais, conteúdo sensível, violência ou diagnóstico. Não inclua frases, hífens ou números. Responda somente no JSON solicitado.',
+            'input' => json_encode($input, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'text' => ['format' => ['type' => 'json_schema', 'name' => 'gamekit_hangman_words', 'strict' => true, 'schema' => $this->hangmanSchema($count)]],
+        ]);
+        if ($response->failed()) {
+            if ($response->status() === 401) throw new RuntimeException('A chave da OpenAI é inválida ou expirou.');
+            if ($response->status() === 429) throw new RuntimeException('A conta da OpenAI está sem créditos ou atingiu o limite. Verifique o faturamento da API.');
+            throw new RuntimeException('Não foi possível gerar as palavras agora.');
+        }
+        $text = $response->json('output_text') ?: data_get($response->json(), 'output.0.content.0.text');
+        if (! is_string($text) || trim($text) === '') throw new RuntimeException('A resposta da IA veio vazia.');
+        try { $payload = json_decode($text, true, 512, JSON_THROW_ON_ERROR); } catch (\JsonException) { throw new RuntimeException('A resposta da IA não pôde ser validada.'); }
+        return $this->validateHangmanWords($payload['words'] ?? [], $count);
+    }
+
     private function memorySchema(int $count): array
     {
         return [
@@ -155,6 +238,69 @@ class GameKitAiService
             ],
             'required' => ['pairs'],
         ];
+    }
+
+    private function routineSchema(int $count): array
+    {
+        return [
+            'type' => 'object',
+            'additionalProperties' => false,
+            'properties' => [
+                'blocks' => [
+                    'type' => 'array', 'minItems' => $count, 'maxItems' => $count,
+                    'items' => [
+                        'type' => 'object', 'additionalProperties' => false,
+                        'properties' => [
+                            'start_time' => ['type' => 'string', 'pattern' => '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'],
+                            'duration_minutes' => ['type' => 'integer', 'minimum' => 5, 'maximum' => 240],
+                            'title' => ['type' => 'string'],
+                            'description' => ['type' => 'string'],
+                            'category' => ['type' => 'string', 'enum' => ['study', 'rest', 'leisure', 'self_care']],
+                            'icon' => ['type' => 'string', 'enum' => ['BookOpen', 'Moon', 'Sparkles', 'Heart', 'CircleCheck', 'Coffee', 'Dumbbell', 'Users']],
+                        ],
+                        'required' => ['start_time', 'duration_minutes', 'title', 'description', 'category', 'icon'],
+                    ],
+                ],
+            ],
+            'required' => ['blocks'],
+        ];
+    }
+
+    private function hangmanSchema(int $count): array
+    {
+        return ['type' => 'object', 'additionalProperties' => false, 'properties' => ['words' => ['type' => 'array', 'minItems' => $count, 'maxItems' => $count, 'items' => ['type' => 'string']]], 'required' => ['words']];
+    }
+
+    private function validateHangmanWords(array $words, int $count): array
+    {
+        $clean = collect($words)->map(fn ($word) => is_string($word) ? trim($word) : '')->filter()->map(fn ($word) => preg_replace('/[^\p{L} ]/u', '', $word))->map(fn ($word) => mb_strtolower(trim($word)))->filter(fn ($word) => mb_strlen($word) >= 3 && mb_strlen($word) <= 24)->unique()->values()->all();
+        if (count($clean) !== $count) throw new RuntimeException('A IA gerou uma quantidade inválida de palavras.');
+        return $clean;
+    }
+
+    private function validateRoutineBlocks(array $blocks, int $count): array
+    {
+        if (count($blocks) !== $count) {
+            throw new RuntimeException('A IA gerou uma quantidade inválida de momentos.');
+        }
+
+        $allowedCategories = ['study', 'rest', 'leisure', 'self_care'];
+        $allowedIcons = ['BookOpen', 'Moon', 'Sparkles', 'Heart', 'CircleCheck', 'Coffee', 'Dumbbell', 'Users'];
+
+        return collect($blocks)->map(function ($block) use ($allowedCategories, $allowedIcons) {
+            if (! is_array($block) || ! preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/', (string) ($block['start_time'] ?? '')) || ! is_numeric($block['duration_minutes'] ?? null) || ! is_string($block['title'] ?? null) || trim($block['title']) === '' || ! is_string($block['description'] ?? null) || ! in_array($block['category'] ?? null, $allowedCategories, true)) {
+                throw new RuntimeException('Um momento gerado não passou na validação.');
+            }
+
+            return [
+                'start_time' => $block['start_time'],
+                'duration_minutes' => max(5, min(240, (int) $block['duration_minutes'])),
+                'title' => trim($block['title']),
+                'description' => trim($block['description']),
+                'category' => $block['category'],
+                'icon' => in_array($block['icon'] ?? null, $allowedIcons, true) ? $block['icon'] : 'CircleCheck',
+            ];
+        })->sortBy('start_time')->values()->all();
     }
 
     private function validateMemoryPairs(array $pairs, int $count): array

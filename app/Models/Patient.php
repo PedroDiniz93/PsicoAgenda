@@ -54,4 +54,9 @@ class Patient extends Model
     {
         return $this->hasMany(GameKitSession::class)->latest();
     }
+
+    public function gamekitRoutines(): HasMany
+    {
+        return $this->hasMany(GameKitRoutine::class)->latest();
+    }
 }

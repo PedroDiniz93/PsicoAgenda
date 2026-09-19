@@ -25,6 +25,105 @@ Regras:
 
 ## Features
 
+### 2026-09-19 - Cards de link temporário do GameKit
+
+- Status: Implementada
+- Objetivo: tornar os links dos jogos mais fáceis de copiar e abrir.
+- Escopo: `resources/js/components/gamekit/TemporaryLinkCard.vue` e telas do GameKit.
+- Comportamento: todos os jogos exibem o link em um card padronizado, com cópia ao clicar na URL, botão explícito de copiar, confirmação visual e abertura em nova aba.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Correções no Jogo da Velha Mutante
+
+- Status: Implementada
+- Objetivo: corrigir a alternância entre jogadores e o reinício da partida.
+- Escopo: `resources/js/views/GameKitTicTacToePlayerView.vue`.
+- Comportamento: no modo local, os toques alternam corretamente entre X e O; “Jogar novamente” limpa o tabuleiro sem recarregar ou invalidar a tela.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Boneco visual na Forca infantil
+
+- Status: Implementada
+- Objetivo: tornar os erros da Forca claros e acolhedores para crianças.
+- Escopo: `resources/js/views/GameKitHangmanPlayerView.vue`.
+- Comportamento: o boneco é desenhado progressivamente em doze erros, começando pela estrutura da forca e terminando nas pernas; ao completar o desenho, a palavra é revelada e o paciente pode avançar para a próxima.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Jogos infantis recreativos no GameKit
+
+- Status: Implementada
+- Objetivo: oferecer jogos simples e acolhedores para crianças, com link de participação no celular.
+- Escopo: migration `2026_09_19_000009_create_gamekit_child_games_tables.php`, modelos e `GameKitChildGamesController`, `GameKitAiService`, rotas, catálogo GameKit e telas dos jogos da velha e da forca.
+- Comportamento: o Jogo da Velha Mutante limita cada jogador a três peças e remove a mais antiga ao inserir a quarta; a Forca permite escolher tema/faixa etária, gerar palavras com IA, revisar o modelo e criar uma sessão com link temporário.
+- Validação: PHP lint, migration, `npm run build`, `php artisan route:list --path=gamekit` e `git diff --check`.
+- Notas: resultados recreativos ficam separados dos registros clínicos; tokens públicos são armazenados somente como hash.
+
+### 2026-09-19 - Exclusão de rotina pelo prontuário
+
+- Status: Implementada
+- Objetivo: permitir remover uma rotina terapêutica diretamente do paciente vinculado.
+- Escopo: `resources/js/views/PatientRecordView.vue`.
+- Comportamento: o card da rotina ganhou um ícone de lixeira; a exclusão pede confirmação, remove a rotina e suas versões e atualiza a lista sem recarregar a página.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Resumo enxuto das atividades da rotina
+
+- Status: Implementada
+- Objetivo: deixar a leitura da rotina no prontuário mais limpa.
+- Escopo: `resources/js/views/PatientRecordView.vue`.
+- Comportamento: cada bloco mostra apenas horário e nome da atividade; duração e códigos internos de categoria não aparecem no resumo.
+- Validação: `git diff --check`.
+
+### 2026-09-19 - Formatação dos horários da rotina
+
+- Status: Implementada
+- Objetivo: deixar os horários legíveis no formato de horas e minutos.
+- Escopo: `GameKitRoutineController.php` e `PatientRecordView.vue`.
+- Comportamento: horários como `06:00:00` são exibidos como `06:00`, sem segundos.
+- Validação: PHP lint, `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Correção do carregamento da versão atual da rotina
+
+- Status: Implementada
+- Objetivo: permitir listar e abrir rotinas sem erro SQL no carregamento dos blocos.
+- Escopo: `app/Models/GameKitRoutine.php`.
+- Comportamento: a versão atual é carregada como a versão incremental mais recente, com suporte a eager loading em listas, prontuário e link público.
+- Validação: PHP lint, `php artisan route:list --path=gamekit/routines` e `git diff --check`.
+
+### 2026-09-19 - Exibição amigável das rotinas no prontuário
+
+- Status: Implementada
+- Objetivo: evitar que o objeto completo da versão apareça no resumo da rotina.
+- Escopo: `resources/js/views/PatientRecordView.vue` e `resources/js/views/GameKitRoutineView.vue`.
+- Comportamento: os cards mostram o número da versão e a quantidade de blocos, mantendo os detalhes organizados ao expandir a rotina.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-19 - Geração de rotina por IA
+
+- Status: Implementada
+- Objetivo: acelerar a criação de uma rotina diária personalizada sem retirar a revisão do psicólogo.
+- Escopo: `GameKitAiService`, `GameKitRoutineController`, rotas de rotina e `GameKitRoutineView.vue`.
+- Comportamento: o psicólogo informa tema, faixa etária e quantidade de momentos; a IA sugere horários, duração, atividade, categoria, ícone e descrição em português. Os blocos são carregados no mesmo editor, podem ser ajustados e só são persistidos ao clicar em salvar.
+- Validação: PHP lint, `npm run build`, `php artisan route:list --path=gamekit` e `git diff --check`.
+- Notas: a IA recebe apenas os parâmetros da atividade; nenhum dado identificável do paciente é enviado.
+
+### 2026-09-19 - Organizador de Rotina vinculado ao paciente
+
+- Status: Implementada
+- Objetivo: montar uma rotina diária visual durante a sessão e reutilizá-la no acompanhamento do paciente.
+- Escopo: migration `2026_09_19_000008_create_gamekit_routine_tables.php`, modelos e `GameKitRoutineController`, rotas, `GameKitRoutineView.vue`, `GameKitRoutinePlayerView.vue`, catálogo GameKit, `PatientController`, `Patient.php` e `PatientRecordView.vue`.
+- Comportamento: o psicólogo cria blocos de estudo, descanso, lazer e autocuidado em uma linha do tempo, vincula a rotina a um paciente, cria novas versões, consulta a rotina no prontuário e pode gerar um link temporário somente leitura.
+- Validação: `php artisan migrate --force`, PHP lint, `npm run build`, `php artisan route:list --path=gamekit` e `git diff --check`.
+- Notas: a rotina não cria eventos na agenda e o link público não exibe dados clínicos nem informações adicionais do paciente.
+
+### 2026-09-19 - Pausa antes do encerramento do Jogo da Memória
+
+- Status: Implementada
+- Objetivo: permitir que o paciente veja o último par antes do resumo final.
+- Escopo: `resources/js/views/GameKitMemoryPlayerView.vue`.
+- Comportamento: após encontrar o último par, o destaque e o feedback permanecem visíveis por 1,2 segundo antes de “Atividade concluída”.
+- Validação: `npm run build` e `git diff --check`.
+
 ### 2026-09-19 - Ícones semânticos nos pares do Jogo da Memória
 
 - Status: Implementada

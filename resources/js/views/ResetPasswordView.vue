@@ -41,7 +41,7 @@ const submit = async () => {
     try {
         const { data } = await axios.post('/api/auth/reset-password', form);
         message.value = data.message ?? 'Senha redefinida com sucesso.';
-        setTimeout(() => router.push({ name: 'login' }), 1200);
+        setTimeout(() => router.push({ name: 'login' }), 5200);
     } catch (error) {
         errorMessage.value = error?.response?.data?.message ?? 'Não foi possível redefinir a senha.';
     } finally {

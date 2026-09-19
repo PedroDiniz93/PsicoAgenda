@@ -60,6 +60,7 @@ const recordFormErrors = reactive({
     notes: '',
 });
 const recordDeletingId = ref(null);
+const routineDeletingId = ref(null);
 const newObjective = ref('');
 const newTechnique = ref('');
 
@@ -459,6 +460,20 @@ const deleteRecord = async (record) => {
     }
 };
 
+const deleteRoutine = async (routine) => {
+    if (!routine?.id || !patient.value?.gamekit_routines) return;
+    if (!window.confirm('Deseja realmente excluir esta rotina e suas versões?')) return;
+    routineDeletingId.value = routine.id;
+    try {
+        await axios.delete(`/api/gamekit/routines/${routine.id}`);
+        patient.value.gamekit_routines = patient.value.gamekit_routines.filter((item) => item.id !== routine.id);
+    } catch (error) {
+        window.alert(error?.response?.data?.message ?? 'Não foi possível excluir a rotina.');
+    } finally {
+        routineDeletingId.value = null;
+    }
+};
+
 const goBackToPatients = () => {
     router.push({ name: 'patients' });
 };
@@ -615,6 +630,16 @@ onMounted(() => {
                             </details>
                         </div>
                         <p v-else class="mt-3 text-sm text-slate-500">Nenhuma atividade vinculada a este paciente.</p>
+                    </details>
+                    <details class="mt-3 rounded-xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface-muted)] p-4">
+                        <summary class="cursor-pointer text-sm font-semibold text-[var(--spa-ink)]">Rotinas terapêuticas</summary>
+                        <div v-if="patient.gamekit_routines?.length" class="mt-4 space-y-3">
+                            <details v-for="routine in patient.gamekit_routines" :key="routine.id" class="rounded-xl border border-[var(--spa-border-soft)] bg-white p-3">
+                                <summary class="cursor-pointer"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-semibold text-[var(--spa-ink)]">{{ routine.name }}</p><p class="mt-1 text-xs text-slate-500">Versão {{ routine.current_version?.version ?? routine.current_version ?? '—' }} · {{ routine.current_version?.blocks?.length ?? 0 }} blocos</p></div><div class="flex items-center gap-2"><span class="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Ativa</span><button class="inline-flex size-8 items-center justify-center rounded-lg text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50" type="button" aria-label="Excluir rotina" title="Excluir rotina" :disabled="routineDeletingId === routine.id" @click.stop="deleteRoutine(routine)"><AppIcon name="Trash2" class="size-4" /></button></div></div></summary>
+                                <div v-if="routine.current_version?.blocks?.length" class="mt-3 space-y-2 border-t border-slate-100 pt-3"><div v-for="block in routine.current_version.blocks" :key="block.id" class="flex items-start gap-2 rounded-lg bg-slate-50 p-3"><span class="w-12 shrink-0 text-xs font-bold text-slate-500">{{ String(block.start_time).slice(0, 5) }}</span><div><p class="text-sm font-semibold text-slate-700">{{ block.title }}</p></div></div></div>
+                            </details>
+                        </div>
+                        <p v-else class="mt-3 text-sm text-slate-500">Nenhuma rotina vinculada a este paciente.</p>
                     </details>
                 </section>
 
