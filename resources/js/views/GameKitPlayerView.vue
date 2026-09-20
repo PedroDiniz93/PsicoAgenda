@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import GameKitExpiredState from '../components/gamekit/GameKitExpiredState.vue';
 
 const route = useRoute();
 const session = ref(null);
@@ -39,7 +40,7 @@ onMounted(async () => {
     <main class="auth-screen min-h-screen px-4 py-8">
         <section class="w-full max-w-xl rounded-3xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-6 shadow-[var(--spa-shadow)] sm:p-8">
             <div v-if="loading" class="py-16 text-center text-sm text-[var(--spa-ink-muted)]">Carregando atividade...</div>
-            <div v-else-if="error" class="py-12 text-center text-sm text-red-700">{{ error }}</div>
+            <GameKitExpiredState v-else-if="error" :message="error" />
             <div v-else-if="finished" class="py-12 text-center"><h1 class="text-2xl font-semibold text-[var(--spa-ink)]">Atividade concluída</h1><p class="mt-2 text-sm text-[var(--spa-ink-muted)]">Sua resposta foi enviada.</p></div>
             <div v-else-if="card">
                 <div class="mt-2 flex items-center justify-between gap-4"><h1 class="text-2xl font-semibold text-[var(--spa-ink)]">{{ session.theme }}</h1><span class="text-sm text-[var(--spa-ink-muted)]">{{ current + 1 }}/{{ session.cards.length }}</span></div>

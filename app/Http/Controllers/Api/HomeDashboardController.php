@@ -229,6 +229,6 @@ class HomeDashboardController extends Controller
 
     private function formatMoney(float|int|string $value): string
     {
-        return number_format((float) $value, 2, '.', '');
+        return 'R$ '.number_format((float) $value, 2, ',', '.');
     }
 }

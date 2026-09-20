@@ -203,6 +203,9 @@ onMounted(fetchExportPatients);
                     </button>
                 </div>
             </div>
+            <p v-if="!exportHasSelection" class="mt-3 text-right text-xs text-slate-500">
+                Selecione pelo menos um paciente na lista abaixo para habilitar a exportação.
+            </p>
         </section>
 
         <section class="surface-panel p-6">

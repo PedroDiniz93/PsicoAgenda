@@ -221,7 +221,7 @@ const billingItems = computed(() => {
         billingStatusLabel: receivableBadge(item).label,
         billingStatusClass: receivableBadge(item).class,
         billingDateLabel: `${formatDateTime(item.start_at)} · vence ${formatDate(item.due_at)}`,
-        billingActionLabel: 'Ações',
+        billingActionLabel: 'Abrir cobrança',
         billingActionClass: 'hover:border-cyan-200 hover:bg-white hover:text-cyan-800',
         billingCardClass: 'hover:border-cyan-200 hover:bg-cyan-50/30',
         billingMeta: methodLabel(item.payment_method),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import AppIcon from '../base/AppIcon.vue';
 
@@ -12,6 +12,11 @@ interface NavigationItem {
 }
 
 const route = useRoute();
+const activeItemElement = ref(null);
+
+const setActiveItemElement = (element, item) => {
+    if (isItemActive(item)) activeItemElement.value = element;
+};
 
 const props = defineProps<{
     items: NavigationItem[];
@@ -44,6 +49,15 @@ const isItemActive = (item: NavigationItem) => {
 
     return true;
 };
+
+watch(
+    () => route.fullPath,
+    async () => {
+        await nextTick();
+        activeItemElement.value?.scrollIntoView({ block: 'nearest' });
+    },
+    { immediate: true }
+);
 
 defineEmits<{
     closeMobile: [];
@@ -89,7 +103,7 @@ defineEmits<{
                 <span :class="collapsed ? 'lg:hidden' : ''">{{ collapsed ? 'Expandir' : 'Recolher' }}</span>
             </button>
 
-            <nav class="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4" aria-label="Navegação principal">
+            <nav class="min-h-0 flex-1 space-y-3 overflow-y-auto pb-4" aria-label="Navegação principal">
                 <div v-for="group in groupedItems" :key="group.label">
                     <p
                         class="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--spa-sidebar-muted)]"
@@ -102,12 +116,13 @@ defineEmits<{
                             v-for="item in group.items"
                             :key="item.id"
                             :to="item.to"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                             :class="[
                                 collapsed ? 'lg:justify-center' : '',
                                 isItemActive(item) ? 'bg-white text-[var(--spa-sidebar)] shadow-sm' : 'text-[var(--spa-sidebar-muted)] hover:bg-white/10 hover:text-white',
                             ]"
                             :title="collapsed ? item.label : undefined"
+                            :ref="(element) => setActiveItemElement(element, item)"
                             @click="$emit('closeMobile')"
                         >
                             <AppIcon :name="item.icon" class="size-5 shrink-0" />

@@ -220,7 +220,7 @@ const barHeight = (count: number) => {
                 </div>
 
                 <div v-if="nextPatients.length === 0" class="empty-state mt-5 !py-8 text-sm">
-                    Nenhuma sessão futura agendada.
+                    Nenhuma sessão futura agendada. Agende a próxima sessão para acompanhar o atendimento aqui.
                 </div>
 
                 <div v-else class="mt-5 space-y-3">
@@ -268,7 +268,7 @@ const barHeight = (count: number) => {
                 </div>
 
                 <div v-else-if="!weeklyHasData" class="empty-state mt-5 !py-8 text-sm">
-                    Nenhum atendimento concluído nesta semana.
+                    Nenhum atendimento concluído nesta semana. Marque as sessões realizadas para acompanhar este indicador.
                     <RouterLink class="mt-4 inline-flex btn-secondary" :to="{ name: 'schedule' }">
                         Abrir agenda
                     </RouterLink>

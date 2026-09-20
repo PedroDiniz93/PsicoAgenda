@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('auth-login', function (Request $request) {
+            if (app()->environment('testing')) {
+                return Limit::perMinute(100)->by($this->emailAndIp($request));
+            }
+
             return Limit::perMinute(5)->by($this->emailAndIp($request));
         });
 

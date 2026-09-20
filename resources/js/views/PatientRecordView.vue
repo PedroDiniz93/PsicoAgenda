@@ -3,6 +3,7 @@ import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import axios from 'axios';
 import AppIcon from '../components/base/AppIcon.vue';
+import LocalizedDateInput from '../components/base/LocalizedDateInput.vue';
 import { formatDateOnly, formatDateTime } from '../utils/formatters';
 
 const route = useRoute();
@@ -43,6 +44,7 @@ const recordFiltersApplied = reactive({
 const recordFormVisible = ref(false);
 const recordFormSubmitting = ref(false);
 const recordFormError = ref('');
+const recordSuccessMessage = ref('');
 const editingRecord = ref(null);
 const recordForm = reactive({
     title: '',
@@ -201,6 +203,7 @@ const resetRecordForm = () => {
     newObjective.value = '';
     newTechnique.value = '';
     recordFormError.value = '';
+    recordSuccessMessage.value = '';
     Object.keys(recordFormErrors).forEach((key) => {
         recordFormErrors[key] = '';
     });
@@ -424,6 +427,7 @@ const clearRecordFilters = () => {
 
 const submitRecordForm = async () => {
     if (!recordFormVisible.value) return;
+    const wasEditing = isEditingRecord.value;
     recordFormError.value = '';
     Object.keys(recordFormErrors).forEach((key) => {
         recordFormErrors[key] = '';
@@ -442,6 +446,7 @@ const submitRecordForm = async () => {
         }
         closeRecordForm();
         await fetchRecords(1);
+        recordSuccessMessage.value = wasEditing ? 'Anotação atualizada com sucesso.' : 'Anotação adicionada ao prontuário.';
     } catch (error) {
         if (error?.response?.status === 422) {
             const errors = error.response.data.errors ?? {};
@@ -470,6 +475,7 @@ const deleteRecord = async (record) => {
     try {
         await axios.delete(`/api/patients/${patientId.value}/records/${record.id}`);
         await fetchRecords(recordPagination.currentPage);
+        recordSuccessMessage.value = 'Anotação excluída com sucesso.';
     } catch (error) {
         const message = error?.response?.data?.message ?? 'Não foi possível excluir a anotação.';
         window.alert(message);
@@ -583,7 +589,11 @@ onMounted(() => {
             </button>
         </div>
 
-        <div v-else class="grid gap-5 lg:grid-cols-[320px_1fr]">
+        <div v-else class="space-y-4">
+            <p v-if="recordSuccessMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">
+                {{ recordSuccessMessage }}
+            </p>
+            <div class="grid gap-5 lg:grid-cols-[320px_1fr]">
             <aside class="space-y-4">
                 <section class="surface-panel p-5">
                     <div class="flex items-start justify-between gap-3">
@@ -834,9 +844,10 @@ onMounted(() => {
                     </div>
                 </section>
             </main>
+            </div>
         </div>
 
-        <div v-if="recordFormVisible" class="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm" @click.self="closeRecordForm">
+        <div v-if="recordFormVisible" class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" :aria-label="recordFormTitle" @click.self="closeRecordForm">
             <div class="w-full max-w-6xl rounded-lg bg-white shadow-2xl">
                 <div class="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -860,7 +871,7 @@ onMounted(() => {
                                 </label>
                                 <label class="block text-sm font-semibold text-slate-700" for="modal-record-date">
                                     Data e horário
-                                    <input id="modal-record-date" v-model="recordForm.recordedAt" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="datetime-local" />
+                                    <LocalizedDateInput id="modal-record-date" v-model="recordForm.recordedAt" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" mode="datetime" aria-label="Data e horário" />
                                     <span v-if="recordFormErrors.recorded_at" class="mt-1 block text-xs text-rose-600">{{ recordFormErrors.recorded_at }}</span>
                                 </label>
                             </div>

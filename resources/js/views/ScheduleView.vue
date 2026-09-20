@@ -1,9 +1,10 @@
 <script setup>
-import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import AppIcon from '../components/base/AppIcon.vue';
+import LocalizedDateInput from '../components/base/LocalizedDateInput.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -158,6 +159,7 @@ const recurrenceForm = reactive({
 const recurrenceActionLoading = ref(false);
 
 const appointmentMessage = ref('');
+const scheduleSuccessMessage = ref('');
 
 const appointmentStatusOptions = [
     { value: 'scheduled', label: 'Agendado' },
@@ -293,6 +295,20 @@ const appointmentsByDay = computed(() => {
 });
 
 const appointmentsEmpty = computed(() => allCalendarEvents.value.length === 0);
+const nextAppointment = computed(() => allCalendarEvents.value
+    .filter((appointment) => appointment.source !== 'google' && new Date(appointment.start_at).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0] ?? null);
+
+const focusNextAppointment = async () => {
+    if (!nextAppointment.value) return;
+
+    scheduleDate.value = formatDate(getWeekStart(new Date(nextAppointment.value.start_at)));
+    await nextTick();
+    document.getElementById(`calendar-appointment-${nextAppointment.value.id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+    });
+};
 const enabledAvailabilityRulesCount = computed(() =>
     availabilityRules.value.filter((rule) => rule.enabled).length
 );
@@ -903,7 +919,9 @@ const sanitizeAppointmentPayload = () => {
 const submitAppointment = async () => {
     clearAppointmentErrors();
     appointmentMessage.value = '';
+    scheduleSuccessMessage.value = '';
     appointmentSubmitting.value = true;
+    const wasEditing = Boolean(editingAppointment.value);
 
     const payload = sanitizeAppointmentPayload();
 
@@ -921,6 +939,7 @@ const submitAppointment = async () => {
 
         await fetchAppointments();
         closeAppointmentModal();
+        scheduleSuccessMessage.value = wasEditing ? 'Agendamento atualizado com sucesso.' : 'Agendamento criado com sucesso.';
     } catch (error) {
         if (error?.response?.status === 422) {
             const errors = error.response.data.errors ?? {};
@@ -1119,6 +1138,9 @@ onBeforeUnmount(() => {
         </section>
 
         <template v-else>
+        <p v-if="scheduleSuccessMessage" class="mb-4 rounded-2xl border border-[#c9d8cd] bg-[#eff4f0] px-4 py-3 text-sm text-[#365341]" role="status">
+            {{ scheduleSuccessMessage }}
+        </p>
         <header class="page-header">
             <div class="page-header__content">
                 <p class="section-kicker">Agenda</p>
@@ -1143,7 +1165,7 @@ onBeforeUnmount(() => {
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="text-sm font-medium text-[#58635f]">Semana selecionada</p>
-                    <h2 class="mt-1 text-2xl font-semibold text-slate-900 capitalize">{{ scheduleWeekLabel }}</h2>
+            <h2 class="mt-1 text-2xl font-semibold text-slate-900">{{ scheduleWeekLabel }}</h2>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button class="btn-secondary" type="button" @click="changeWeek(-1)">
@@ -1190,6 +1212,16 @@ onBeforeUnmount(() => {
                     {{ section.label }}
                 </button>
             </nav>
+
+            <button
+                v-if="nextAppointment"
+                class="inline-flex items-center gap-2 rounded-xl border border-[#c9d8cd] bg-[#edf4ef] px-3 py-2 text-sm font-semibold text-[#365341] transition hover:border-[#9fbaa7]"
+                type="button"
+                @click="focusNextAppointment"
+            >
+                <AppIcon name="CalendarClock" class="size-4" />
+                Ir para próxima sessão · {{ nextAppointment.patient?.name ?? 'Paciente' }}
+            </button>
 
             <section v-if="scheduleCategory === 'agenda'" class="space-y-4">
                 <div v-if="scheduleError" class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
@@ -1299,6 +1331,7 @@ onBeforeUnmount(() => {
                                             <div
                                                 v-for="item in calendarDayAppointments[day.date] ?? []"
                                                 :key="item.appointment.id"
+                                                :id="`calendar-appointment-${item.appointment.id}`"
                                                 class="group absolute z-20 box-border overflow-hidden border text-left text-xs shadow transition focus:outline-none"
                                                 :class="[
                                                     item.compact ? 'rounded-xl px-2 py-1.5' : 'rounded-2xl px-3 py-2',
@@ -1530,11 +1563,11 @@ onBeforeUnmount(() => {
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-[#58635f]">Início</span>
-                                    <input v-model="blockForm.startsAt" class="field-input" required type="datetime-local" />
+                                    <LocalizedDateInput v-model="blockForm.startsAt" class="field-input" mode="datetime" required aria-label="Início do bloqueio" />
                                 </label>
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-[#58635f]">Fim</span>
-                                    <input v-model="blockForm.endsAt" class="field-input" required type="datetime-local" />
+                                    <LocalizedDateInput v-model="blockForm.endsAt" class="field-input" mode="datetime" required aria-label="Fim do bloqueio" />
                                 </label>
                             </div>
                             <button class="btn-primary w-full" type="submit" :disabled="blockSaving">
@@ -1690,12 +1723,12 @@ onBeforeUnmount(() => {
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-start">Início</label>
-                            <input id="appointment-start" v-model="appointmentForm.startAt" class="field-input mt-1" type="datetime-local" required />
+                            <LocalizedDateInput id="appointment-start" v-model="appointmentForm.startAt" class="field-input mt-1" mode="datetime" required aria-label="Início" />
                             <p v-if="appointmentErrors.startAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.startAt }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-end">Fim</label>
-                            <input id="appointment-end" v-model="appointmentForm.endAt" class="field-input mt-1" type="datetime-local" required />
+                            <LocalizedDateInput id="appointment-end" v-model="appointmentForm.endAt" class="field-input mt-1" mode="datetime" required aria-label="Fim" />
                             <p v-if="appointmentErrors.endAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.endAt }}</p>
                         </div>
                     </div>
@@ -1741,7 +1774,7 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700" for="appointment-paid">Pago em</label>
-                            <input id="appointment-paid" v-model="appointmentForm.paidAt" class="field-input mt-1" type="datetime-local" />
+                            <LocalizedDateInput id="appointment-paid" v-model="appointmentForm.paidAt" class="field-input mt-1" mode="datetime" aria-label="Pago em" />
                             <p v-if="appointmentErrors.paidAt" class="mt-1 text-xs text-red-600">{{ appointmentErrors.paidAt }}</p>
                         </div>
                     </div>
