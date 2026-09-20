@@ -16,7 +16,7 @@ class PsychologistController extends Controller
 
         $psychologist = $user->psychologist;
 
-        abort_if(!$psychologist, 404, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $psychologist, 404, 'Perfil de psicólogo não encontrado.');
 
         return $psychologist;
     }

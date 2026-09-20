@@ -7,8 +7,8 @@ use App\Models\Patient;
 use App\Models\Psychologist;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Carbon;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class HomeDashboardTest extends TestCase

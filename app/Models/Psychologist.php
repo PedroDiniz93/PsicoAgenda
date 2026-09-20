@@ -86,6 +86,6 @@ class Psychologist extends Model
 
     public function getGoogleCalendarConnectedAttribute(): bool
     {
-        return !empty($this->attributes['google_calendar_token'] ?? null);
+        return ! empty($this->attributes['google_calendar_token'] ?? null);
     }
 }

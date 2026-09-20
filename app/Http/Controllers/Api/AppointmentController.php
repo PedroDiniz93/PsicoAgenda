@@ -21,8 +21,7 @@ class AppointmentController extends Controller
         private readonly GoogleCalendarService $googleCalendarService,
         private readonly RecurringAppointmentService $recurringAppointmentService,
         private readonly AppointmentAvailabilityService $availabilityService
-    ) {
-    }
+    ) {}
 
     private function psychologist(Request $request): Psychologist
     {
@@ -31,7 +30,7 @@ class AppointmentController extends Controller
         $psychologist = $user->psychologist;
 
         abort_if(
-            !$psychologist,
+            ! $psychologist,
             403,
             'Usuário autenticado não possui um perfil de psicólogo.'
         );
@@ -148,7 +147,7 @@ class AppointmentController extends Controller
             $data['end_at'] = $end;
         }
 
-        if (!array_key_exists('price', $data) && $patient) {
+        if (! array_key_exists('price', $data) && $patient) {
             $this->applyPatientFee($data, $patient);
         }
 
@@ -173,7 +172,7 @@ class AppointmentController extends Controller
     {
         $appointment = $this->findOwnedAppointment($request, $id);
         abort_if(
-            $appointment->google_event_id && !$this->googleCalendarService->deleteAppointment($appointment),
+            $appointment->google_event_id && ! $this->googleCalendarService->deleteAppointment($appointment),
             502,
             'Não foi possível excluir o evento sincronizado no Google Calendar.'
         );

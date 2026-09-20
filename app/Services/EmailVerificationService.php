@@ -27,7 +27,7 @@ class EmailVerificationService
 
     public function ensureActiveCode(User $user): void
     {
-        if (!$user->requiresEmailVerification()) {
+        if (! $user->requiresEmailVerification()) {
             return;
         }
 
@@ -42,17 +42,17 @@ class EmailVerificationService
 
     public function verify(User $user, string $code): bool
     {
-        if (!$user->requiresEmailVerification()) {
+        if (! $user->requiresEmailVerification()) {
             return true;
         }
 
         $expiresAt = $user->email_verification_expires_at;
 
-        if (!$user->email_verification_code_hash || !$expiresAt instanceof Carbon || $expiresAt->isPast()) {
+        if (! $user->email_verification_code_hash || ! $expiresAt instanceof Carbon || $expiresAt->isPast()) {
             return false;
         }
 
-        if (!Hash::check($code, $user->email_verification_code_hash)) {
+        if (! Hash::check($code, $user->email_verification_code_hash)) {
             return false;
         }
 

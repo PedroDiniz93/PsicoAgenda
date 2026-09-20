@@ -11,7 +11,16 @@ class GameKitCard extends Model
     protected $table = 'gamekit_cards';
 
     protected $fillable = ['gamekit_session_id', 'position', 'pair_key', 'prompt_a', 'prompt_b', 'options'];
+
     protected $casts = ['options' => 'array'];
-    public function session(): BelongsTo { return $this->belongsTo(GameKitSession::class, 'gamekit_session_id'); }
-    public function responses(): HasMany { return $this->hasMany(GameKitResponse::class); }
+
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(GameKitSession::class, 'gamekit_session_id');
+    }
+
+    public function responses(): HasMany
+    {
+        return $this->hasMany(GameKitResponse::class);
+    }
 }

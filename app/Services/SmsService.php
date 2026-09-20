@@ -21,12 +21,12 @@ class SmsService
 
     public function isConfigured(): bool
     {
-        return !empty($this->endpoint) && !empty($this->token) && !empty($this->from);
+        return ! empty($this->endpoint) && ! empty($this->token) && ! empty($this->from);
     }
 
     public function send(string $phone, string $message): bool
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             Log::info('SMS service not configured, skipping send.', ['phone' => $phone]);
 
             return false;

@@ -1,5 +1,7 @@
 <?php
+
 // app/Http/Controllers/Api/PatientController.php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -36,7 +38,7 @@ class PatientController extends Controller
         $psychologistId = $user->psychologist?->id;
 
         abort_if(
-            !$psychologistId,
+            ! $psychologistId,
             403,
             'Usuário autenticado não possui um perfil de psicólogo.'
         );
@@ -400,7 +402,7 @@ class PatientController extends Controller
             'registro_tecnicas' => implode(' | ', $record->techniques ?? []),
             'registro_tarefas' => collect($record->homework_items ?? [])
                 ->map(function ($item) {
-                    if (!is_array($item)) {
+                    if (! is_array($item)) {
                         return null;
                     }
                     $status = match ($item['status'] ?? '') {
@@ -408,6 +410,7 @@ class PatientController extends Controller
                         'in_progress' => 'Em andamento',
                         default => 'Pendente',
                     };
+
                     return "{$status}: {$item['description']}";
                 })
                 ->filter()
@@ -458,7 +461,7 @@ class PatientController extends Controller
     {
         return collect($contacts)
             ->map(function ($contact) {
-                if (!is_array($contact)) {
+                if (! is_array($contact)) {
                     return null;
                 }
 
@@ -541,7 +544,7 @@ class PatientController extends Controller
         $headers = $headers ?? $this->csvHeaders();
 
         // Excel-friendly BOM
-        fwrite($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        fwrite($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
         fputcsv($handle, $headers, ';');
 
@@ -564,7 +567,7 @@ class PatientController extends Controller
                 throw new \RuntimeException('Não foi possível preparar o arquivo para exportação.');
             }
 
-            $zip = new ZipArchive();
+            $zip = new ZipArchive;
             $status = $zip->open($temporaryPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
             if ($status !== true) {
@@ -596,7 +599,7 @@ class PatientController extends Controller
     {
         $availableTypes = array_keys(self::EXPORT_TYPES);
 
-        if (!$request->has('types')) {
+        if (! $request->has('types')) {
             return $availableTypes;
         }
 
@@ -607,7 +610,7 @@ class PatientController extends Controller
         foreach ($incoming as $type) {
             $type = strtolower((string) $type);
 
-            if (in_array($type, $availableTypes, true) && !in_array($type, $selected, true)) {
+            if (in_array($type, $availableTypes, true) && ! in_array($type, $selected, true)) {
                 $selected[] = $type;
             }
         }

@@ -205,13 +205,24 @@ class GameKitAiService
             'text' => ['format' => ['type' => 'json_schema', 'name' => 'gamekit_hangman_words', 'strict' => true, 'schema' => $this->hangmanSchema($count)]],
         ]);
         if ($response->failed()) {
-            if ($response->status() === 401) throw new RuntimeException('A chave da OpenAI é inválida ou expirou.');
-            if ($response->status() === 429) throw new RuntimeException('A conta da OpenAI está sem créditos ou atingiu o limite. Verifique o faturamento da API.');
+            if ($response->status() === 401) {
+                throw new RuntimeException('A chave da OpenAI é inválida ou expirou.');
+            }
+            if ($response->status() === 429) {
+                throw new RuntimeException('A conta da OpenAI está sem créditos ou atingiu o limite. Verifique o faturamento da API.');
+            }
             throw new RuntimeException('Não foi possível gerar as palavras agora.');
         }
         $text = $response->json('output_text') ?: data_get($response->json(), 'output.0.content.0.text');
-        if (! is_string($text) || trim($text) === '') throw new RuntimeException('A resposta da IA veio vazia.');
-        try { $payload = json_decode($text, true, 512, JSON_THROW_ON_ERROR); } catch (\JsonException) { throw new RuntimeException('A resposta da IA não pôde ser validada.'); }
+        if (! is_string($text) || trim($text) === '') {
+            throw new RuntimeException('A resposta da IA veio vazia.');
+        }
+        try {
+            $payload = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new RuntimeException('A resposta da IA não pôde ser validada.');
+        }
+
         return $this->validateHangmanWords($payload['words'] ?? [], $count);
     }
 
@@ -274,7 +285,10 @@ class GameKitAiService
     private function validateHangmanWords(array $words, int $count): array
     {
         $clean = collect($words)->map(fn ($word) => is_string($word) ? trim($word) : '')->filter()->map(fn ($word) => preg_replace('/[^\p{L} ]/u', '', $word))->map(fn ($word) => mb_strtolower(trim($word)))->filter(fn ($word) => mb_strlen($word) >= 3 && mb_strlen($word) <= 24)->unique()->values()->all();
-        if (count($clean) !== $count) throw new RuntimeException('A IA gerou uma quantidade inválida de palavras.');
+        if (count($clean) !== $count) {
+            throw new RuntimeException('A IA gerou uma quantidade inválida de palavras.');
+        }
+
         return $clean;
     }
 
@@ -315,6 +329,7 @@ class GameKitAiService
                     throw new RuntimeException('Um par gerado não passou na validação.');
                 }
             }
+
             return [
                 'label_a' => trim($pair['label_a']),
                 'label_b' => trim($pair['label_b']),
@@ -371,6 +386,7 @@ class GameKitAiService
             if (count($options) !== 3 || count(array_unique($options)) !== 3) {
                 throw new RuntimeException('As opções de uma carta precisam ser três alternativas distintas.');
             }
+
             return [
                 'context' => trim($card['context']),
                 'question' => trim($card['question']),

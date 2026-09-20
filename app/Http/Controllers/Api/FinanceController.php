@@ -168,14 +168,14 @@ class FinanceController extends Controller
         $appointment = $this->ownedAppointment($psychologist, $appointmentId)
             ->load('patient:id,name,email,phone,cpf,status');
 
-        abort_if(!$appointment->paid_at, 422, 'Marque o atendimento como recebido antes de emitir o recibo.');
+        abort_if(! $appointment->paid_at, 422, 'Marque o atendimento como recebido antes de emitir o recibo.');
         abort_if((float) ($appointment->price ?? 0) <= 0, 422, 'Informe um valor para emitir o recibo.');
 
-        if (!$appointment->receipt_number) {
+        if (! $appointment->receipt_number) {
             $appointment->receipt_number = $this->generateReceiptNumber($psychologist, $appointment);
         }
 
-        if (!$appointment->receipt_issued_at) {
+        if (! $appointment->receipt_issued_at) {
             $appointment->receipt_issued_at = now();
         }
 
@@ -191,7 +191,7 @@ class FinanceController extends Controller
         $user = $request->user()->loadMissing('psychologist');
         $psychologist = $user->psychologist;
 
-        abort_if(!$psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
+        abort_if(! $psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
 
         return $psychologist;
     }

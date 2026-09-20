@@ -14,11 +14,10 @@ use Illuminate\Support\Str;
 class GameKitRoutineController extends Controller
 {
     private const CATEGORIES = ['study', 'rest', 'leisure', 'self_care'];
+
     private const ICONS = ['BookOpen', 'Moon', 'Sparkles', 'Heart', 'CircleCheck', 'Coffee', 'Dumbbell', 'Users'];
 
-    public function __construct(private readonly GameKitAiService $ai)
-    {
-    }
+    public function __construct(private readonly GameKitAiService $ai) {}
 
     public function index(Request $request)
     {
@@ -27,6 +26,7 @@ class GameKitRoutineController extends Controller
         if ($request->filled('patient_id')) {
             $query->where('patient_id', (int) $request->input('patient_id'));
         }
+
         return response()->json(['routines' => $query->latest()->limit(50)->get()]);
     }
 
@@ -43,8 +43,10 @@ class GameKitRoutineController extends Controller
                 'current_version' => 1,
             ]);
             $this->saveVersion($routine, $data['blocks'], 1, $data['summary']);
+
             return $routine;
         });
+
         return response()->json($this->withCurrent($routine), 201);
     }
 
@@ -78,12 +80,14 @@ class GameKitRoutineController extends Controller
             $routine->update(['patient_id' => $data['patient_id'], 'name' => $data['name'], 'reference_date' => $data['reference_date'], 'current_version' => $version]);
             $this->saveVersion($routine, $data['blocks'], $version, $data['summary']);
         });
+
         return response()->json($this->withCurrent($routine->fresh()));
     }
 
     public function destroy(Request $request, int $id)
     {
         $this->owned($request, $id)->delete();
+
         return response()->json(['status' => 'deleted']);
     }
 
@@ -93,14 +97,16 @@ class GameKitRoutineController extends Controller
         $token = Str::random(64);
         GameKitRoutineLink::where('gamekit_routine_id', $routine->id)->where('status', 'active')->update(['status' => 'revoked']);
         GameKitRoutineLink::create(['gamekit_routine_id' => $routine->id, 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addHours(8), 'status' => 'active']);
-        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/') . '/gamekit/routine/play/' . $token]);
+
+        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/').'/gamekit/routine/play/'.$token]);
     }
 
     public function publicView(string $token)
     {
         $link = GameKitRoutineLink::with(['routine.currentVersion.blocks'])
             ->where('token_hash', hash('sha256', $token))->where('status', 'active')->where('expires_at', '>', now())->first();
-        abort_if(!$link, 404, 'Esta rotina não está mais disponível.');
+        abort_if(! $link, 404, 'Esta rotina não está mais disponível.');
+
         return response()->json(['routine' => $this->publicPayload($link->routine)]);
     }
 
@@ -116,13 +122,14 @@ class GameKitRoutineController extends Controller
             'blocks.*.duration_minutes' => ['required', 'integer', 'min:5', 'max:1440'],
             'blocks.*.title' => ['required', 'string', 'max:160'],
             'blocks.*.description' => ['nullable', 'string', 'max:1000'],
-            'blocks.*.category' => ['required', 'string', 'in:' . implode(',', self::CATEGORIES)],
-            'blocks.*.icon' => ['nullable', 'string', 'in:' . implode(',', self::ICONS)],
+            'blocks.*.category' => ['required', 'string', 'in:'.implode(',', self::CATEGORIES)],
+            'blocks.*.icon' => ['nullable', 'string', 'in:'.implode(',', self::ICONS)],
         ]);
         $patientId = $data['patient_id'] ?? null;
         if ($patientId !== null) {
-            abort_if(!Patient::where('psychologist_id', $this->psychologistId($request))->whereKey($patientId)->exists(), 422, 'Paciente inválido.');
+            abort_if(! Patient::where('psychologist_id', $this->psychologistId($request))->whereKey($patientId)->exists(), 422, 'Paciente inválido.');
         }
+
         return [...$data, 'patient_id' => $patientId, 'blocks' => array_values($data['blocks'])];
     }
 
@@ -157,7 +164,8 @@ class GameKitRoutineController extends Controller
     private function psychologistId(Request $request): int
     {
         $id = $request->user()->loadMissing('psychologist')->psychologist?->id;
-        abort_if(!$id, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $id, 403, 'Perfil de psicólogo não encontrado.');
+
         return (int) $id;
     }
 }

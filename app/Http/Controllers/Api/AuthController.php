@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\PasswordResetMail;
+use App\Models\User;
 use App\Services\EmailVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -11,11 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 class AuthController extends Controller
 {
-
     public function forgotPassword(Request $request)
     {
         $data = $request->validate([
@@ -36,7 +35,7 @@ class AuthController extends Controller
                 ]
             );
 
-            $resetUrl = url('/reset-password?' . http_build_query([
+            $resetUrl = url('/reset-password?'.http_build_query([
                 'token' => $token,
                 'email' => $user->email,
             ]));
@@ -59,7 +58,7 @@ class AuthController extends Controller
 
         $reset = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
-        if (!$reset || Carbon::parse($reset->created_at)->addHour()->isPast() || !Hash::check($data['token'], $reset->token)) {
+        if (! $reset || Carbon::parse($reset->created_at)->addHour()->isPast() || ! Hash::check($data['token'], $reset->token)) {
             return response()->json([
                 'message' => 'Link de redefinição inválido ou expirado.',
             ], 422);
@@ -67,7 +66,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'message' => 'Link de redefinição inválido ou expirado.',
             ], 422);
@@ -96,7 +95,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'Credenciais inválidas.'], 422);
         }
 
@@ -135,7 +134,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        if (!$emailVerificationService->verify($user, $data['code'])) {
+        if (! $emailVerificationService->verify($user, $data['code'])) {
             return response()->json([
                 'message' => 'Código inválido ou expirado.',
             ], 422);
@@ -151,7 +150,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->requiresEmailVerification()) {
+        if (! $user->requiresEmailVerification()) {
             return response()->json([
                 'message' => 'Este e-mail já foi validado.',
                 'user' => $user->load('psychologist'),

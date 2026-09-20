@@ -1,26 +1,26 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AvailabilityController;
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminPsychologistController;
-use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\AppointmentController;
-use App\Http\Controllers\Api\PsychologistController;
-use App\Http\Controllers\Api\GoogleOAuthController;
-use App\Http\Controllers\Api\GoogleCalendarController;
-use App\Http\Controllers\Api\GameKitController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvailabilityController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\GameKitAiController;
+use App\Http\Controllers\Api\GameKitChildGamesController;
+use App\Http\Controllers\Api\GameKitController;
 use App\Http\Controllers\Api\GameKitMemoryController;
 use App\Http\Controllers\Api\GameKitRoutineController;
-use App\Http\Controllers\Api\GameKitChildGamesController;
-use App\Http\Controllers\Api\PatientRecordController;
+use App\Http\Controllers\Api\GoogleCalendarController;
+use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\HomeDashboardController;
+use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\PatientRecordController;
+use App\Http\Controllers\Api\PsychologistController;
 use App\Http\Controllers\Api\RecurringAppointmentController;
 use App\Http\Controllers\Api\ReportController;
-use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 use App\Http\Middleware\EnsurePsychologistEmailIsVerified;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);

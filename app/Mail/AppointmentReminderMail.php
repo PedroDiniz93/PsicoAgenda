@@ -14,8 +14,7 @@ class AppointmentReminderMail extends Mailable
 
     public function __construct(
         private readonly Appointment $appointment
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {

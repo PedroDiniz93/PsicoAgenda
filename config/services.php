@@ -38,7 +38,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_OAUTH_REDIRECT_URI', env('APP_URL') . '/google/oauth/callback'),
+        'redirect' => env('GOOGLE_OAUTH_REDIRECT_URI', env('APP_URL').'/google/oauth/callback'),
         'scopes' => [
             'https://www.googleapis.com/auth/calendar.events',
         ],

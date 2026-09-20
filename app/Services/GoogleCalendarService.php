@@ -23,7 +23,7 @@ class GoogleCalendarService
     public function listExternalEvents(Psychologist $psychologist, Carbon $from, Carbon $to): array
     {
         $token = $this->resolveToken($psychologist);
-        if (!$token) {
+        if (! $token) {
             return [];
         }
 
@@ -56,10 +56,10 @@ class GoogleCalendarService
             $response = $this->request(
                 $token,
                 'get',
-                self::BASE_URL . '/calendars/primary/events?' . http_build_query($query)
+                self::BASE_URL.'/calendars/primary/events?'.http_build_query($query)
             );
 
-            if (!$response || !$response->successful()) {
+            if (! $response || ! $response->successful()) {
                 if ($response) {
                     Log::warning('Falha ao listar eventos externos do Google Calendar.', [
                         'psychologist_id' => $psychologist->id,
@@ -75,7 +75,7 @@ class GoogleCalendarService
                 $start = $event['start']['dateTime'] ?? $event['start']['date'] ?? null;
                 $end = $event['end']['dateTime'] ?? $event['end']['date'] ?? null;
 
-                if (!$eventId || !$start || !$end || ($event['status'] ?? null) === 'cancelled') {
+                if (! $eventId || ! $start || ! $end || ($event['status'] ?? null) === 'cancelled') {
                     continue;
                 }
 
@@ -95,7 +95,7 @@ class GoogleCalendarService
                 }
 
                 $events[] = [
-                    'id' => 'google:' . $eventId,
+                    'id' => 'google:'.$eventId,
                     'source' => 'google',
                     'title' => trim((string) ($event['summary'] ?? '')) ?: 'Evento do Google',
                     'start_at' => $startAt->toIso8601String(),
@@ -116,12 +116,12 @@ class GoogleCalendarService
         $appointment->loadMissing(['patient', 'psychologist']);
 
         $psychologist = $appointment->psychologist;
-        if (!$psychologist) {
+        if (! $psychologist) {
             return;
         }
 
         $token = $this->resolveToken($psychologist);
-        if (!$token) {
+        if (! $token) {
             return;
         }
 
@@ -152,7 +152,7 @@ class GoogleCalendarService
             $payload
         );
 
-        if (!$response || !$response->successful()) {
+        if (! $response || ! $response->successful()) {
             return;
         }
 
@@ -166,12 +166,12 @@ class GoogleCalendarService
         $appointment->loadMissing('psychologist');
         $psychologist = $appointment->psychologist;
 
-        if (!$psychologist || !$appointment->google_event_id) {
+        if (! $psychologist || ! $appointment->google_event_id) {
             return true;
         }
 
         $token = $this->resolveToken($psychologist);
-        if (!$token) {
+        if (! $token) {
             return false;
         }
 
@@ -187,6 +187,7 @@ class GoogleCalendarService
                 'meeting_url' => null,
                 'meeting_provider' => null,
             ])->save();
+
             return true;
         }
 
@@ -196,7 +197,7 @@ class GoogleCalendarService
     public function deleteExternalEvent(Psychologist $psychologist, string $eventId): bool
     {
         $token = $this->resolveToken($psychologist);
-        if (!$token || $eventId === '') {
+        if (! $token || $eventId === '') {
             return false;
         }
 
@@ -227,10 +228,10 @@ class GoogleCalendarService
         }
 
         $descriptionParts = array_filter([
-            $patient?->email ? 'E-mail do paciente: ' . $patient->email : null,
-            $patient?->phone ? 'Telefone: ' . $patient->phone : null,
-            $appointment->type ? 'Tipo: ' . ($appointment->type === 'online' ? 'Online' : 'Presencial') : null,
-            $status
+            $patient?->email ? 'E-mail do paciente: '.$patient->email : null,
+            $patient?->phone ? 'Telefone: '.$patient->phone : null,
+            $appointment->type ? 'Tipo: '.($appointment->type === 'online' ? 'Online' : 'Presencial') : null,
+            $status,
         ]);
 
         $payload = [
@@ -264,7 +265,7 @@ class GoogleCalendarService
     private function resolveToken(Psychologist $psychologist): ?array
     {
         $encrypted = $psychologist->google_calendar_token;
-        if (!$encrypted) {
+        if (! $encrypted) {
             return null;
         }
 
@@ -279,7 +280,7 @@ class GoogleCalendarService
             return null;
         }
 
-        if (!is_array($token) || empty($token['access_token'])) {
+        if (! is_array($token) || empty($token['access_token'])) {
             return null;
         }
 
@@ -300,13 +301,13 @@ class GoogleCalendarService
             }
         }
 
-        if (!$expiresSoon) {
+        if (! $expiresSoon) {
             return $token;
         }
 
         $refreshToken = $token['refresh_token'] ?? null;
 
-        if (!$refreshToken) {
+        if (! $refreshToken) {
             Log::warning('Token do Google Calendar expirado e sem refresh token.', [
                 'psychologist_id' => $psychologist->id,
             ]);
@@ -318,7 +319,7 @@ class GoogleCalendarService
         $clientId = Arr::get($config, 'client_id');
         $clientSecret = Arr::get($config, 'client_secret');
 
-        if (!$clientId || !$clientSecret) {
+        if (! $clientId || ! $clientSecret) {
             return null;
         }
 
@@ -338,7 +339,7 @@ class GoogleCalendarService
             return null;
         }
 
-        if (!$response->successful() || !isset($response['access_token'])) {
+        if (! $response->successful() || ! isset($response['access_token'])) {
             Log::warning('Resposta inválida ao atualizar token do Google Calendar.', [
                 'psychologist_id' => $psychologist->id,
                 'status' => $response?->status(),
@@ -351,7 +352,7 @@ class GoogleCalendarService
         $token['access_token'] = $response['access_token'];
         $token['expires_at'] = now()->addSeconds((int) ($response['expires_in'] ?? 0))->toIso8601String();
 
-        if (!empty($response['refresh_token'])) {
+        if (! empty($response['refresh_token'])) {
             $token['refresh_token'] = $response['refresh_token'];
         }
 
@@ -387,16 +388,16 @@ class GoogleCalendarService
 
     private function eventsUrl(bool $withConference = false): string
     {
-        $url = self::BASE_URL . '/calendars/primary/events';
+        $url = self::BASE_URL.'/calendars/primary/events';
 
-        return $withConference ? $url . '?conferenceDataVersion=1' : $url;
+        return $withConference ? $url.'?conferenceDataVersion=1' : $url;
     }
 
     private function eventUrl(string $eventId, bool $withConference = false): string
     {
-        $url = self::BASE_URL . '/calendars/primary/events/' . urlencode($eventId);
+        $url = self::BASE_URL.'/calendars/primary/events/'.urlencode($eventId);
 
-        return $withConference ? $url . '?conferenceDataVersion=1' : $url;
+        return $withConference ? $url.'?conferenceDataVersion=1' : $url;
     }
 
     private function shouldCreateConference(Appointment $appointment): bool
@@ -431,7 +432,7 @@ class GoogleCalendarService
         $entryPoints = Arr::get($event, 'conferenceData.entryPoints', []);
 
         foreach ($entryPoints as $entry) {
-            if (($entry['entryPointType'] ?? null) === 'video' && !empty($entry['uri'])) {
+            if (($entry['entryPointType'] ?? null) === 'video' && ! empty($entry['uri'])) {
                 return $entry['uri'];
             }
         }

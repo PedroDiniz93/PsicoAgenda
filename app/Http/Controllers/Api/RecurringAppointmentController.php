@@ -12,8 +12,7 @@ class RecurringAppointmentController extends Controller
 {
     public function __construct(
         private readonly RecurringAppointmentService $recurringAppointmentService
-    ) {
-    }
+    ) {}
 
     public function destroy(Request $request, int $id)
     {
@@ -24,7 +23,7 @@ class RecurringAppointmentController extends Controller
 
         if ($recurrence->status !== 'ended') {
             $recurrence->status = 'ended';
-            if (!$recurrence->end_date) {
+            if (! $recurrence->end_date) {
                 $timezone = $recurrence->timezone ?? config('app.timezone');
                 $recurrence->end_date = Carbon::now($timezone)->toDateString();
             }
@@ -45,7 +44,7 @@ class RecurringAppointmentController extends Controller
         $psychologistId = $user->psychologist?->id;
 
         abort_if(
-            !$psychologistId,
+            ! $psychologistId,
             403,
             'Usuário autenticado não possui um perfil de psicólogo.'
         );

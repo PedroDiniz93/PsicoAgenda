@@ -16,8 +16,7 @@ class PsychologistEmailVerificationMail extends Mailable
         private readonly User $user,
         private readonly string $code,
         private readonly Carbon $expiresAt
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {

@@ -52,11 +52,11 @@ class WhatsAppWebhookController extends Controller
         $body = $message['text']['body'] ?? null;
         $from = $message['from'] ?? null;
 
-        if (!$body || !$from) {
+        if (! $body || ! $from) {
             return;
         }
 
-        if (!$this->looksLikeConfirmation($body)) {
+        if (! $this->looksLikeConfirmation($body)) {
             return;
         }
 
@@ -66,7 +66,7 @@ class WhatsAppWebhookController extends Controller
         $appointmentQuery = Appointment::query()
             ->with('psychologist:id,name,whatsapp_sender_phone_id')
             ->whereHas('patient', function ($query) use ($phone) {
-                $query->where('phone', 'like', '%' . substr($phone, -8));
+                $query->where('phone', 'like', '%'.substr($phone, -8));
             })
             ->where('status', 'scheduled');
 
@@ -76,7 +76,7 @@ class WhatsAppWebhookController extends Controller
             ->orderByDesc('start_at')
             ->first();
 
-        if (!$appointment) {
+        if (! $appointment) {
             Log::info('WhatsApp confirmation message received but appointment not found', [
                 'from' => $from,
                 'sender_phone_id' => $senderPhoneId,
@@ -138,7 +138,7 @@ class WhatsAppWebhookController extends Controller
         $digits = preg_replace('/\D+/', '', $raw);
 
         if (str_starts_with($digits, '55') === false && strlen($digits) >= 10) {
-            return '55' . $digits;
+            return '55'.$digits;
         }
 
         return $digits;

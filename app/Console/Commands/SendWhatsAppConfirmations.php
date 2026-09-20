@@ -74,7 +74,7 @@ class SendWhatsAppConfirmations extends Command
 
                 if (
                     $psychologist->whatsapp_confirm_enabled
-                    && !$appointment->confirmation_sent_at
+                    && ! $appointment->confirmation_sent_at
                     && $this->whatsAppService->sendSessionConfirmation($appointment)
                 ) {
                     $appointment->confirmation_sent_at = now();
@@ -86,7 +86,7 @@ class SendWhatsAppConfirmations extends Command
 
                 if (
                     $psychologist->email_confirm_enabled
-                    && !$appointment->email_reminder_sent_at
+                    && ! $appointment->email_reminder_sent_at
                     && $appointment->patient?->email
                 ) {
                     Mail::to($appointment->patient->email)->send(new AppointmentReminderMail($appointment));
@@ -96,7 +96,7 @@ class SendWhatsAppConfirmations extends Command
                     Log::info('Lembrete enviado por e-mail', ['appointment_id' => $appointment->id]);
                 }
 
-                if (!$updated) {
+                if (! $updated) {
                     continue;
                 }
 
@@ -114,5 +114,4 @@ class SendWhatsAppConfirmations extends Command
 
         return self::SUCCESS;
     }
-
 }

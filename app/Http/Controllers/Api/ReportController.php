@@ -105,7 +105,7 @@ class ReportController extends Controller
         $psychologistId = $user->psychologist?->id;
 
         abort_if(
-            !$psychologistId,
+            ! $psychologistId,
             403,
             'Usuário autenticado não possui um perfil de psicólogo.'
         );
@@ -123,7 +123,7 @@ class ReportController extends Controller
 
     private function parseDate(?string $value, bool $endOfDay): ?Carbon
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 

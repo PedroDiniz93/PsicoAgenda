@@ -53,6 +53,7 @@ class GameKitMemoryController extends Controller
                 'status' => 'saved',
             ]);
             $this->savePairs($game, $data['pairs']);
+
             return $game;
         });
 
@@ -80,6 +81,7 @@ class GameKitMemoryController extends Controller
     public function destroy(Request $request, int $id)
     {
         $this->ownedGame($request, $id)->delete();
+
         return response()->json(['status' => 'deleted']);
     }
 
@@ -89,7 +91,7 @@ class GameKitMemoryController extends Controller
         $copy = DB::transaction(function () use ($source, $request) {
             $copy = GameKitMemoryGame::create([
                 'psychologist_id' => $this->psychologistId($request),
-                'name' => 'Cópia de ' . $source->name,
+                'name' => 'Cópia de '.$source->name,
                 'age_group' => $source->age_group,
                 'theme' => $source->theme,
                 'difficulty' => $source->difficulty,
@@ -97,6 +99,7 @@ class GameKitMemoryController extends Controller
                 'status' => 'saved',
             ]);
             $this->savePairs($copy, $source->pairs->map(fn ($pair) => $pair->only(['label_a', 'label_b', 'concept', 'feedback', 'icon', 'accent']))->all());
+
             return $copy;
         });
 
@@ -119,6 +122,7 @@ class GameKitMemoryController extends Controller
     {
         $session = GameKitMemorySession::with(['game.pairs', 'result'])
             ->where('psychologist_id', $this->psychologistId($request))->findOrFail($id);
+
         return response()->json($session);
     }
 
@@ -134,12 +138,13 @@ class GameKitMemoryController extends Controller
             'started_at' => $session->started_at ?? now(),
         ])->save();
 
-        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/') . '/gamekit/memory/play/' . $token]);
+        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/').'/gamekit/memory/play/'.$token]);
     }
 
     public function play(string $token)
     {
         $session = $this->findPublicSession($token);
+
         return response()->json([
             'session' => [
                 'id' => $session->id,
@@ -171,6 +176,7 @@ class GameKitMemoryController extends Controller
         if ($completed) {
             $session->forceFill(['status' => 'finished', 'finished_at' => now(), 'public_token_hash' => null])->save();
         }
+
         return response()->json(['status' => $completed ? 'finished' : 'saved', 'result' => $result]);
     }
 
@@ -188,9 +194,10 @@ class GameKitMemoryController extends Controller
             'pairs.*.label_b' => ['required', 'string', 'max:160'],
             'pairs.*.concept' => ['required', 'string', 'max:160'],
             'pairs.*.feedback' => ['required', 'string', 'max:500'],
-            'pairs.*.icon' => ['nullable', 'string', 'in:' . implode(',', self::ICONS)],
+            'pairs.*.icon' => ['nullable', 'string', 'in:'.implode(',', self::ICONS)],
             'pairs.*.accent' => ['nullable', 'string', 'max:30'],
         ])['pairs'];
+
         return ['meta' => $meta, 'pairs' => $pairs];
     }
 
@@ -217,14 +224,16 @@ class GameKitMemoryController extends Controller
         $session = GameKitMemorySession::with(['game.pairs'])
             ->where('public_token_hash', hash('sha256', $token))
             ->where('status', 'active')->where('public_token_expires_at', '>', now())->first();
-        abort_if(!$session, 404, 'Esta atividade não está mais disponível.');
+        abort_if(! $session, 404, 'Esta atividade não está mais disponível.');
+
         return $session;
     }
 
     private function psychologistId(Request $request): int
     {
         $id = $request->user()->loadMissing('psychologist')->psychologist?->id;
-        abort_if(!$id, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $id, 403, 'Perfil de psicólogo não encontrado.');
+
         return (int) $id;
     }
 }

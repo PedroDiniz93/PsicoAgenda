@@ -11,13 +11,12 @@ class GoogleCalendarController extends Controller
 {
     public function __construct(
         private readonly GoogleCalendarService $googleCalendarService
-    ) {
-    }
+    ) {}
 
     public function events(Request $request)
     {
         $psychologist = $request->user()->loadMissing('psychologist')->psychologist;
-        abort_if(!$psychologist, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $psychologist, 403, 'Perfil de psicólogo não encontrado.');
 
         [$from, $to] = $this->parseRange($request);
 
@@ -29,7 +28,7 @@ class GoogleCalendarController extends Controller
     public function destroy(Request $request, string $eventId)
     {
         $psychologist = $request->user()->loadMissing('psychologist')->psychologist;
-        abort_if(!$psychologist, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $psychologist, 403, 'Perfil de psicólogo não encontrado.');
 
         $eventId = str_starts_with($eventId, 'google:') ? substr($eventId, 7) : $eventId;
         abort_if($eventId === '', 422, 'Evento do Google inválido.');
@@ -53,7 +52,7 @@ class GoogleCalendarController extends Controller
         $fromValue = $request->query('from');
         $toValue = $request->query('to');
 
-        abort_if(!$fromValue || !$toValue, 422, 'Informe o intervalo da agenda.');
+        abort_if(! $fromValue || ! $toValue, 422, 'Informe o intervalo da agenda.');
 
         try {
             $from = Carbon::parse($fromValue)->startOfDay();

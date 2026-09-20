@@ -30,7 +30,7 @@ class HomeDashboardController extends Controller
         $psychologist = $this->psychologist($request);
         $timezone = $psychologist->timezone ?? config('app.timezone');
         $nowLocal = Carbon::now($timezone);
-        $now = $nowLocal->copy()->timezone(config('app.timezone'));
+        $now = $nowLocal->copy();
 
         $summaryQuery = Appointment::query()
             ->where('psychologist_id', $psychologist->id)
@@ -78,6 +78,7 @@ class HomeDashboardController extends Controller
 
         return response()->json([
             'hero' => [
+                'kicker' => 'Visão geral',
                 'title' => sprintf('Olá, %s', $psychologist->name ?: $request->user()->name ?: 'Psicólogo(a)'),
                 'description' => $totalSessions > 0
                     ? sprintf(
@@ -130,7 +131,7 @@ class HomeDashboardController extends Controller
         $user = $request->user()->loadMissing('psychologist');
         $psychologist = $user->psychologist;
 
-        abort_if(!$psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
+        abort_if(! $psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
 
         return $psychologist;
     }
@@ -174,7 +175,7 @@ class HomeDashboardController extends Controller
 
         foreach ($appointments as $appointment) {
             $localStart = $appointment->start_at?->copy()->setTimezone($timezone);
-            if (!$localStart) {
+            if (! $localStart) {
                 continue;
             }
 

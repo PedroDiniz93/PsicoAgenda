@@ -34,6 +34,7 @@ class GameKitAiController extends Controller
         $cards = collect($this->games->generateCards($theme))->map(fn ($card) => [
             'context' => $card['prompt_a'], 'question' => $card['prompt_b'], 'options' => $card['options'],
         ])->values();
+
         return response()->json(['cards' => $cards]);
     }
 
@@ -43,6 +44,7 @@ class GameKitAiController extends Controller
             ->where('psychologist_id', $this->psychologistId($request))->latest()->limit(6)->get()
             ->map(function (GameKitTemplate $template) {
                 $cards = $template->cards->where('version', $template->current_version)->sortBy('position')->values();
+
                 return [
                     'id' => $template->id,
                     'name' => $template->name,
@@ -73,8 +75,10 @@ class GameKitAiController extends Controller
                 'format' => 'association_memory', 'status' => 'approved', 'current_version' => 1,
             ]);
             $this->saveCards($template, $data['cards'], 1);
+
             return $template;
         });
+
         return response()->json($this->withCurrentCards($template), 201);
     }
 
@@ -90,6 +94,7 @@ class GameKitAiController extends Controller
             $name = $request->validate(['name' => ['required', 'string', 'max:160']])['name'];
             $template->update(['name' => $name]);
             $template->refresh();
+
             return response()->json($template);
         }
         $data = $this->templateData($request);
@@ -98,6 +103,7 @@ class GameKitAiController extends Controller
             $template->update([...$data['meta'], 'name' => $data['name'], 'current_version' => $version]);
             $this->saveCards($template, $data['cards'], $version);
         });
+
         return response()->json($this->withCurrentCards($template->fresh()), 200);
     }
 
@@ -107,6 +113,7 @@ class GameKitAiController extends Controller
         $name = $request->validate(['name' => ['required', 'string', 'max:160']])['name'];
         $template->update(['name' => $name]);
         $template->refresh();
+
         return response()->json($template);
     }
 
@@ -115,20 +122,23 @@ class GameKitAiController extends Controller
         $source = $this->owned($request, $id)->load('cards');
         $copy = DB::transaction(function () use ($source, $request) {
             $copy = GameKitTemplate::create([
-                'psychologist_id' => $this->psychologistId($request), 'name' => 'Cópia de ' . $source->name,
+                'psychologist_id' => $this->psychologistId($request), 'name' => 'Cópia de '.$source->name,
                 'format' => $source->format, 'age_group' => $source->age_group, 'theme' => $source->theme,
                 'activity_type' => $source->activity_type, 'difficulty' => $source->difficulty,
                 'duration_minutes' => $source->duration_minutes, 'status' => 'approved', 'current_version' => 1,
             ]);
             $this->saveCards($copy, $this->currentCards($source)->map(fn ($card) => $card->only(['context', 'question', 'options']))->all(), 1);
+
             return $copy;
         });
+
         return response()->json($this->withCurrentCards($copy), 201);
     }
 
     public function destroy(Request $request, int $id)
     {
         $this->owned($request, $id)->delete();
+
         return response()->json(['status' => 'deleted']);
     }
 
@@ -141,8 +151,9 @@ class GameKitAiController extends Controller
         ], $this->psychologistId($request));
         $session->cards()->delete();
         foreach ($this->currentCards($template) as $position => $card) {
-            $session->cards()->create(['position' => $position + 1, 'pair_key' => 'template_' . $template->id . '_' . ($position + 1), 'prompt_a' => $card->context, 'prompt_b' => $card->question, 'options' => $card->options]);
+            $session->cards()->create(['position' => $position + 1, 'pair_key' => 'template_'.$template->id.'_'.($position + 1), 'prompt_a' => $card->context, 'prompt_b' => $card->question, 'options' => $card->options]);
         }
+
         return response()->json($session->load('cards'), 201);
     }
 
@@ -180,6 +191,7 @@ class GameKitAiController extends Controller
         $name = $request->validate(['name' => ['required', 'string', 'max:160']])['name'];
         unset($meta['card_count'], $meta['language']);
         $cards = $request->validate(['cards' => ['required', 'array', 'min:1', 'max:30'], 'cards.*.context' => ['required', 'string', 'max:1000'], 'cards.*.question' => ['required', 'string', 'max:500'], 'cards.*.options' => ['required', 'array', 'size:3'], 'cards.*.options.*' => ['required', 'string', 'max:300']])['cards'];
+
         return compact('meta', 'cards', 'name');
     }
 
@@ -201,6 +213,7 @@ class GameKitAiController extends Controller
         $current = $this->currentCards($template);
         $template->setRelation('cards', $current);
         $template->setRelation('currentCards', $current);
+
         return $template;
     }
 
@@ -212,7 +225,8 @@ class GameKitAiController extends Controller
     private function psychologistId(Request $request): int
     {
         $id = $request->user()->loadMissing('psychologist')->psychologist?->id;
-        abort_if(!$id, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $id, 403, 'Perfil de psicólogo não encontrado.');
+
         return (int) $id;
     }
 }

@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\PatientAlert;
 use App\Models\Psychologist;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 
 class DevSeeder extends Seeder
 {

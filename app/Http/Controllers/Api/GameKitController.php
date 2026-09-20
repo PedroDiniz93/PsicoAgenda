@@ -71,7 +71,7 @@ class GameKitController extends Controller
         foreach ($data['cards'] as $index => $card) {
             $session->cards()->create([
                 'position' => $index + 1,
-                'pair_key' => 'custom_' . ($index + 1),
+                'pair_key' => 'custom_'.($index + 1),
                 ...$card,
             ]);
         }
@@ -86,7 +86,7 @@ class GameKitController extends Controller
 
         $token = $this->service->issuePublicToken($session);
 
-        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/') . '/gamekit/play/' . $token]);
+        return response()->json(['url' => rtrim(config('app.frontend_url', config('app.url')), '/').'/gamekit/play/'.$token]);
     }
 
     public function finish(Request $request, int $id)
@@ -110,7 +110,7 @@ class GameKitController extends Controller
 
         $patientId = $data['patient_id'] ?? null;
         if ($patientId !== null) {
-            abort_if(!Patient::where('psychologist_id', $this->psychologistId($request))->whereKey($patientId)->exists(), 422, 'Paciente inválido.');
+            abort_if(! Patient::where('psychologist_id', $this->psychologistId($request))->whereKey($patientId)->exists(), 422, 'Paciente inválido.');
         }
         $session->update(['patient_id' => $patientId]);
 
@@ -131,7 +131,7 @@ class GameKitController extends Controller
     public function play(string $token)
     {
         $session = $this->service->findByToken($token);
-        abort_if(!$session, 404, 'Esta sessão não está disponível.');
+        abort_if(! $session, 404, 'Esta sessão não está disponível.');
 
         return response()->json([
             'session' => [
@@ -154,7 +154,7 @@ class GameKitController extends Controller
     public function respond(Request $request, string $token)
     {
         $session = $this->service->findByToken($token);
-        abort_if(!$session, 404, 'Esta sessão não está disponível.');
+        abort_if(! $session, 404, 'Esta sessão não está disponível.');
 
         $data = $request->validate([
             'card_id' => ['required', 'integer'],
@@ -162,7 +162,7 @@ class GameKitController extends Controller
             'participant_key' => ['nullable', 'string', 'max:64'],
         ]);
         $card = $session->cards->firstWhere('id', (int) $data['card_id']);
-        abort_if(!$card || !in_array($data['answer'], $card->options ?? [], true), 422, 'Resposta inválida.');
+        abort_if(! $card || ! in_array($data['answer'], $card->options ?? [], true), 422, 'Resposta inválida.');
 
         $participantKey = ($data['participant_key'] ?? null) ?: hash('sha256', Str::uuid()->toString());
         $response = GameKitResponse::updateOrCreate(
@@ -184,7 +184,7 @@ class GameKitController extends Controller
     public function finishPublic(string $token)
     {
         $session = $this->service->findByToken($token);
-        abort_if(!$session, 404, 'Esta sessão não está disponível.');
+        abort_if(! $session, 404, 'Esta sessão não está disponível.');
         $this->service->finish($session);
 
         return response()->json(['status' => 'finished']);
@@ -198,7 +198,8 @@ class GameKitController extends Controller
     private function psychologistId(Request $request): int
     {
         $id = $request->user()->loadMissing('psychologist')->psychologist?->id;
-        abort_if(!$id, 403, 'Perfil de psicólogo não encontrado.');
+        abort_if(! $id, 403, 'Perfil de psicólogo não encontrado.');
+
         return (int) $id;
     }
 }

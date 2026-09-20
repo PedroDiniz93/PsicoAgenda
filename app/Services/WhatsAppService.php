@@ -22,7 +22,7 @@ class WhatsAppService
 
     public function isConfigured(?Psychologist $psychologist = null): bool
     {
-        return !empty($this->token) && !empty($this->senderPhoneId($psychologist));
+        return ! empty($this->token) && ! empty($this->senderPhoneId($psychologist));
     }
 
     public function sendSessionConfirmation(Appointment $appointment): bool
@@ -31,34 +31,37 @@ class WhatsAppService
         $psychologist = $appointment->psychologist;
         $senderPhoneId = $this->senderPhoneId($psychologist);
 
-        if (!$this->isConfigured($psychologist)) {
+        if (! $this->isConfigured($psychologist)) {
             Log::info('WhatsApp confirmation skipped: service not configured', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
-                'has_token' => !empty($this->token),
-                'has_sender_phone_id' => !empty($senderPhoneId),
+                'has_token' => ! empty($this->token),
+                'has_sender_phone_id' => ! empty($senderPhoneId),
             ]);
+
             return false;
         }
 
         $patient = $appointment->patient;
 
-        if (!$patient?->phone) {
+        if (! $patient?->phone) {
             Log::info('WhatsApp confirmation skipped: patient without phone', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
             ]);
+
             return false;
         }
 
         $phone = $this->formatPhoneNumber($patient->phone);
 
-        if (!$phone) {
+        if (! $phone) {
             Log::info('WhatsApp confirmation skipped: invalid phone format', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
                 'raw_phone' => $patient->phone,
             ]);
+
             return false;
         }
 
@@ -125,7 +128,7 @@ class WhatsAppService
         $time = $startAt->format('H:i');
 
         return sprintf(
-            "Olá %s! Aqui é %s. Sua sessão está confirmada para %s às %s. Caso precise reagendar ou cancelar, responda esta mensagem.",
+            'Olá %s! Aqui é %s. Sua sessão está confirmada para %s às %s. Caso precise reagendar ou cancelar, responda esta mensagem.',
             $patientName,
             $psychologistName,
             $date,
@@ -142,29 +145,29 @@ class WhatsAppService
 
     private function formatPhoneNumber(?string $raw): ?string
     {
-        if (!$raw) {
+        if (! $raw) {
             return null;
         }
 
         $hasPlus = str_contains($raw, '+');
         $digits = preg_replace('/\D+/', '', $raw);
 
-        if (!$digits) {
+        if (! $digits) {
             return null;
         }
 
         $digits = ltrim($digits, '0');
 
         if ($hasPlus && strlen($digits) >= 8) {
-            return '+' . $digits;
+            return '+'.$digits;
         }
 
         if (str_starts_with($digits, '55') && strlen($digits) >= 12) {
-            return '+' . $digits;
+            return '+'.$digits;
         }
 
         if (strlen($digits) >= 10) {
-            return '+55' . $digits;
+            return '+55'.$digits;
         }
 
         return null;

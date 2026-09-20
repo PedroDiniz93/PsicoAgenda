@@ -18,7 +18,7 @@ class AvailabilityController extends Controller
         $user = $request->user()->loadMissing('psychologist');
         $psychologist = $user->psychologist;
 
-        abort_if(!$psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
+        abort_if(! $psychologist, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
 
         return $psychologist;
     }

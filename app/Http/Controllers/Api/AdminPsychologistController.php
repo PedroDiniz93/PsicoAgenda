@@ -87,7 +87,7 @@ class AdminPsychologistController extends Controller
                 'role' => $data['role'] ?? 'psychologist',
             ]);
 
-            if (!empty($data['password'])) {
+            if (! empty($data['password'])) {
                 $psychologist->user->password = Hash::make($data['password']);
             }
 
@@ -111,7 +111,7 @@ class AdminPsychologistController extends Controller
             ])->save();
         });
 
-        if ($role === 'psychologist' && (!$wasPsychologist || $emailChanged || is_null($psychologist->user->fresh()->email_verified_at))) {
+        if ($role === 'psychologist' && (! $wasPsychologist || $emailChanged || is_null($psychologist->user->fresh()->email_verified_at))) {
             $emailVerificationService->send($psychologist->user->fresh());
         }
 
@@ -131,7 +131,7 @@ class AdminPsychologistController extends Controller
 
         abort_unless($psychologist->user, 404, 'Usuário do psicólogo não encontrado.');
 
-        if (!$psychologist->user->requiresEmailVerification()) {
+        if (! $psychologist->user->requiresEmailVerification()) {
             return response()->json([
                 'message' => 'Este e-mail já foi validado.',
                 'psychologist' => $psychologist->fresh()->load('user:id,name,email,role,email_verified_at,email_verification_sent_at,email_verification_expires_at'),

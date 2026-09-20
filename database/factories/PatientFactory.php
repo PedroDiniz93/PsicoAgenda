@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Patient;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PatientFactory extends Factory
 {

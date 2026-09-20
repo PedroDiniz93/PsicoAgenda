@@ -11,8 +11,7 @@ class RecurringAppointmentService
 {
     public function __construct(
         private readonly AppointmentAvailabilityService $availabilityService
-    ) {
-    }
+    ) {}
 
     private const WEEKS_AHEAD = 8;
 
@@ -102,7 +101,7 @@ class RecurringAppointmentService
         }
 
         $psychologist = Psychologist::find($recurrence->psychologist_id);
-        if (!$psychologist || $this->availabilityService->firstSchedulingConflict($psychologist, $start, $end) !== null) {
+        if (! $psychologist || $this->availabilityService->firstSchedulingConflict($psychologist, $start, $end) !== null) {
             return;
         }
 

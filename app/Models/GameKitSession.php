@@ -24,8 +24,23 @@ class GameKitSession extends Model
 
     protected $hidden = ['public_token_hash'];
 
-    public function psychologist(): BelongsTo { return $this->belongsTo(Psychologist::class); }
-    public function patient(): BelongsTo { return $this->belongsTo(Patient::class); }
-    public function cards(): HasMany { return $this->hasMany(GameKitCard::class, 'gamekit_session_id')->orderBy('position'); }
-    public function responses(): HasMany { return $this->hasMany(GameKitResponse::class, 'gamekit_session_id'); }
+    public function psychologist(): BelongsTo
+    {
+        return $this->belongsTo(Psychologist::class);
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
+    public function cards(): HasMany
+    {
+        return $this->hasMany(GameKitCard::class, 'gamekit_session_id')->orderBy('position');
+    }
+
+    public function responses(): HasMany
+    {
+        return $this->hasMany(GameKitResponse::class, 'gamekit_session_id');
+    }
 }

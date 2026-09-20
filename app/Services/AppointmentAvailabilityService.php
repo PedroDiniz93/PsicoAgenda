@@ -23,11 +23,11 @@ class AppointmentAvailabilityService
         $startLocal = $start->copy()->setTimezone($timezone);
         $endLocal = $end->copy()->setTimezone($timezone);
 
-        if (!$startLocal->isSameDay($endLocal)) {
+        if (! $startLocal->isSameDay($endLocal)) {
             return 'Agendamentos devem começar e terminar no mesmo dia de atendimento.';
         }
 
-        if (!$this->isWithinAvailability($psychologist, $startLocal, $endLocal)) {
+        if (! $this->isWithinAvailability($psychologist, $startLocal, $endLocal)) {
             return 'Horário fora da disponibilidade configurada.';
         }
 

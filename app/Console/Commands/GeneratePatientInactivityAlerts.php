@@ -40,7 +40,7 @@ class GeneratePatientInactivityAlerts extends Command
 
                     $referenceDate = $lastAppointment ?? $patient->created_at;
 
-                    if (!$referenceDate instanceof Carbon || $referenceDate->gte($thresholdDate)) {
+                    if (! $referenceDate instanceof Carbon || $referenceDate->gte($thresholdDate)) {
                         continue;
                     }
 
@@ -63,11 +63,11 @@ class GeneratePatientInactivityAlerts extends Command
                     $existingReference = $existingPayload['reference_date'] ?? null;
                     $isNewCycle = $existingReference !== $payload['reference_date'];
 
-                    if (!$alert->exists || $isNewCycle) {
+                    if (! $alert->exists || $isNewCycle) {
                         $alert->resolved_at = null;
                     }
 
-                    if (!$alert->exists) {
+                    if (! $alert->exists) {
                         $createdCount++;
                     }
 
@@ -88,7 +88,7 @@ class GeneratePatientInactivityAlerts extends Command
                 }
             });
 
-        if (!empty($activeAlertIds)) {
+        if (! empty($activeAlertIds)) {
             PatientAlert::where('type', 'patient-inactivity')
                 ->whereNotIn('id', $activeAlertIds)
                 ->delete();

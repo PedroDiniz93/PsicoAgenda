@@ -1,5 +1,7 @@
 <?php
+
 // app/Http/Requests/PatientStoreRequest.php
+
 namespace App\Http\Requests;
 
 use Carbon\Carbon;
@@ -8,7 +10,10 @@ use Illuminate\Validation\Validator;
 
 class PatientStoreRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
     public function rules(): array
     {
@@ -34,15 +39,15 @@ class PatientStoreRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            if (!$this->isMinorPatient()) {
+            if (! $this->isMinorPatient()) {
                 return;
             }
 
-            if (!$this->filled('minor_guardian_name')) {
+            if (! $this->filled('minor_guardian_name')) {
                 $validator->errors()->add('minor_guardian_name', 'Informe o nome do responsável pelo menor de idade.');
             }
 
-            if (!$this->filled('minor_guardian_phone')) {
+            if (! $this->filled('minor_guardian_phone')) {
                 $validator->errors()->add('minor_guardian_phone', 'Informe o telefone do responsável pelo menor de idade.');
             }
         });
@@ -50,7 +55,7 @@ class PatientStoreRequest extends FormRequest
 
     private function isMinorPatient(): bool
     {
-        if (!$this->filled('birth_date')) {
+        if (! $this->filled('birth_date')) {
             return false;
         }
 

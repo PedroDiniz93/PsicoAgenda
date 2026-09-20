@@ -23,7 +23,7 @@ class PatientRecordController extends Controller
         $user = $request->user()->loadMissing('psychologist');
         $psychologistId = $user->psychologist?->id;
 
-        abort_if(!$psychologistId, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
+        abort_if(! $psychologistId, 403, 'Usuário autenticado não possui um perfil de psicólogo.');
 
         return (int) $psychologistId;
     }
@@ -111,7 +111,7 @@ class PatientRecordController extends Controller
         $record = $this->resolveRecord($patient, $recordId);
 
         $data = $request->validated();
-        if (array_key_exists('recorded_at', $data) && !$data['recorded_at']) {
+        if (array_key_exists('recorded_at', $data) && ! $data['recorded_at']) {
             $data['recorded_at'] = $record->recorded_at;
         }
 
@@ -157,7 +157,7 @@ class PatientRecordController extends Controller
 
     private function cleanStringArray(?array $items): array
     {
-        if (!$items) {
+        if (! $items) {
             return [];
         }
 
@@ -168,7 +168,7 @@ class PatientRecordController extends Controller
 
     private function sanitizeHomeworkItems(?array $items): array
     {
-        if (!$items) {
+        if (! $items) {
             return [];
         }
 
@@ -195,14 +195,14 @@ class PatientRecordController extends Controller
     }
 
     /**
-     * @param array<int, UploadedFile>|UploadedFile[] $files
+     * @param  array<int, UploadedFile>|UploadedFile[]  $files
      */
     private function storeUploadedAttachments(array $files, Patient $patient): array
     {
         $saved = [];
 
         foreach ($files as $file) {
-            if (!$file instanceof UploadedFile) {
+            if (! $file instanceof UploadedFile) {
                 continue;
             }
 
@@ -224,7 +224,7 @@ class PatientRecordController extends Controller
     private function retainExistingAttachments(PatientRecord $record, array $keepIds): array
     {
         $attachments = $record->attachments ?? [];
-        if (!$attachments) {
+        if (! $attachments) {
             return [];
         }
 
@@ -232,8 +232,9 @@ class PatientRecordController extends Controller
 
         foreach ($attachments as $attachment) {
             $id = $attachment['id'] ?? null;
-            if (!$id || !in_array($id, $keepIds, true)) {
+            if (! $id || ! in_array($id, $keepIds, true)) {
                 $this->deleteStoredAttachment($attachment);
+
                 continue;
             }
 
@@ -262,7 +263,7 @@ class PatientRecordController extends Controller
 
     private function parseFilterDate(Request $request, string $key): ?string
     {
-        if (!$request->filled($key)) {
+        if (! $request->filled($key)) {
             return null;
         }
 

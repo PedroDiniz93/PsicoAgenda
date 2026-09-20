@@ -16,8 +16,7 @@ class PasswordResetMail extends Mailable
         private readonly User $user,
         private readonly string $resetUrl,
         private readonly Carbon $expiresAt
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
