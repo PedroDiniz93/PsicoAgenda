@@ -5,6 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $psychologist_id
+ * @property int $patient_id
+ * @property \Illuminate\Support\Carbon $start_at
+ * @property \Illuminate\Support\Carbon $end_at
+ * @property string $status
+ * @property string $type
+ * @property string|null $price
+ * @property string|null $meeting_url
+ * @property string|null $notes
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property-read Psychologist|null $psychologist
+ * @property-read Patient|null $patient
+ * @property-read RecurringAppointment|null $recurrence
+ */
 class Appointment extends Model
 {
     protected $fillable = [

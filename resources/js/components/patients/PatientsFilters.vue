@@ -45,7 +45,7 @@ defineEmits(['search', 'clear']);
                         id="patients-search"
                         v-model="filters.q"
                         class="h-11 w-full rounded-full border border-[#c2c7cd]/30 bg-[#f9f9f8] pl-10 pr-4 text-sm text-[#1a1c1c] placeholder:text-[#73787d] focus:border-[#415f76] focus:ring-[#415f76]"
-                        placeholder="Nome, e-mail ou telefone"
+                        placeholder="Nome, e-mail, telefone ou CPF"
                         type="search"
                     />
                 </label>

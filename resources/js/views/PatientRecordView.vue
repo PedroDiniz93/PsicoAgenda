@@ -254,6 +254,24 @@ const removeNewAttachment = (index) => {
     recordForm.newAttachments = recordForm.newAttachments.filter((_, idx) => idx !== index);
 };
 
+const attachmentDownloadUrl = (record, attachment) =>
+    `/api/patients/${patientId.value}/records/${record.id}/attachments/${attachment.id}`;
+
+const openAttachment = async (record, attachment) => {
+    try {
+        const { data } = await axios.get(attachmentDownloadUrl(record, attachment), { responseType: 'blob' });
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+        recordsError.value = 'Não foi possível abrir este anexo.';
+    }
+};
+
 const toggleExistingAttachment = (attachment) => {
     attachment.keep = !attachment.keep;
 };
@@ -794,9 +812,9 @@ onMounted(() => {
                                             <p class="truncate text-sm font-semibold text-slate-900">{{ attachment.name ?? 'Arquivo' }}</p>
                                             <p class="text-xs text-slate-500">{{ attachment.mime_type ?? 'Arquivo' }} · {{ formatFileSize(attachment.size) }}</p>
                                         </div>
-                                        <a :href="attachment.url" class="shrink-0 rounded-lg border border-cyan-200 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50" rel="noopener noreferrer" target="_blank">
+                                        <button class="shrink-0 rounded-lg border border-cyan-200 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50" type="button" @click="openAttachment(record, attachment)">
                                             Abrir
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

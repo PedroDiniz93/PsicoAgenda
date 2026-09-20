@@ -25,7 +25,7 @@ class RecurringAppointmentController extends Controller
             $recurrence->status = 'ended';
             if (! $recurrence->end_date) {
                 $timezone = $recurrence->timezone ?? config('app.timezone');
-                $recurrence->end_date = Carbon::now($timezone)->toDateString();
+                $recurrence->end_date = Carbon::now($timezone)->startOfDay();
             }
             $recurrence->save();
         }

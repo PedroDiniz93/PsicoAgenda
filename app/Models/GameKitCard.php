@@ -6,6 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $position
+ * @property string $prompt_a
+ * @property string $prompt_b
+ * @property array<int, string>|null $options
+ * @property-read GameKitSession|null $session
+ */
 class GameKitCard extends Model
 {
     protected $table = 'gamekit_cards';

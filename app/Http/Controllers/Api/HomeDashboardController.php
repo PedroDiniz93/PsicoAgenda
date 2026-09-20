@@ -36,19 +36,26 @@ class HomeDashboardController extends Controller
             ->where('psychologist_id', $psychologist->id)
             ->whereIn('status', self::CHARGEABLE_STATUSES);
 
-        $paidBuilder = (clone $summaryQuery)->whereNotNull('paid_at');
-        $pendingBuilder = (clone $summaryQuery)
-            ->whereNull('paid_at')
-            ->whereIn('status', self::CHARGEABLE_STATUSES);
+        $summary = (clone $summaryQuery)
+            ->selectRaw('COUNT(*) as total_sessions')
+            ->selectRaw('COUNT(DISTINCT patient_id) as unique_patients')
+            ->selectRaw('SUM(CASE WHEN paid_at IS NOT NULL THEN 1 ELSE 0 END) as paid_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN paid_at IS NOT NULL THEN price ELSE 0 END), 0) as paid_value')
+            ->selectRaw('SUM(CASE WHEN paid_at IS NULL THEN 1 ELSE 0 END) as pending_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN paid_at IS NULL THEN price ELSE 0 END), 0) as pending_value')
+            ->selectRaw("SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done_count")
+            ->selectRaw("SUM(CASE WHEN status = 'missed' THEN 1 ELSE 0 END) as missed_count")
+            ->toBase()
+            ->first();
 
-        $paidCount = (clone $paidBuilder)->count();
-        $paidValue = (clone $paidBuilder)->sum('price');
-        $pendingCount = (clone $pendingBuilder)->count();
-        $pendingValue = (clone $pendingBuilder)->sum('price');
-        $totalSessions = (clone $summaryQuery)->count();
-        $uniquePatients = (clone $summaryQuery)->distinct('patient_id')->count('patient_id');
-        $doneCount = (clone $summaryQuery)->where('status', 'done')->count();
-        $missedCount = (clone $summaryQuery)->where('status', 'missed')->count();
+        $paidCount = (int) $summary->paid_count;
+        $paidValue = (float) $summary->paid_value;
+        $pendingCount = (int) $summary->pending_count;
+        $pendingValue = (float) $summary->pending_value;
+        $totalSessions = (int) $summary->total_sessions;
+        $uniquePatients = (int) $summary->unique_patients;
+        $doneCount = (int) $summary->done_count;
+        $missedCount = (int) $summary->missed_count;
         $attendanceBase = $doneCount + $missedCount;
         $attendanceRate = $attendanceBase > 0 ? $doneCount / $attendanceBase : null;
         $avgTicket = $paidCount > 0 ? $paidValue / $paidCount : 0;
@@ -138,21 +145,19 @@ class HomeDashboardController extends Controller
 
     private function serializeNextAppointment(Appointment $appointment, string $timezone): array
     {
-        $startLocal = $appointment->start_at?->copy()->setTimezone($timezone);
-        $endLocal = $appointment->end_at?->copy()->setTimezone($timezone);
+        $startLocal = $appointment->start_at->copy()->setTimezone($timezone);
+        $endLocal = $appointment->end_at->copy()->setTimezone($timezone);
 
         return [
             'id' => $appointment->id,
             'patient' => [
                 'id' => $appointment->patient_id,
-                'name' => $appointment->patient?->name ?? 'Paciente sem nome',
+                'name' => $appointment->patient->name,
             ],
-            'start_at' => $appointment->start_at?->toIso8601String(),
-            'end_at' => $appointment->end_at?->toIso8601String(),
-            'date_label' => $startLocal?->format('d/m/Y') ?? '—',
-            'time_label' => $startLocal && $endLocal
-                ? sprintf('%s - %s', $startLocal->format('H:i'), $endLocal->format('H:i'))
-                : '—',
+            'start_at' => $appointment->start_at->toIso8601String(),
+            'end_at' => $appointment->end_at->toIso8601String(),
+            'date_label' => $startLocal->format('d/m/Y'),
+            'time_label' => sprintf('%s - %s', $startLocal->format('H:i'), $endLocal->format('H:i')),
             'modality' => $appointment->type ?? 'online',
             'modality_label' => self::TYPE_LABELS[$appointment->type ?? 'online'] ?? 'Online',
             'status' => $appointment->status,

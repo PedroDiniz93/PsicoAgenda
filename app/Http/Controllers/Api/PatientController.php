@@ -89,14 +89,21 @@ class PatientController extends Controller
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
+        $metrics = (clone $baseQuery)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as created_this_month', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN status = 'paused' THEN 1 ELSE 0 END) as paused")
+            ->selectRaw("SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed")
+            ->toBase()
+            ->first();
+
         return [
-            'total' => (clone $baseQuery)->count(),
-            'created_this_month' => (clone $baseQuery)
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->count(),
-            'active' => (clone $baseQuery)->where('status', 'active')->count(),
-            'paused' => (clone $baseQuery)->where('status', 'paused')->count(),
-            'closed' => (clone $baseQuery)->where('status', 'closed')->count(),
+            'total' => (int) $metrics->total,
+            'created_this_month' => (int) $metrics->created_this_month,
+            'active' => (int) $metrics->active,
+            'paused' => (int) $metrics->paused,
+            'closed' => (int) $metrics->closed,
         ];
     }
 
@@ -367,8 +374,8 @@ class PatientController extends Controller
             'tipo_registro' => 'Atendimento',
             ...$this->patientColumns($patient, $exportedAt),
             'atendimento_id' => $appointment->id,
-            'atendimento_inicio' => $appointment->start_at?->toIso8601String(),
-            'atendimento_fim' => $appointment->end_at?->toIso8601String(),
+            'atendimento_inicio' => $appointment->start_at->toIso8601String(),
+            'atendimento_fim' => $appointment->end_at->toIso8601String(),
             'atendimento_status' => $this->translateAppointmentStatus($appointment->status),
             'atendimento_modalidade' => $this->translateAppointmentType($appointment->type),
             'atendimento_valor' => $appointment->price,

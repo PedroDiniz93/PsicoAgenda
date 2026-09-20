@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\Psychologist;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -114,13 +113,11 @@ class WhatsAppService
 
     private function buildConfirmationMessage(Appointment $appointment): string
     {
-        $patientName = $appointment->patient?->name ?? 'Paciente';
-        $psychologistName = $appointment->psychologist?->name ?? $this->businessName;
-        $timezone = $appointment->psychologist?->timezone ?? config('app.timezone');
+        $patientName = $appointment->patient->name;
+        $psychologistName = $appointment->psychologist->name;
+        $timezone = $appointment->psychologist->timezone ?? config('app.timezone');
 
-        $startAt = $appointment->start_at instanceof Carbon
-            ? $appointment->start_at->copy()
-            : Carbon::parse($appointment->start_at);
+        $startAt = $appointment->start_at->copy();
 
         $startAt->setTimezone($timezone);
 

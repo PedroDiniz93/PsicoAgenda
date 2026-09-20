@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $theme
+ * @property int $pair_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, GameKitMemoryPair> $pairs
+ */
 class GameKitMemoryGame extends Model
 {
     protected $table = 'gamekit_memory_games';

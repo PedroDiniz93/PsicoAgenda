@@ -143,6 +143,26 @@ class PatientRecordController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    public function downloadAttachment(Request $request, int $patientId, int $recordId, string $attachmentId)
+    {
+        $patient = $this->resolvePatient($request, $patientId);
+        $record = $this->resolveRecord($patient, $recordId);
+        $attachment = collect($record->attachments ?? [])->firstWhere('id', $attachmentId);
+
+        abort_if(! is_array($attachment) || empty($attachment['path']), 404, 'Anexo não encontrado.');
+
+        $disk = (string) ($attachment['disk'] ?? 'public');
+        abort_unless(in_array($disk, ['private', 'public'], true), 404, 'Anexo não encontrado.');
+        abort_unless(Storage::disk($disk)->exists($attachment['path']), 404, 'Anexo não encontrado.');
+
+        $filename = str_replace(["\r", "\n"], '', basename((string) ($attachment['name'] ?? 'anexo')));
+
+        return Storage::disk($disk)->download($attachment['path'], $filename, [
+            'Content-Type' => (string) ($attachment['mime_type'] ?? 'application/octet-stream'),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     private function prepareTherapeuticPayload(array $data): array
     {
         $data['notes'] = $data['notes'] ?? '';
@@ -202,18 +222,14 @@ class PatientRecordController extends Controller
         $saved = [];
 
         foreach ($files as $file) {
-            if (! $file instanceof UploadedFile) {
-                continue;
-            }
-
-            $path = $file->store("patient-records/{$patient->id}", 'public');
+            $path = $file->store("patient-records/{$patient->id}", 'private');
             $saved[] = [
                 'id' => (string) Str::uuid(),
                 'name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getClientMimeType(),
                 'size' => $file->getSize(),
                 'path' => $path,
-                'url' => Storage::disk('public')->url($path),
+                'disk' => 'private',
                 'uploaded_at' => now()->toIso8601String(),
             ];
         }
@@ -248,7 +264,7 @@ class PatientRecordController extends Controller
     {
         $path = $attachment['path'] ?? null;
         if ($path) {
-            Storage::disk('public')->delete($path);
+            Storage::disk((string) ($attachment['disk'] ?? 'public'))->delete($path);
         }
     }
 

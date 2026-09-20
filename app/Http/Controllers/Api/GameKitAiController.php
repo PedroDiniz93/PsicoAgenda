@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\GameKitTemplate;
+use App\Models\GameKitTemplateCard;
 use App\Services\GameKitAiService;
 use App\Services\GameKitService;
 use Illuminate\Http\Request;
@@ -40,10 +41,29 @@ class GameKitAiController extends Controller
 
     public function index(Request $request)
     {
-        $templates = GameKitTemplate::with('cards')
-            ->where('psychologist_id', $this->psychologistId($request))->latest()->limit(6)->get()
-            ->map(function (GameKitTemplate $template) {
-                $cards = $template->cards->where('version', $template->current_version)->sortBy('position')->values();
+        $templates = GameKitTemplate::query()
+            ->where('psychologist_id', $this->psychologistId($request))->latest()->limit(6)->get();
+
+        $cardsByTemplate = collect();
+        if ($templates->isNotEmpty()) {
+            $cardsByTemplate = GameKitTemplateCard::query()
+                ->where(function ($query) use ($templates): void {
+                    foreach ($templates as $template) {
+                        $query->orWhere(function ($versionQuery) use ($template): void {
+                            $versionQuery
+                                ->where('gamekit_template_id', $template->id)
+                                ->where('version', $template->current_version);
+                        });
+                    }
+                })
+                ->orderBy('position')
+                ->get(['id', 'gamekit_template_id', 'position', 'context', 'question', 'options'])
+                ->groupBy('gamekit_template_id');
+        }
+
+        $templates = $templates
+            ->map(function (GameKitTemplate $template) use ($cardsByTemplate): array {
+                $cards = $cardsByTemplate->get($template->id, collect())->values();
 
                 return [
                     'id' => $template->id,
@@ -56,7 +76,7 @@ class GameKitAiController extends Controller
                     'duration_minutes' => $template->duration_minutes,
                     'status' => $template->status,
                     'current_version' => $template->current_version,
-                    'cards' => $cards->map(fn ($card) => [
+                    'cards' => $cards->map(fn (GameKitTemplateCard $card): array => [
                         'id' => $card->id, 'position' => $card->position, 'context' => $card->context,
                         'question' => $card->question, 'options' => $card->options,
                     ])->values(),
@@ -176,13 +196,15 @@ class GameKitAiController extends Controller
 
     private function parameters(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'age_group' => ['required', 'string', 'max:80'], 'theme' => ['required', 'string', 'max:120'],
             'activity_type' => ['required', 'string', 'max:80'], 'difficulty' => ['required', 'string', 'max:40'],
             'duration_minutes' => ['nullable', 'integer', 'min:5', 'max:180'], 'card_count' => ['nullable', 'integer', 'min:6', 'max:12'],
             'language' => ['nullable', 'string', 'max:20'],
         ]);
         $data['duration_minutes'] = $data['duration_minutes'] ?? 45;
+
+        return $data;
     }
 
     private function templateData(Request $request): array

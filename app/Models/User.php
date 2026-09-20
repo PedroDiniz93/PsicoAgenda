@@ -3,10 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ * @property string $role
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property string|null $email_verification_code_hash
+ * @property \Illuminate\Support\Carbon|null $email_verification_expires_at
+ * @property \Illuminate\Support\Carbon|null $email_verification_sent_at
+ * @property-read Psychologist|null $psychologist
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
@@ -34,7 +47,7 @@ class User extends Authenticatable
         'email_verification_sent_at' => 'datetime',
     ];
 
-    public function psychologist()
+    public function psychologist(): HasOne
     {
         return $this->hasOne(Psychologist::class);
     }

@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property int $id
+ * @property-read GameKitMemoryGame $game
+ */
 class GameKitMemorySession extends Model
 {
     protected $table = 'gamekit_memory_sessions';

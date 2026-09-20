@@ -17,6 +17,20 @@ const toLocalMonth = (date = new Date()) => {
 
 const moneyNumber = (value: unknown) => Number(value ?? 0);
 
+const formatMonthLabel = (value?: string) => {
+    if (!value) return '';
+
+    const date = new Date(`${value}-01T00:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const label = new Intl.DateTimeFormat('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+    }).format(date);
+
+    return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
 const formatDate = (value?: string) => {
     if (!value) return 'Sem vencimento';
 
@@ -647,7 +661,7 @@ onMounted(() => {
                             <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500">{{ sectionTitle.description }}</p>
                         </div>
                         <span class="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                            {{ dashboard.period?.label }}
+                            {{ formatMonthLabel(dashboard.period?.month) || dashboard.period?.label }}
                         </span>
                     </div>
                 </section>
@@ -716,12 +730,19 @@ onMounted(() => {
 
                         <label class="space-y-1.5">
                             <span class="text-sm font-medium text-slate-700">Mês e ano</span>
-                            <input
-                                v-model="selectedMonth"
-                                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
-                                type="month"
-                                @change="fetchDashboard"
-                            />
+                            <div class="relative h-10">
+                                <span class="pointer-events-none absolute inset-0 z-0 flex items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800">
+                                    {{ formatMonthLabel(selectedMonth) }}
+                                </span>
+                                <input
+                                    v-model="selectedMonth"
+                                    class="relative z-10 h-10 w-full cursor-pointer opacity-0"
+                                    aria-label="Escolher mês e ano"
+                                    lang="pt-BR"
+                                    type="month"
+                                    @change="fetchDashboard"
+                                />
+                            </div>
                         </label>
 
                         <button

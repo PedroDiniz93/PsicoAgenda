@@ -6,6 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string|null $phone
+ * @property string|null $email
+ * @property string|null $timezone
+ * @property int|null $session_duration
+ * @property int|null $daily_appointment_limit
+ * @property bool $allow_online
+ * @property bool $allow_in_person
+ * @property bool $whatsapp_confirm_enabled
+ * @property int|null $whatsapp_confirm_days_before
+ * @property string|null $whatsapp_sender_phone_id
+ * @property string|null $whatsapp_sender_display_number
+ * @property bool $email_confirm_enabled
+ * @property bool $sms_confirm_enabled
+ * @property-read User|null $user
+ */
 class Psychologist extends Model
 {
     protected $fillable = [

@@ -27,8 +27,16 @@ class WhatsAppWebhookController extends Controller
 
     public function receive(Request $request): JsonResponse
     {
+        if (! $this->hasValidSignature($request)) {
+            return response()->json(['message' => 'Assinatura inválida.'], 401);
+        }
+
         $payload = $request->all();
-        $entries = $payload['entry'] ?? [];
+        if (($payload['object'] ?? null) !== 'whatsapp_business_account' || ! is_array($payload['entry'] ?? null)) {
+            return response()->json(['message' => 'Payload inválido.'], 422);
+        }
+
+        $entries = $payload['entry'];
 
         foreach ($entries as $entry) {
             $changes = $entry['changes'] ?? [];
@@ -62,6 +70,9 @@ class WhatsAppWebhookController extends Controller
 
         $phone = $this->normalizePhone($from);
         $senderPhoneId = $metadata['phone_number_id'] ?? null;
+        if (! $senderPhoneId) {
+            return;
+        }
 
         $appointmentQuery = Appointment::query()
             ->with('psychologist:id,name,whatsapp_sender_phone_id')
@@ -78,9 +89,7 @@ class WhatsAppWebhookController extends Controller
 
         if (! $appointment) {
             Log::info('WhatsApp confirmation message received but appointment not found', [
-                'from' => $from,
                 'sender_phone_id' => $senderPhoneId,
-                'message' => $body,
             ]);
 
             return;
@@ -116,6 +125,20 @@ class WhatsAppWebhookController extends Controller
                     ->orWhere('whatsapp_sender_phone_id', '');
             }
         });
+    }
+
+    private function hasValidSignature(Request $request): bool
+    {
+        $appSecret = (string) config('services.whatsapp.app_secret');
+        $signature = (string) $request->header('X-Hub-Signature-256');
+
+        if ($appSecret === '' || ! str_starts_with($signature, 'sha256=')) {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $request->getContent(), $appSecret);
+
+        return hash_equals($expected, substr($signature, 7));
     }
 
     private function looksLikeConfirmation(string $body): bool

@@ -7,6 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read string|null $last_appointment_at
+ * @property int $id
+ * @property int $psychologist_id
+ * @property string $name
+ * @property string|null $phone
+ * @property string|null $email
+ * @property string|null $cpf
+ * @property \Illuminate\Support\Carbon|null $birth_date
+ * @property string|null $status
+ * @property string|null $notes
+ * @property-read Psychologist|null $psychologist
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Appointment> $appointments
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, PatientRecord> $records
+ */
 class Patient extends Model
 {
     use HasFactory;

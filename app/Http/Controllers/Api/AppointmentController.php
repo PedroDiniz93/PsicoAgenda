@@ -84,7 +84,9 @@ class AppointmentController extends Controller
             $query->where('start_at', '<=', $to);
         }
 
-        return response()->json($query->get());
+        $limit = max(1, min($request->integer('limit', 500), 500));
+
+        return response()->json($query->limit($limit)->get());
     }
 
     public function store(AppointmentStoreRequest $request)

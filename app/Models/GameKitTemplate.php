@@ -6,6 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $psychologist_id
+ * @property string $name
+ * @property string $format
+ * @property string $age_group
+ * @property string $theme
+ * @property string $activity_type
+ * @property string $difficulty
+ * @property int|null $duration_minutes
+ * @property string $status
+ * @property int $current_version
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, GameKitTemplateCard> $cards
+ */
 class GameKitTemplate extends Model
 {
     protected $table = 'gamekit_templates';

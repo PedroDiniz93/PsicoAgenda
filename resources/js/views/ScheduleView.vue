@@ -268,6 +268,13 @@ const scheduleWeekLabel = computed(() => {
     return `${formatter.format(start)} – ${formatter.format(end)}`;
 });
 
+const scheduleDateLabel = computed(() => {
+    const date = new Date(`${scheduleDate.value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return scheduleDate.value;
+
+    return new Intl.DateTimeFormat('pt-BR').format(date);
+});
+
 const allCalendarEvents = computed(() => [...appointments.value, ...externalEvents.value]);
 
 const appointmentsByDay = computed(() => {
@@ -1151,12 +1158,19 @@ onBeforeUnmount(() => {
                         Próxima semana
                         <AppIcon name="ChevronRight" class="size-4" />
                     </button>
-                    <input
-                        v-model="scheduleDate"
-                        class="field-input h-10 w-36"
-                        type="date"
-                        @change="handleScheduleDateChange"
-                    />
+                    <div class="relative h-10 w-36">
+                        <span class="pointer-events-none absolute inset-0 z-0 flex items-center rounded-lg border border-[#c2c7cd] bg-white px-3 text-sm text-slate-700">
+                            {{ scheduleDateLabel }}
+                        </span>
+                        <input
+                            v-model="scheduleDate"
+                            class="relative z-10 h-10 w-full cursor-pointer opacity-0"
+                            aria-label="Escolher semana da agenda"
+                            lang="pt-BR"
+                            type="date"
+                            @change="handleScheduleDateChange"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -1201,6 +1215,7 @@ onBeforeUnmount(() => {
 
                     <template v-else>
                         <div
+                            v-if="!appointmentsEmpty"
                             class="relative hidden overflow-x-auto lg:block"
                             :class="{ 'blur-[2px]': externalEventsLoading }"
                         >
@@ -1359,6 +1374,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div
+                            v-if="!appointmentsEmpty"
                             class="relative space-y-3 lg:hidden"
                             :class="{ 'blur-[2px]': externalEventsLoading }"
                         >
@@ -1426,11 +1442,10 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div
-                            v-if="appointmentsEmpty"
-                            class="rounded-2xl border border-dashed border-[#d8d2c5] px-6 py-8 text-center text-sm text-[#58635f]"
-                        >
-                            Nenhum agendamento encontrado para esta semana.
+                        <div v-if="appointmentsEmpty" class="rounded-2xl border border-dashed border-[#d8d2c5] bg-[#fcfaf6] px-6 py-10 text-center text-sm text-[#58635f]">
+                            <AppIcon name="CalendarDays" class="mx-auto mb-3 size-7 text-[#6e5939]" />
+                            <p class="font-semibold text-slate-900">Sua semana está livre</p>
+                            <p class="mt-1">Nenhum agendamento encontrado entre {{ scheduleWeekLabel }}.</p>
                             <div class="mt-4">
                                 <button class="btn-secondary" type="button" @click="openCreateAppointment">
                                     <AppIcon name="CalendarPlus2" class="size-4" />

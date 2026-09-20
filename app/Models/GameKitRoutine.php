@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property \Illuminate\Support\Carbon|null $reference_date
+ * @property string $status
+ * @property int $current_version
+ * @property-read GameKitRoutineVersion|null $currentVersion
+ */
 class GameKitRoutine extends Model
 {
     protected $table = 'gamekit_routines';

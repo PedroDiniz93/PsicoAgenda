@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $theme
+ * @property int $word_count
+ * @property array<int, string> $words
+ */
 class GameKitHangmanGame extends Model
 {
     protected $table = 'gamekit_hangman_games';

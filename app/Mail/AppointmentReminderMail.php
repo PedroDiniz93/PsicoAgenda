@@ -6,7 +6,6 @@ use App\Models\Appointment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
 
 class AppointmentReminderMail extends Mailable
 {
@@ -20,11 +19,9 @@ class AppointmentReminderMail extends Mailable
     {
         $psychologist = $this->appointment->psychologist;
         $patient = $this->appointment->patient;
-        $timezone = $psychologist?->timezone ?? config('app.timezone');
+        $timezone = $psychologist->timezone ?? config('app.timezone');
 
-        $startAt = $this->appointment->start_at instanceof Carbon
-            ? $this->appointment->start_at->copy()
-            : Carbon::parse($this->appointment->start_at);
+        $startAt = $this->appointment->start_at->copy();
 
         $startAt->setTimezone($timezone);
 

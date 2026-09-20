@@ -74,9 +74,6 @@ onBeforeUnmount(() => {
                         <p class="mt-0.5 text-xs capitalize text-[var(--spa-ink-muted)]">{{ todayLabel }}</p>
                     </div>
                 </div>
-                <div class="hidden size-9 shrink-0 items-center justify-center rounded-full border border-[var(--spa-border)] bg-[var(--spa-surface)] text-sm font-bold text-[var(--spa-accent)] sm:flex lg:hidden">
-                    {{ userName.slice(0, 1).toUpperCase() }}
-                </div>
             </div>
 
             <form ref="searchContainerRef" class="relative w-full lg:ml-auto lg:max-w-xl lg:flex-1" @submit.prevent="$emit('searchPatients')">

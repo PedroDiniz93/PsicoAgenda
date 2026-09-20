@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property-read GameKitRoutine|null $routine
+ */
 class GameKitRoutineLink extends Model
 {
     protected $table = 'gamekit_routine_links';

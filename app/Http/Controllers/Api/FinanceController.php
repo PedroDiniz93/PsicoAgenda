@@ -42,7 +42,14 @@ class FinanceController extends Controller
         $monthEnd = $monthEndLocal->copy()->timezone(config('app.timezone'));
         $todayLocal = Carbon::now($timezone)->startOfDay();
 
+        $appointmentColumns = [
+            'id', 'patient_id', 'start_at', 'end_at', 'status', 'type', 'price', 'paid_at',
+            'payment_due_at', 'payment_method', 'payment_link', 'payment_notes', 'receipt_number',
+            'receipt_issued_at',
+        ];
+
         $monthAppointments = Appointment::query()
+            ->select($appointmentColumns)
             ->with('patient:id,name,email,phone,cpf,status')
             ->where('psychologist_id', $psychologist->id)
             ->whereIn('status', self::CHARGEABLE_STATUSES)
@@ -51,6 +58,7 @@ class FinanceController extends Controller
             ->get();
 
         $openAppointments = Appointment::query()
+            ->select($appointmentColumns)
             ->with('patient:id,name,email,phone,cpf,status')
             ->where('psychologist_id', $psychologist->id)
             ->whereIn('status', self::CHARGEABLE_STATUSES)
@@ -272,7 +280,7 @@ class FinanceController extends Controller
                 return [
                     'patient' => [
                         'id' => $first->patient?->id,
-                        'name' => $first->patient?->name ?? 'Paciente sem nome',
+                        'name' => $first->patient->name,
                         'email' => $first->patient?->email,
                         'phone' => $first->patient?->phone,
                     ],
@@ -333,6 +341,7 @@ class FinanceController extends Controller
     private function recentReceipts(Psychologist $psychologist): array
     {
         return Appointment::query()
+            ->select(['id', 'patient_id', 'start_at', 'end_at', 'type', 'price', 'payment_method', 'receipt_number', 'receipt_issued_at'])
             ->with('patient:id,name,email,phone,cpf,status')
             ->where('psychologist_id', $psychologist->id)
             ->whereNotNull('receipt_issued_at')
@@ -355,13 +364,13 @@ class FinanceController extends Controller
             'id' => $appointment->id,
             'patient' => [
                 'id' => $appointment->patient?->id,
-                'name' => $appointment->patient?->name ?? 'Paciente sem nome',
+                'name' => $appointment->patient->name,
                 'email' => $appointment->patient?->email,
                 'phone' => $appointment->patient?->phone,
                 'cpf' => $appointment->patient?->cpf,
             ],
-            'start_at' => $appointment->start_at?->toIso8601String(),
-            'end_at' => $appointment->end_at?->toIso8601String(),
+            'start_at' => $appointment->start_at->toIso8601String(),
+            'end_at' => $appointment->end_at->toIso8601String(),
             'status' => $appointment->status,
             'status_label' => self::STATUS_LABELS[$appointment->status] ?? $appointment->status,
             'price' => $this->money($appointment->price),
@@ -399,12 +408,12 @@ class FinanceController extends Controller
                 : null,
             'appointment' => [
                 'id' => $appointment->id,
-                'start_at' => $appointment->start_at?->copy()->setTimezone($timezone)->toIso8601String(),
-                'end_at' => $appointment->end_at?->copy()->setTimezone($timezone)->toIso8601String(),
+                'start_at' => $appointment->start_at->copy()->setTimezone($timezone)->toIso8601String(),
+                'end_at' => $appointment->end_at->copy()->setTimezone($timezone)->toIso8601String(),
                 'type' => $appointment->type,
             ],
             'patient' => [
-                'name' => $appointment->patient?->name ?? 'Paciente sem nome',
+                'name' => $appointment->patient->name,
                 'email' => $appointment->patient?->email,
                 'phone' => $appointment->patient?->phone,
                 'cpf' => $appointment->patient?->cpf,

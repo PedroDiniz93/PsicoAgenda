@@ -214,8 +214,8 @@ class GoogleCalendarService
     {
         $timezone = $psychologist->timezone ?? config('app.timezone', 'UTC');
 
-        $start = $appointment->start_at?->copy()->tz($timezone);
-        $end = $appointment->end_at?->copy()->tz($timezone);
+        $start = $appointment->start_at->copy()->tz($timezone);
+        $end = $appointment->end_at->copy()->tz($timezone);
 
         $summary = trim(sprintf(
             'Sessão com %s',
@@ -238,11 +238,11 @@ class GoogleCalendarService
             'summary' => $summary,
             'description' => implode(PHP_EOL, $descriptionParts),
             'start' => [
-                'dateTime' => $start?->toIso8601String(),
+                'dateTime' => $start->toIso8601String(),
                 'timeZone' => $timezone,
             ],
             'end' => [
-                'dateTime' => $end?->toIso8601String(),
+                'dateTime' => $end->toIso8601String(),
                 'timeZone' => $timezone,
             ],
             'reminders' => [
@@ -342,8 +342,8 @@ class GoogleCalendarService
         if (! $response->successful() || ! isset($response['access_token'])) {
             Log::warning('Resposta inválida ao atualizar token do Google Calendar.', [
                 'psychologist_id' => $psychologist->id,
-                'status' => $response?->status(),
-                'body' => $response?->body(),
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
 
             return null;

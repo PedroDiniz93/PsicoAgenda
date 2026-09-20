@@ -129,7 +129,7 @@ class AdminPsychologistController extends Controller
 
         $psychologist->loadMissing('user');
 
-        abort_unless($psychologist->user, 404, 'Usuário do psicólogo não encontrado.');
+        abort_unless($psychologist->user !== null, 404, 'Usuário do psicólogo não encontrado.');
 
         if (! $psychologist->user->requiresEmailVerification()) {
             return response()->json([

@@ -174,8 +174,8 @@ class AvailabilityController extends Controller
     {
         return [
             'id' => $block->id,
-            'starts_at' => $block->starts_at?->toIso8601String(),
-            'ends_at' => $block->ends_at?->toIso8601String(),
+            'starts_at' => $block->starts_at->toIso8601String(),
+            'ends_at' => $block->ends_at->toIso8601String(),
             'type' => $block->type,
             'reason' => $block->reason,
         ];

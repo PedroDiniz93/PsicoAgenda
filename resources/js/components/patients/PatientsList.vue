@@ -224,7 +224,7 @@ const avatarClasses = (status) => {
             </div>
         </template>
 
-        <div v-if="!errorMessage && !privacyMode" class="flex flex-wrap items-center justify-between gap-4 border-t border-[#c2c7cd]/20 bg-[#f3f4f3]/20 px-6 py-4 text-sm text-[#73787d]">
+        <div v-if="!errorMessage && !privacyMode && patients.length" class="flex flex-wrap items-center justify-between gap-4 border-t border-[#c2c7cd]/20 bg-[#f3f4f3]/20 px-6 py-4 text-sm text-[#73787d]">
             <p>{{ paginationSummary }}</p>
             <div class="flex items-center gap-2">
                 <button

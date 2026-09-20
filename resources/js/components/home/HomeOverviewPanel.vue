@@ -89,6 +89,7 @@ const weeklyAttendances = computed(() => props.weeklyAttendances);
 
 const weeklyMax = computed(() => Math.max(0, ...weeklyAttendances.value.days.map((day) => day.count)));
 const weeklyAverage = computed(() => Number(weeklyAttendances.value.average_daily ?? 0).toFixed(1));
+const weeklyHasData = computed(() => weeklyAttendances.value.total > 0 || weeklyMax.value > 0);
 
 const accentClasses: Record<Accent, { border: string; icon: string; soft: string; value: string }> = {
     primary: {
@@ -208,18 +209,18 @@ const barHeight = (count: number) => {
 
         <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <section class="surface-panel p-6">
-                <div class="flex items-start justify-between gap-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Próximos Pacientes</h3>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Próximas sessões</h3>
                     </div>
 
-                    <RouterLink class="btn-secondary h-10" :to="{ name: 'schedule' }">
+                    <RouterLink class="btn-secondary h-10 w-full justify-center sm:w-auto" :to="{ name: 'schedule' }">
                         Ver agenda completa
                     </RouterLink>
                 </div>
 
                 <div v-if="nextPatients.length === 0" class="empty-state mt-5 !py-8 text-sm">
-                    Sem próximos pacientes agendados.
+                    Nenhuma sessão futura agendada.
                 </div>
 
                 <div v-else class="mt-5 space-y-3">
@@ -252,7 +253,7 @@ const barHeight = (count: number) => {
             <section class="surface-panel p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Atendimentos Semanais</h3>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Atendimentos semanais</h3>
                     </div>
 
                     <div class="flex items-center gap-2 text-xs font-semibold text-[#58635f]">
@@ -261,7 +262,19 @@ const barHeight = (count: number) => {
                     </div>
                 </div>
 
-                <div class="mt-5 flex h-52 items-end justify-between gap-2 px-1">
+                <div v-if="dashboardLoading" class="empty-state mt-5 !py-8 text-sm" role="status" aria-live="polite">
+                    <AppIcon name="LoaderCircle" class="mx-auto mb-2 size-5 animate-spin text-[var(--spa-accent)]" />
+                    Carregando atendimentos...
+                </div>
+
+                <div v-else-if="!weeklyHasData" class="empty-state mt-5 !py-8 text-sm">
+                    Nenhum atendimento concluído nesta semana.
+                    <RouterLink class="mt-4 inline-flex btn-secondary" :to="{ name: 'schedule' }">
+                        Abrir agenda
+                    </RouterLink>
+                </div>
+
+                <div v-else class="mt-5 flex h-52 items-end justify-between gap-2 px-1">
                     <div v-for="day in weeklyAttendances.days" :key="day.key" class="flex flex-1 flex-col items-center gap-2">
                         <div class="flex h-44 w-full flex-col justify-end rounded-t-lg bg-[#eeeeed] px-2 pb-2">
                             <span class="mb-2 text-center text-xs font-semibold text-[#415f76]">{{ day.count }}</span>

@@ -31,13 +31,25 @@ class ReportController extends Controller
             ->whereNull('paid_at')
             ->whereIn('status', ['scheduled', 'done', 'missed']);
 
-        $paidValue = (clone $paidBuilder)->sum('price');
-        $paidCount = (clone $paidBuilder)->count();
-        $pendingValue = (clone $pendingBuilder)->sum('price');
-        $pendingCount = (clone $pendingBuilder)->count();
+        $summary = (clone $baseQuery)
+            ->selectRaw('COUNT(*) as total_sessions')
+            ->selectRaw('COUNT(DISTINCT patient_id) as unique_patients')
+            ->selectRaw('SUM(CASE WHEN paid_at IS NOT NULL THEN 1 ELSE 0 END) as paid_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN paid_at IS NOT NULL THEN price ELSE 0 END), 0) as paid_value')
+            ->selectRaw("SUM(CASE WHEN paid_at IS NULL AND status IN ('scheduled', 'done', 'missed') THEN 1 ELSE 0 END) as pending_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN paid_at IS NULL AND status IN ('scheduled', 'done', 'missed') THEN price ELSE 0 END), 0) as pending_value")
+            ->selectRaw("SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done_count")
+            ->selectRaw("SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) as canceled_count")
+            ->selectRaw("SUM(CASE WHEN status = 'missed' THEN 1 ELSE 0 END) as missed_count")
+            ->toBase()
+            ->first();
 
-        $totalSessions = (clone $baseQuery)->count();
-        $uniquePatients = (clone $baseQuery)->distinct('patient_id')->count('patient_id');
+        $paidValue = (float) $summary->paid_value;
+        $paidCount = (int) $summary->paid_count;
+        $pendingValue = (float) $summary->pending_value;
+        $pendingCount = (int) $summary->pending_count;
+        $totalSessions = (int) $summary->total_sessions;
+        $uniquePatients = (int) $summary->unique_patients;
 
         $paidList = $this->formatAppointmentsForReport(clone $paidBuilder);
         $pendingList = $this->formatAppointmentsForReport(clone $pendingBuilder);
@@ -52,9 +64,9 @@ class ReportController extends Controller
             (clone $baseQuery)->where('status', 'missed')
         );
 
-        $doneCount = count($doneList);
-        $canceledCount = count($canceledList);
-        $missedCount = count($missedList);
+        $doneCount = (int) $summary->done_count;
+        $canceledCount = (int) $summary->canceled_count;
+        $missedCount = (int) $summary->missed_count;
 
         $attendanceBase = $doneCount + $missedCount;
         $attendanceRate = $attendanceBase > 0 ? $doneCount / $attendanceBase : null;
@@ -137,6 +149,7 @@ class ReportController extends Controller
         return number_format((float) $value, 2, '.', '');
     }
 
+    /** @param Builder<Appointment> $query */
     private function formatAppointmentsForReport(Builder $query): array
     {
         return $query
@@ -148,10 +161,10 @@ class ReportController extends Controller
                     'id' => $appointment->id,
                     'patient' => [
                         'id' => $appointment->patient_id,
-                        'name' => $appointment->patient?->name,
+                        'name' => $appointment->patient->name,
                     ],
-                    'start_at' => $appointment->start_at?->toIso8601String(),
-                    'end_at' => $appointment->end_at?->toIso8601String(),
+                    'start_at' => $appointment->start_at->toIso8601String(),
+                    'end_at' => $appointment->end_at->toIso8601String(),
                     'status' => $appointment->status,
                     'price' => $this->formatMoney($appointment->price),
                     'paid_at' => $appointment->paid_at?->toIso8601String(),

@@ -382,7 +382,7 @@ class GameKitAiService
             if (! is_array($card) || ! is_string($card['context'] ?? null) || ! is_string($card['question'] ?? null) || ! is_array($card['options'] ?? null) || count($card['options']) !== 3) {
                 throw new RuntimeException('Uma carta gerada não passou na validação.');
             }
-            $options = array_values(array_filter(array_map('trim', $card['options']), fn ($value) => is_string($value) && $value !== ''));
+            $options = array_values(array_filter(array_map('trim', $card['options']), fn ($value) => $value !== ''));
             if (count($options) !== 3 || count(array_unique($options)) !== 3) {
                 throw new RuntimeException('As opções de uma carta precisam ser três alternativas distintas.');
             }

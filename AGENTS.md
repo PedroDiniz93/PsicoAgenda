@@ -11,7 +11,7 @@
 ## RuFlo Workflow
 
 1. Make a technical plan.
-2. Split work across the relevant fronts: `frontend-vue`, `backend-node`, `database`, `security`, `qa-tests`, `code-review`.
+2. Split work across the relevant fronts: `frontend-vue`, `backend-laravel`, `database`, `security`, `qa-tests`, `code-review`.
 3. Implement in small steps with validation after each step.
 4. Record what changed in each relevant front when behavior, security, data, or tests change.
 
@@ -47,8 +47,9 @@ Output: findings, files, risk, next step
 - Keep responses short unless the user asks for detail.
 - Follow existing Laravel controller/request/service patterns.
 - Follow existing Vue Composition API style.
+- For UX changes, preserve clear loading, empty, error, success, keyboard-focus, and responsive states.
+- Keep UI copy in clear Portuguese and avoid invented patient or clinical data.
 - Prefer structured APIs and model relationships over ad hoc string manipulation.
-- Prefer clear Portuguese UI copy.
 
 ## Validation Baseline
 
@@ -57,8 +58,20 @@ Output: findings, files, risk, next step
 - `php artisan test`
 - `php artisan route:list`
 - `php artisan serve --host=127.0.0.1 --port=8000`
+- `vendor/bin/pint --test`
+- `vendor/bin/phpstan analyse --no-progress`
+- `composer audit`
 
 The app is normally available at `http://127.0.0.1:8000`.
+
+Run the smallest relevant checks first, then the full suite when the change affects shared code. Report blocked checks with the exact missing extension, service, or command.
+
+## Security and privacy checks
+
+- For every API change, verify authentication, psychologist ownership, validation, and unauthorized responses.
+- Do not add patient or clinical fields to logs, analytics, frontend debug output, or error messages without an explicit need.
+- Review dependency changes with `composer audit` and avoid suppressing security findings without documenting the reason.
+- For external integrations, keep credentials in environment variables and verify webhook signatures or tokens where supported.
 
 ## Reference
 

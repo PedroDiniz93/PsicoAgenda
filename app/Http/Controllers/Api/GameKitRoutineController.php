@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\GameKitRoutine;
 use App\Models\GameKitRoutineLink;
+use App\Models\GameKitRoutineVersion;
 use App\Models\Patient;
 use App\Services\GameKitAiService;
 use Illuminate\Http\Request;
@@ -106,8 +107,10 @@ class GameKitRoutineController extends Controller
         $link = GameKitRoutineLink::with(['routine.currentVersion.blocks'])
             ->where('token_hash', hash('sha256', $token))->where('status', 'active')->where('expires_at', '>', now())->first();
         abort_if(! $link, 404, 'Esta rotina não está mais disponível.');
+        $routine = $link->routine;
+        abort_if(! $routine, 404, 'Esta rotina não está mais disponível.');
 
-        return response()->json(['routine' => $this->publicPayload($link->routine)]);
+        return response()->json(['routine' => $this->publicPayload($routine)]);
     }
 
     private function routineData(Request $request): array
@@ -135,7 +138,9 @@ class GameKitRoutineController extends Controller
 
     private function saveVersion(GameKitRoutine $routine, array $blocks, int $version, ?string $summary): void
     {
-        $record = $routine->versions()->create(['version' => $version, 'summary' => $summary]);
+        $record = new GameKitRoutineVersion(['version' => $version, 'summary' => $summary]);
+        $record->routine()->associate($routine);
+        $record->save();
         foreach ($blocks as $position => $block) {
             $record->blocks()->create([...$block, 'position' => $position + 1, 'icon' => in_array($block['icon'] ?? null, self::ICONS, true) ? $block['icon'] : 'CircleCheck']);
         }

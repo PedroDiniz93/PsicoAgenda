@@ -22,19 +22,19 @@ use App\Http\Controllers\Api\WhatsAppWebhookController;
 use App\Http\Middleware\EnsurePsychologistEmailIsVerified;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-recovery');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/auth/email-verification/verify', [AuthController::class, 'verifyEmail']);
-    Route::post('/auth/email-verification/resend', [AuthController::class, 'resendEmailVerification']);
+    Route::post('/auth/email-verification/resend', [AuthController::class, 'resendEmailVerification'])->middleware('throttle:email-verification-resend');
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify']);
-Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'receive']);
+Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'receive'])->middleware('throttle:whatsapp-webhook');
 
 Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->group(function () {
     Route::get('/admin/psychologists', [AdminPsychologistController::class, 'index']);
@@ -52,8 +52,8 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::get('/google/calendar/events', [GoogleCalendarController::class, 'events']);
     Route::delete('/google/calendar/events/{eventId}', [GoogleCalendarController::class, 'destroy']);
     Route::get('/home/dashboard', [HomeDashboardController::class, 'show']);
-    Route::post('/gamekit/ai/generate', [GameKitAiController::class, 'generate']);
-    Route::post('/gamekit/default-model', [GameKitAiController::class, 'defaultModel']);
+    Route::post('/gamekit/ai/generate', [GameKitAiController::class, 'generate'])->middleware('throttle:gamekit-ai');
+    Route::post('/gamekit/default-model', [GameKitAiController::class, 'defaultModel'])->middleware('throttle:gamekit-ai');
     Route::get('/gamekit/templates', [GameKitAiController::class, 'index']);
     Route::post('/gamekit/templates', [GameKitAiController::class, 'store']);
     Route::get('/gamekit/templates/{id}', [GameKitAiController::class, 'show'])->whereNumber('id');
@@ -65,7 +65,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::post('/gamekit/templates/{id}/generate-card', [GameKitAiController::class, 'generateCard'])->whereNumber('id');
     Route::get('/gamekit/memory/games', [GameKitMemoryController::class, 'index']);
     Route::post('/gamekit/memory/games', [GameKitMemoryController::class, 'store']);
-    Route::post('/gamekit/memory/ai-generate', [GameKitMemoryController::class, 'generateWithAi']);
+    Route::post('/gamekit/memory/ai-generate', [GameKitMemoryController::class, 'generateWithAi'])->middleware('throttle:gamekit-ai');
     Route::get('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'show'])->whereNumber('id');
     Route::put('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'update'])->whereNumber('id');
     Route::delete('/gamekit/memory/games/{id}', [GameKitMemoryController::class, 'destroy'])->whereNumber('id');
@@ -75,12 +75,12 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::post('/gamekit/memory/sessions/{id}/link', [GameKitMemoryController::class, 'link'])->whereNumber('id');
     Route::get('/gamekit/routines', [GameKitRoutineController::class, 'index']);
     Route::post('/gamekit/routines', [GameKitRoutineController::class, 'store']);
-    Route::post('/gamekit/routines/ai-generate', [GameKitRoutineController::class, 'generateWithAi']);
+    Route::post('/gamekit/routines/ai-generate', [GameKitRoutineController::class, 'generateWithAi'])->middleware('throttle:gamekit-ai');
     Route::get('/gamekit/routines/{id}', [GameKitRoutineController::class, 'show'])->whereNumber('id');
     Route::put('/gamekit/routines/{id}', [GameKitRoutineController::class, 'update'])->whereNumber('id');
     Route::delete('/gamekit/routines/{id}', [GameKitRoutineController::class, 'destroy'])->whereNumber('id');
     Route::post('/gamekit/routines/{id}/link', [GameKitRoutineController::class, 'link'])->whereNumber('id');
-    Route::post('/gamekit/hangman/ai-generate', [GameKitChildGamesController::class, 'generateHangman']);
+    Route::post('/gamekit/hangman/ai-generate', [GameKitChildGamesController::class, 'generateHangman'])->middleware('throttle:gamekit-ai');
     Route::get('/gamekit/hangman/games', [GameKitChildGamesController::class, 'hangmanGames']);
     Route::post('/gamekit/hangman/games', [GameKitChildGamesController::class, 'storeHangman']);
     Route::put('/gamekit/hangman/games/{id}', [GameKitChildGamesController::class, 'updateHangman'])->whereNumber('id');
@@ -113,6 +113,9 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
         ->whereNumber('patient')
         ->whereNumber('record');
     Route::delete('/patients/{patient}/records/{record}', [PatientRecordController::class, 'destroy'])
+        ->whereNumber('patient')
+        ->whereNumber('record');
+    Route::get('/patients/{patient}/records/{record}/attachments/{attachment}', [PatientRecordController::class, 'downloadAttachment'])
         ->whereNumber('patient')
         ->whereNumber('record');
 

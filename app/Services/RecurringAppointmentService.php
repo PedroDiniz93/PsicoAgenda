@@ -71,7 +71,7 @@ class RecurringAppointmentService
         }
 
         $diffDays = $startDate->diffInDays($referenceDate);
-        $weeks = intdiv($diffDays, 7);
+        $weeks = intdiv((int) $diffDays, 7);
         $candidate = $startDate->copy()->addWeeks($weeks);
 
         while ($candidate->lt($referenceDate)) {

@@ -13,6 +13,31 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (! id.includes('node_modules')) {
+                        return undefined;
+                    }
+
+                    if (id.includes('/@lucide/vue/')) {
+                        return 'icons';
+                    }
+
+                    if (id.includes('/vue/') || id.includes('/@vue/') || id.includes('/vue-router/') || id.includes('/pinia/')) {
+                        return 'framework';
+                    }
+
+                    if (id.includes('/axios/')) {
+                        return 'http-client';
+                    }
+
+                    return undefined;
+                },
+            },
+        },
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
