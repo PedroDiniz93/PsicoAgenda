@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\GameKitChildGamesController;
 use App\Http\Controllers\Api\GameKitController;
 use App\Http\Controllers\Api\GameKitMemoryController;
 use App\Http\Controllers\Api\GameKitRoutineController;
+use App\Http\Controllers\Api\GameKitVisualActivityController;
 use App\Http\Controllers\Api\GoogleCalendarController;
 use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\HomeDashboardController;
@@ -80,6 +81,11 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::put('/gamekit/routines/{id}', [GameKitRoutineController::class, 'update'])->whereNumber('id');
     Route::delete('/gamekit/routines/{id}', [GameKitRoutineController::class, 'destroy'])->whereNumber('id');
     Route::post('/gamekit/routines/{id}/link', [GameKitRoutineController::class, 'link'])->whereNumber('id');
+    Route::get('/gamekit/visual-activities', [GameKitVisualActivityController::class, 'index']);
+    Route::post('/gamekit/visual-activities/generate', [GameKitVisualActivityController::class, 'generate'])->middleware('throttle:gamekit-ai');
+    Route::get('/gamekit/visual-activities/{id}/download', [GameKitVisualActivityController::class, 'download'])->whereNumber('id')->name('gamekit.visual.download');
+    Route::post('/gamekit/visual-activities/{id}/publish', [GameKitVisualActivityController::class, 'publish'])->whereNumber('id');
+    Route::patch('/gamekit/visual-activities/{id}/archive', [GameKitVisualActivityController::class, 'archive'])->whereNumber('id');
     Route::post('/gamekit/hangman/ai-generate', [GameKitChildGamesController::class, 'generateHangman'])->middleware('throttle:gamekit-ai');
     Route::get('/gamekit/hangman/games', [GameKitChildGamesController::class, 'hangmanGames']);
     Route::post('/gamekit/hangman/games', [GameKitChildGamesController::class, 'storeHangman']);
@@ -154,4 +160,9 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::post('/gamekit/hangman/play/{token}/result', [GameKitChildGamesController::class, 'hangmanResult']);
     Route::get('/gamekit/tictactoe/play/{token}', [GameKitChildGamesController::class, 'ticTacToePlay']);
     Route::post('/gamekit/tictactoe/play/{token}/result', [GameKitChildGamesController::class, 'ticTacToeResult']);
+});
+
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/gamekit/visual/play/{token}', [GameKitVisualActivityController::class, 'publicView'])->name('gamekit.visual.public-view');
+    Route::get('/gamekit/visual/play/{token}/image', [GameKitVisualActivityController::class, 'publicImage'])->name('gamekit.visual.public-image');
 });

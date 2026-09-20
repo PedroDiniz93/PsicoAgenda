@@ -55,6 +55,7 @@ return [
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'gamekit_model' => env('OPENAI_GAMEKIT_MODEL', 'gpt-4o-mini'),
+        'gamekit_image_model' => env('OPENAI_GAMEKIT_IMAGE_MODEL', 'gpt-image-1'),
     ],
 
     'sms' => [

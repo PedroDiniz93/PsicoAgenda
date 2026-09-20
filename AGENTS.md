@@ -47,6 +47,7 @@ Output: findings, files, risk, next step
 - Keep responses short unless the user asks for detail.
 - Follow existing Laravel controller/request/service patterns.
 - Follow existing Vue Composition API style.
+- Before using an icon in a Vue template, verify that its name is imported and registered in `resources/js/components/base/AppIcon.vue`. If it is not registered, add it there before using it; never rely on the `Circle` fallback for a meaningful UI action or feature.
 - For UX changes, preserve clear loading, empty, error, success, keyboard-focus, and responsive states.
 - Keep UI copy in clear Portuguese and avoid invented patient or clinical data.
 - Prefer structured APIs and model relationships over ad hoc string manipulation.

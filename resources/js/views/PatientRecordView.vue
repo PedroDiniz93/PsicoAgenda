@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import axios from 'axios';
 import AppIcon from '../components/base/AppIcon.vue';
@@ -56,6 +56,15 @@ const recordForm = reactive({
     existingAttachments: [],
     newAttachments: [],
 });
+
+watch(
+    recordFormVisible,
+    (open) => {
+        if (!open) return;
+
+        nextTick(() => document.getElementById('modal-record-title')?.focus());
+    }
+);
 const recordFormErrors = reactive({
     title: '',
     recorded_at: '',
@@ -847,7 +856,7 @@ onMounted(() => {
             </div>
         </div>
 
-        <div v-if="recordFormVisible" class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" :aria-label="recordFormTitle" @click.self="closeRecordForm">
+        <div v-if="recordFormVisible" class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" :aria-label="recordFormTitle" tabindex="-1" @keydown.esc="closeRecordForm" @click.self="closeRecordForm">
             <div class="w-full max-w-6xl rounded-lg bg-white shadow-2xl">
                 <div class="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -866,7 +875,7 @@ onMounted(() => {
                             <div class="grid gap-4 md:grid-cols-[1fr_220px]">
                                 <label class="block text-sm font-semibold text-slate-700" for="modal-record-title">
                                     Título
-                                    <input id="modal-record-title" v-model="recordForm.title" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ex.: Sessão 12 - avanços em autoestima" required />
+                                    <input id="modal-record-title" v-model="recordForm.title" class="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Ex.: Sessão 12 - avanços em autoestima" required autofocus />
                                     <span v-if="recordFormErrors.title" class="mt-1 block text-xs text-rose-600">{{ recordFormErrors.title }}</span>
                                 </label>
                                 <label class="block text-sm font-semibold text-slate-700" for="modal-record-date">

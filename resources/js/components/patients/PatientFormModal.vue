@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { formatCpf, formatPhone } from '../../utils/formatters';
 import AppIcon from '../base/AppIcon.vue';
 
@@ -145,6 +145,15 @@ watch(
     }
 );
 
+watch(
+    () => props.open,
+    (open) => {
+        if (!open) return;
+
+        nextTick(() => document.getElementById('patient-name')?.focus());
+    }
+);
+
 const handleBirthDateInput = (event) => {
     const value = event.target.value || '';
     birthDateDisplay.value = formatBirthDateMask(value);
@@ -174,7 +183,12 @@ const openBirthDatePicker = () => {
 <template>
     <div
         v-if="open"
-        class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-[#1a1c1c]/40 px-4 py-6 backdrop-blur-sm"
+        class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#1a1c1c]/40 px-4 py-6 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="modalTitle"
+        tabindex="-1"
+        @keydown.esc="$emit('close')"
         @click.self="$emit('close')"
     >
         <div class="flex max-h-[calc(100vh-3rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[#c2c7cd]/20 bg-[#f9f9f8] shadow-2xl">
@@ -213,6 +227,7 @@ const openBirthDatePicker = () => {
                                     type="text"
                                     placeholder="Nome do paciente"
                                     required
+                                    autofocus
                                 />
                                 <span v-if="formErrors.name" class="mt-1 block text-xs text-[#ba1a1a]">{{ formErrors.name }}</span>
                             </label>

@@ -24,7 +24,7 @@ const closeButton = ref<HTMLElement | null>(null);
       />
     </transition>
     <transition name="modal">
-      <div v-show="modelValue" class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto px-4 py-4 sm:items-center sm:py-8" role="dialog" aria-modal="true">
+      <div v-show="modelValue" class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto px-4 py-4 sm:items-center sm:py-8" role="dialog" aria-modal="true" tabindex="-1" @keydown.esc="$emit('update:modelValue', false)">
         <div class="my-auto max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] shadow-[var(--spa-shadow)] sm:max-h-[calc(100vh-4rem)]" @click.stop>
           <slot />
         </div>

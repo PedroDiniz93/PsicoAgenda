@@ -116,7 +116,7 @@ defineEmits<{
                             v-for="item in group.items"
                             :key="item.id"
                             :to="item.to"
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                            class="sidebar-nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                             :class="[
                                 collapsed ? 'lg:justify-center' : '',
                                 isItemActive(item) ? 'bg-white text-[var(--spa-sidebar)] shadow-sm' : 'text-[var(--spa-sidebar-muted)] hover:bg-white/10 hover:text-white',

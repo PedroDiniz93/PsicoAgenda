@@ -18,6 +18,8 @@ const GameKitPlayerView = () => import('../views/GameKitPlayerView.vue');
 const GameKitMemoryView = () => import('../views/GameKitMemoryView.vue');
 const GameKitMemoryPlayerView = () => import('../views/GameKitMemoryPlayerView.vue');
 const GameKitRoutineView = () => import('../views/GameKitRoutineView.vue');
+const GameKitVisualActivitiesView = () => import('../views/GameKitVisualActivitiesView.vue');
+const GameKitVisualActivityPlayerView = () => import('../views/GameKitVisualActivityPlayerView.vue');
 const GameKitRoutinePlayerView = () => import('../views/GameKitRoutinePlayerView.vue');
 const GameKitTicTacToeView = () => import('../views/GameKitTicTacToeView.vue');
 const GameKitTicTacToePlayerView = () => import('../views/GameKitTicTacToePlayerView.vue');
@@ -136,6 +138,18 @@ const router = createRouter({
             name: 'gamekit-routine',
             component: GameKitRoutineView,
             meta: { requiresAuth: true, title: 'Organizador de rotina · GameKit Psi' },
+        },
+        {
+            path: '/gamekit/visual-activities',
+            name: 'gamekit-visual-activities',
+            component: GameKitVisualActivitiesView,
+            meta: { requiresAuth: true, title: 'Atividades visuais' },
+        },
+        {
+            path: '/gamekit/visual/play/:token',
+            name: 'gamekit-visual-player',
+            component: GameKitVisualActivityPlayerView,
+            meta: { public: true, title: 'Atividade visual' },
         },
         {
             path: '/gamekit/routine/play/:token',

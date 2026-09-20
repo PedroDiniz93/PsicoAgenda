@@ -704,6 +704,15 @@ watch(
     }
 );
 
+watch(
+    appointmentModalOpen,
+    (open) => {
+        if (!open) return;
+
+        nextTick(() => document.getElementById('appointment-patient')?.focus());
+    }
+);
+
 const closeAppointmentModal = () => {
     appointmentModalOpen.value = false;
     editingAppointment.value = null;
@@ -1626,6 +1635,8 @@ onBeforeUnmount(() => {
             role="dialog"
             aria-modal="true"
             :aria-label="appointmentModalTitle"
+            tabindex="-1"
+            @keydown.esc="closeAppointmentModal"
             @click.self="closeAppointmentModal"
         >
             <div class="my-auto w-full max-w-3xl overflow-y-auto rounded-2xl border border-[var(--spa-border-soft)] bg-[var(--spa-surface)] p-5 shadow-[var(--spa-shadow)] sm:max-h-[calc(100vh-4rem)] sm:p-6">
@@ -1654,6 +1665,7 @@ onBeforeUnmount(() => {
                                     class="field-input"
                                     placeholder="Buscar paciente pelo nome..."
                                     type="search"
+                                    autofocus
                                     @input="handlePatientSearchInput"
                                 />
                                 <p class="mt-1 text-xs text-[#58635f]">Digite para filtrar e depois selecione abaixo.</p>

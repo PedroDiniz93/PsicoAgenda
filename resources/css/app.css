@@ -22,7 +22,7 @@
     --spa-border-soft: #e2e2e2;
     --spa-ink: #1a1c1c;
     --spa-ink-soft: #42474c;
-    --spa-ink-muted: #73787d;
+    --spa-ink-muted: #555b60;
     --spa-accent: #415f76;
     --spa-accent-hover: #2b4a60;
     --spa-accent-soft: #cae6ff;
@@ -80,6 +80,16 @@ html[data-theme='dark'] {
 
 html {
     overflow-y: scroll;
+}
+
+.sidebar-nav-item.router-link-active {
+    background-color: #ffffff !important;
+    color: #1a1c1c !important;
+}
+
+[class~="text-[#6f7a75]"],
+[class~="text-[#89948f]"] {
+    color: var(--spa-ink-muted) !important;
 }
 
 html[data-theme='dark'] {
@@ -298,7 +308,8 @@ h3,
     .text-slate-600,
     .text-slate-500,
     .text-slate-400,
-    .text-neutral-500 {
+    .text-neutral-500,
+    [class~="text-[#73787d]"] {
         color: var(--spa-ink-muted) !important;
     }
 
@@ -593,4 +604,14 @@ h3,
     html[data-theme='dark'] textarea::placeholder {
         color: var(--spa-ink-muted);
     }
+}
+
+/* Active navigation must preserve a readable 4.5:1 label contrast in both themes. */
+.sidebar-nav-item.router-link-active {
+    background-color: #ffffff !important;
+    color: #1a1c1c !important;
+}
+
+.sidebar-nav-item.router-link-active > .truncate {
+    color: #1a1c1c !important;
 }

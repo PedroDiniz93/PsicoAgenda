@@ -226,6 +226,75 @@ class GameKitAiService
         return $this->validateHangmanWords($payload['words'] ?? [], $count);
     }
 
+    public function generateVisualImage(array $params): array
+    {
+        $apiKey = (string) config('services.openai.api_key');
+        if ($apiKey === '') {
+            throw new RuntimeException('A geração por IA ainda não está configurada no servidor.');
+        }
+
+        $type = (string) ($params['type'] ?? 'coloring');
+        $style = (string) ($params['style'] ?? 'simple');
+        $theme = trim((string) ($params['theme'] ?? ''));
+        $goal = trim((string) ($params['therapeutic_goal'] ?? ''));
+        $styleText = [
+            'simple' => 'formas grandes, poucos elementos e contornos muito simples',
+            'intermediate' => 'composição equilibrada, detalhes moderados e áreas bem separadas',
+            'detailed' => 'mais detalhes decorativos, mantendo áreas amplas e legíveis para uma criança',
+        ][$style] ?? 'formas grandes, poucos elementos e contornos muito simples';
+        $activityText = [
+            'coloring' => 'folha para colorir',
+            'cutting' => 'molde simples para recortar',
+            'coloring_cutting' => 'folha para colorir com linhas de recorte claramente separadas',
+        ][$type] ?? 'folha para colorir';
+
+        $prompt = "Crie uma ilustração infantil em preto e branco para impressão, no formato {$activityText}. Tema: {$theme}. Objetivo pedagógico-terapêutico interno: {$goal}. Use {$styleText}. Fundo branco, contornos pretos grossos, áreas fechadas e fáceis de preencher, composição amigável e não realista. Não inclua texto, letras, números, logotipos, marcas, personagens protegidos, violência, armas, terror, sofrimento explícito, sexualização, diagnóstico ou qualquer dado pessoal. A imagem deve ser apropriada para uma criança e revisável por um psicólogo. Gere somente a arte, sem moldura decorativa.";
+
+        $response = Http::withToken($apiKey)
+            ->acceptJson()
+            ->timeout(60)
+            ->post('https://api.openai.com/v1/images/generations', [
+                'model' => config('services.openai.gamekit_image_model', 'gpt-image-1'),
+                'prompt' => $prompt,
+                'size' => '1024x1024',
+                'quality' => 'medium',
+                'output_format' => 'png',
+            ]);
+
+        if ($response->failed()) {
+            if ($response->status() === 401) {
+                throw new RuntimeException('A chave da OpenAI é inválida ou expirou.');
+            }
+            if ($response->status() === 429) {
+                throw new RuntimeException('A conta da OpenAI está sem créditos ou atingiu o limite.');
+            }
+            if ($response->status() === 400) {
+                throw new RuntimeException('A solicitação de imagem foi recusada pelo provedor.');
+            }
+            throw new RuntimeException('Não foi possível gerar a imagem agora.');
+        }
+
+        $encoded = $response->json('data.0.b64_json');
+        if (! is_string($encoded) || $encoded === '') {
+            throw new RuntimeException('A resposta da IA não trouxe uma imagem válida.');
+        }
+
+        $binary = base64_decode($encoded, true);
+        if ($binary === false || strlen($binary) < 100) {
+            throw new RuntimeException('A imagem gerada não pôde ser validada.');
+        }
+
+        return [
+            'binary' => $binary,
+            'mime_type' => 'image/png',
+            'width' => 1024,
+            'height' => 1024,
+            'provider' => 'openai',
+            'model' => config('services.openai.gamekit_image_model', 'gpt-image-1'),
+            'prompt_version' => 'v1',
+        ];
+    }
+
     private function memorySchema(int $count): array
     {
         return [
