@@ -25,6 +25,7 @@ const GameKitTicTacToeView = () => import('../views/GameKitTicTacToeView.vue');
 const GameKitTicTacToePlayerView = () => import('../views/GameKitTicTacToePlayerView.vue');
 const GameKitHangmanView = () => import('../views/GameKitHangmanView.vue');
 const GameKitHangmanPlayerView = () => import('../views/GameKitHangmanPlayerView.vue');
+const OnlineSessionView = () => import('../views/OnlineSessionView.vue');
 
 const defaultTitle = document.title;
 
@@ -161,6 +162,8 @@ const router = createRouter({
         { path: '/gamekit/tictactoe/play/:token', name: 'gamekit-tictactoe-player', component: GameKitTicTacToePlayerView, meta: { public: true, title: 'Jogo da Velha · GameKit Psi' } },
         { path: '/gamekit/hangman', name: 'gamekit-hangman', component: GameKitHangmanView, meta: { requiresAuth: true, title: 'Jogo da Forca · GameKit Psi' } },
         { path: '/gamekit/hangman/play/:token', name: 'gamekit-hangman-player', component: GameKitHangmanPlayerView, meta: { public: true, title: 'Jogo da Forca · GameKit Psi' } },
+        { path: '/online-session/:id', name: 'online-session', component: OnlineSessionView, meta: { requiresAuth: true, title: 'Atendimento online' } },
+        { path: '/online-session/join/:token', name: 'online-session-patient', component: OnlineSessionView, meta: { public: true, title: 'Atendimento online' } },
     ],
 });
 

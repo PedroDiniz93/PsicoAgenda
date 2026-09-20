@@ -25,6 +25,31 @@ Regras:
 
 ## Features
 
+### 2026-09-20 - Diagnóstico de câmera e microfone na sala online
+
+- Status: Implementada
+- Objetivo: explicar por que a sala não conseguiu acessar áudio e vídeo.
+- Escopo: resources/js/composables/useOnlineSession.js.
+- Comportamento: a sala identifica contexto inseguro, permissão bloqueada, dispositivo ausente, dispositivo ocupado e falhas específicas do navegador, exibindo uma orientação em português.
+- Validação: npm run build e testes da sala online.
+
+### 2026-09-20 - Tentativa novamente para mídia da sala online
+
+- Status: Implementada
+- Objetivo: permitir recuperar falhas temporárias de câmera e microfone sem sair da sala.
+- Escopo: resources/js/views/OnlineSessionView.vue e resources/js/composables/useOnlineSession.js.
+- Comportamento: a interface oferece “Tentar novamente” após falha de mídia e corrige a mensagem para contexto inseguro ou API de mídia indisponível.
+- Validação: npm run build e testes da sala online.
+
+### 2026-09-20 - Núcleo da sala de atendimento online
+
+- Status: Parcial
+- Objetivo: preparar uma sala temporária vinculada ao compromisso para atendimento ao vivo.
+- Escopo: migration de salas online, modelo `OnlineSession`, `OnlineSessionController` e rotas autenticadas/públicas.
+- Comportamento: o psicólogo pode criar, consultar e encerrar uma sala de compromisso online; o paciente recebe somente o estado mínimo da sala por token temporário.
+- Validação: testes de autorização, expiração, isolamento do payload público, PHP lint, rotas e migration.
+- Notas: vídeo, voz, chat em tempo real e telas ainda serão implementados na próxima etapa; não há gravação nem persistência de mensagens.
+
 ### 2026-09-19 - Cards de link temporário do GameKit
 
 - Status: Implementada

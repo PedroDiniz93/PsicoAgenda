@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\GameKitVisualActivityController;
 use App\Http\Controllers\Api\GoogleCalendarController;
 use App\Http\Controllers\Api\GoogleOAuthController;
 use App\Http\Controllers\Api\HomeDashboardController;
+use App\Http\Controllers\Api\OnlineSessionController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PatientRecordController;
 use App\Http\Controllers\Api\PsychologistController;
@@ -132,6 +133,12 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-done', [AppointmentController::class, 'markDone'])->whereNumber('id');
     Route::post('/appointments/{id}/mark-missed', [AppointmentController::class, 'markMissed'])->whereNumber('id');
+    Route::post('/appointments/{appointment}/online-session', [OnlineSessionController::class, 'store'])->whereNumber('appointment');
+    Route::get('/online-sessions/{id}', [OnlineSessionController::class, 'show'])->whereNumber('id');
+    Route::post('/online-sessions/{id}/end', [OnlineSessionController::class, 'end'])->whereNumber('id');
+    Route::post('/online-sessions/{id}/signal', [OnlineSessionController::class, 'signal'])
+        ->whereNumber('id')
+        ->middleware('throttle:120,1');
     Route::delete('/recurring-appointments/{id}', [RecurringAppointmentController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/availability', [AvailabilityController::class, 'index']);
@@ -150,6 +157,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
 });
 
 Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/online-sessions/join/{token}', [OnlineSessionController::class, 'publicShow']);
     Route::get('/gamekit/play/{token}', [GameKitController::class, 'play']);
     Route::post('/gamekit/play/{token}/responses', [GameKitController::class, 'respond']);
     Route::post('/gamekit/play/{token}/finish', [GameKitController::class, 'finishPublic']);
@@ -160,6 +168,10 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::post('/gamekit/hangman/play/{token}/result', [GameKitChildGamesController::class, 'hangmanResult']);
     Route::get('/gamekit/tictactoe/play/{token}', [GameKitChildGamesController::class, 'ticTacToePlay']);
     Route::post('/gamekit/tictactoe/play/{token}/result', [GameKitChildGamesController::class, 'ticTacToeResult']);
+});
+
+Route::middleware('throttle:120,1')->group(function () {
+    Route::post('/online-sessions/join/{token}/signal', [OnlineSessionController::class, 'publicSignal']);
 });
 
 Route::middleware('throttle:30,1')->group(function () {

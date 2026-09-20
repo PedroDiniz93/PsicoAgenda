@@ -200,6 +200,7 @@ const patientOptionsLoading = ref(false);
 let patientSearchTimeout = null;
 
 const appointmentActionLoading = reactive({ id: null, action: '' });
+const onlineSessionLoading = ref(false);
 
 const weekdayOptions = [
     { value: 1, label: 'Segunda' },
@@ -1058,6 +1059,27 @@ const performAppointmentAction = async (appointment, action) => {
     }
 };
 
+const startOnlineSession = async () => {
+    if (!editingAppointment.value?.id || appointmentForm.type !== 'online') return;
+
+    onlineSessionLoading.value = true;
+    appointmentMessage.value = '';
+
+    try {
+        const endpoint = '/api/appointments/' + editingAppointment.value.id + '/online-session';
+        const { data } = await axios.post(endpoint);
+        router.push({
+            name: 'online-session',
+            params: { id: data.id },
+            query: { patientToken: data.patient_token },
+        });
+    } catch (error) {
+        appointmentMessage.value = error?.response?.data?.message ?? 'Não foi possível abrir a sala de atendimento.';
+    } finally {
+        onlineSessionLoading.value = false;
+    }
+};
+
 const stopRecurringSeries = async () => {
     if (!editingAppointment.value?.recurrence_id) return;
     const confirmed = window.confirm('Deseja encerrar esta recorrência? Novos agendamentos não serão gerados.');
@@ -1804,6 +1826,17 @@ onBeforeUnmount(() => {
                             @click="performAppointmentAction(editingAppointment, 'delete')"
                         >
                             Excluir agendamento
+                        </button>
+                        <button
+                            v-if="editingAppointment && appointmentForm.type === 'online'"
+                            class="btn-secondary"
+                            type="button"
+                            :disabled="onlineSessionLoading"
+                            @click="startOnlineSession"
+                        >
+                            <AppIcon v-if="onlineSessionLoading" name="LoaderCircle" class="-ms-1 me-2 size-4 animate-spin" />
+                            <AppIcon v-else name="Video" class="-ms-1 me-2 size-4" />
+                            {{ onlineSessionLoading ? 'Abrindo sala...' : 'Abrir atendimento online' }}
                         </button>
                         <button class="btn-secondary" type="button" @click="closeAppointmentModal">Cancelar</button>
                         <button class="btn-primary px-5 py-2.5" type="submit" :disabled="appointmentSubmitting">
