@@ -941,6 +941,16 @@ const submitAppointment = async () => {
             throw new Error('Paciente obrigatório');
         }
 
+        if (!payload.start_at) {
+            appointmentErrors.startAt = 'Informe uma data e horário de início válidos.';
+            throw new Error('Início inválido');
+        }
+
+        if (!payload.end_at) {
+            appointmentErrors.endAt = 'Informe uma data e horário de término válidos.';
+            throw new Error('Fim inválido');
+        }
+
         if (editingAppointment.value) {
             await axios.put(`/api/appointments/${editingAppointment.value.id}`, payload);
         } else {
@@ -979,6 +989,8 @@ const submitAppointment = async () => {
             }
         } else if (error instanceof Error && error.message === 'Paciente obrigatório') {
             appointmentMessage.value = 'Selecione um paciente para continuar.';
+        } else if (error instanceof Error && ['Início inválido', 'Fim inválido'].includes(error.message)) {
+            appointmentMessage.value = 'Corrija as datas e horários destacados para continuar.';
         } else {
             appointmentMessage.value = error?.response?.data?.message ?? 'Erro ao salvar o agendamento.';
         }
@@ -1732,7 +1744,14 @@ onBeforeUnmount(() => {
                         <div v-if="recurrenceForm.enabled && recurrenceControlsEnabled" class="mt-4 grid gap-4 md:max-w-md md:grid-cols-2">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700" for="recurrence-until">Repetir até</label>
-                                <input id="recurrence-until" v-model="recurrenceForm.until" class="field-input mt-1" type="date" :min="appointmentStartDateOnly" />
+                                <LocalizedDateInput
+                                    id="recurrence-until"
+                                    v-model="recurrenceForm.until"
+                                    class="field-input mt-1"
+                                    mode="date"
+                                    :min="appointmentStartDateOnly"
+                                    aria-label="Repetir até"
+                                />
                                 <p v-if="appointmentErrors.repeatUntil" class="mt-1 text-xs text-red-600">{{ appointmentErrors.repeatUntil }}</p>
                                 <p class="mt-1 text-xs text-[#58635f]">Deixe em branco para manter sem data final.</p>
                             </div>

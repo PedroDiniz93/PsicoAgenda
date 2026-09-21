@@ -25,6 +25,14 @@ Regras:
 
 ## Features
 
+### 2026-09-21 - Widget e validação de data na modal de agendamento
+
+- Status: Implementada
+- Objetivo: corrigir o erro de data inválida e facilitar a escolha de datas e horários no agendamento.
+- Escopo: `resources/js/components/base/LocalizedDateInput.vue` e `resources/js/views/ScheduleView.vue`.
+- Comportamento: os campos exibem ícone de calendário, abrem o seletor nativo de data/hora, aceitam o formato brasileiro e rejeitam datas ou horários impossíveis antes do envio; a data final da recorrência usa o mesmo padrão.
+- Validação: build do frontend e verificação manual dos fluxos de criação, edição, data inválida e recorrência.
+
 ### 2026-09-21 - Confirmação persistente da autorização do paciente
 
 - Status: Implementada
