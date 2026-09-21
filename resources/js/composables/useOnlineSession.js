@@ -38,6 +38,8 @@ export function useOnlineSession({ role, token, sessionId }) {
     let approvalRequestTimer = null;
     let approvalRequestInFlight = false;
     let patientApprovalSent = false;
+    let patientApprovalPollingTimer = null;
+    let patientApprovalPollingInFlight = false;
     const connectionId = typeof crypto?.randomUUID === 'function'
         ? crypto.randomUUID()
         : `connection-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -229,6 +231,42 @@ export function useOnlineSession({ role, token, sessionId }) {
         }, 3000);
     };
 
+    const acceptPatientEntry = async () => {
+        if (role !== 'patient' || !waitingForApproval.value || entryApproved.value) return;
+
+        waitingForApproval.value = false;
+        entryApproved.value = true;
+        showParticipantNotice('Sua entrada foi autorizada pelo psicólogo.');
+        console.info('[online-session] patient entry approved');
+        if (currentSession) await start(currentSession);
+    };
+
+    const refreshPatientApproval = async () => {
+        if (role !== 'patient' || !token || !waitingForApproval.value || patientApprovalPollingInFlight) return;
+
+        patientApprovalPollingInFlight = true;
+        try {
+            const { data } = await axios.get('/api/online-sessions/join/' + token);
+            if (data.entry_approved) await acceptPatientEntry();
+        } catch (cause) {
+            console.warn('[online-session] patient approval polling failed', {
+                status: cause?.response?.status,
+            });
+        } finally {
+            patientApprovalPollingInFlight = false;
+        }
+    };
+
+    const startPatientApprovalPolling = () => {
+        window.clearInterval(patientApprovalPollingTimer);
+        if (role !== 'patient') return;
+
+        void refreshPatientApproval();
+        patientApprovalPollingTimer = window.setInterval(() => {
+            void refreshPatientApproval();
+        }, 3000);
+    };
+
     const createOffer = async () => {
         if (!peerConnection || makingOffer || peerConnection.signalingState !== 'stable' || peerConnection.remoteDescription) {
             console.info('[online-session] offer skipped', {
@@ -389,11 +427,7 @@ export function useOnlineSession({ role, token, sessionId }) {
         }
 
         if (type === 'entry-approved' && role === 'patient' && payload.role === 'psychologist') {
-            waitingForApproval.value = false;
-            entryApproved.value = true;
-            showParticipantNotice('Sua entrada foi autorizada pelo psicólogo.');
-            console.info('[online-session] patient entry approved');
-            if (currentSession) await start(currentSession);
+            await acceptPatientEntry();
         } else if (type === 'presence' && role === 'psychologist' && payload.role === 'patient' && payload.state === 'requesting') {
             entryRequest.value = true;
             console.info('[online-session] patient entry requested');
@@ -531,6 +565,7 @@ export function useOnlineSession({ role, token, sessionId }) {
             if (!setupSignalChannel(session)) throw new Error('echo-channel-unavailable');
             await sendSignal('presence', presencePayload('requesting'));
             startPatientPresenceHeartbeat();
+            startPatientApprovalPolling();
         } catch (cause) {
             console.error('[online-session] approval request failed', {
                 name: cause?.name,
@@ -739,6 +774,9 @@ export function useOnlineSession({ role, token, sessionId }) {
         }
         window.clearInterval(patientPresenceTimer);
         patientPresenceTimer = null;
+        window.clearInterval(patientApprovalPollingTimer);
+        patientApprovalPollingTimer = null;
+        patientApprovalPollingInFlight = false;
         window.clearInterval(approvalRequestTimer);
         approvalRequestTimer = null;
         approvalRequestInFlight = false;

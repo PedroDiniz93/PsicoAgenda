@@ -125,6 +125,9 @@ class OnlineSessionController extends Controller
             'id' => $session->id,
             'status' => $session->status,
             'expires_at' => $session->expires_at,
+            'entry_approved' => (bool) ($session->patient_entry_approved_at
+                && $session->patient_connection_at
+                && $session->patient_connection_at->greaterThan(now()->subSeconds(45))),
             'channel' => 'online-session.'.$session->token_hash,
         ]);
     }
@@ -224,6 +227,7 @@ class OnlineSessionController extends Controller
 
         if ($data['type'] === 'entry-approved') {
             abort_unless($expectedRole === 'psychologist', 403, 'Somente o psicólogo pode autorizar a entrada.');
+            $session->update(['patient_entry_approved_at' => now()]);
         }
 
         if ($expectedRole === 'patient' && $data['type'] === 'presence') {
@@ -242,6 +246,7 @@ class OnlineSessionController extends Controller
                         $lockedSession->update([
                             'patient_connection_id' => null,
                             'patient_connection_at' => null,
+                            'patient_entry_approved_at' => null,
                         ]);
                     }
 
@@ -253,6 +258,7 @@ class OnlineSessionController extends Controller
                 $lockedSession->update([
                     'patient_connection_id' => $connectionId,
                     'patient_connection_at' => now(),
+                    ...($state === 'requesting' ? ['patient_entry_approved_at' => null] : []),
                     ...($state === 'joined' && $lockedSession->status === 'waiting'
                         ? ['status' => 'active', 'started_at' => now()]
                         : []),

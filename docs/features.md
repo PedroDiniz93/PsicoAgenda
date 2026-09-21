@@ -25,6 +25,15 @@ Regras:
 
 ## Features
 
+### 2026-09-21 - Confirmação persistente da autorização do paciente
+
+- Status: Implementada
+- Objetivo: garantir que o paciente saia da espera mesmo quando o evento de aprovação do WebSocket não for recebido.
+- Escopo: nova coluna de autorização em `online_sessions`, `OnlineSessionController`, `OnlineSession`, `useOnlineSession.js` e testes da sala online.
+- Comportamento: a aprovação é registrada somente pela rota autenticada do psicólogo; o paciente recebe pelo WebSocket e consulta o estado público da sala como fallback.
+- Segurança: o estado público expõe apenas um booleano de aprovação, condicionado a uma conexão recente do paciente; o paciente não consegue gravar ou alterar a aprovação.
+- Validação: teste da API de aprovação, teste da sala online, build e `git diff --check`.
+
 ### 2026-09-21 - Fallback de solicitação de entrada da videoconferência
 
 - Status: Implementada

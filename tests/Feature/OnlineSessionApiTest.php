@@ -132,6 +132,37 @@ class OnlineSessionApiTest extends TestCase
         ])->assertOk();
     }
 
+    public function test_patient_can_confirm_approval_from_the_public_room_state(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $sessionId = $creation->json('id');
+        $token = $creation->json('patient_token');
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", [
+            'type' => 'presence',
+            'payload' => [
+                'role' => 'patient',
+                'state' => 'requesting',
+                'connection_id' => 'patient-connection-0001',
+            ],
+        ])->assertOk();
+
+        $this->postJson("/api/online-sessions/{$sessionId}/signal", [
+            'type' => 'entry-approved',
+            'payload' => ['role' => 'psychologist'],
+        ])->assertOk();
+
+        Sanctum::actingAs($user);
+        $this->getJson("/api/online-sessions/join/{$token}")
+            ->assertOk()
+            ->assertJsonPath('entry_approved', true);
+    }
+
     public function test_a_second_patient_connection_is_rejected_for_the_same_link(): void
     {
         [$user, $psychologist] = $this->psychologist();
