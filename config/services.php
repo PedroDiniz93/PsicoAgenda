@@ -64,4 +64,11 @@ return [
         'from' => env('SMS_FROM'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'api_key' => env('TWILIO_API_KEY'),
+        'api_secret' => env('TWILIO_API_SECRET'),
+        'turn_ttl' => (int) env('TWILIO_TURN_TTL', 3600),
+    ],
+
 ];

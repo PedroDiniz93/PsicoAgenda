@@ -136,6 +136,7 @@ Route::middleware(['auth:sanctum', EnsurePsychologistEmailIsVerified::class])->g
     Route::post('/appointments/{appointment}/online-session', [OnlineSessionController::class, 'store'])->whereNumber('appointment');
     Route::get('/online-sessions/{id}', [OnlineSessionController::class, 'show'])->whereNumber('id');
     Route::post('/online-sessions/{id}/end', [OnlineSessionController::class, 'end'])->whereNumber('id');
+    Route::get('/online-sessions/{id}/ice-servers', [OnlineSessionController::class, 'iceServers'])->whereNumber('id');
     Route::post('/online-sessions/{id}/signal', [OnlineSessionController::class, 'signal'])
         ->whereNumber('id')
         ->middleware('throttle:120,1');
@@ -172,6 +173,7 @@ Route::middleware('throttle:30,1')->group(function () {
 
 Route::middleware('throttle:120,1')->group(function () {
     Route::post('/online-sessions/join/{token}/signal', [OnlineSessionController::class, 'publicSignal']);
+    Route::get('/online-sessions/join/{token}/ice-servers', [OnlineSessionController::class, 'publicIceServers']);
 });
 
 Route::middleware('throttle:30,1')->group(function () {

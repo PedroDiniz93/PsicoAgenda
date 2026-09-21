@@ -15,6 +15,8 @@ class OnlineSession extends Model
         'patient_id',
         'token_hash',
         'status',
+        'patient_connection_id',
+        'patient_connection_at',
         'expires_at',
         'started_at',
         'ended_at',
@@ -22,6 +24,7 @@ class OnlineSession extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'patient_connection_at' => 'datetime',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
     ];

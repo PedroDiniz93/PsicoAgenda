@@ -25,6 +25,275 @@ Regras:
 
 ## Features
 
+### 2026-09-20 - Estrutura Twilio para STUN/TURN da videoconferência
+
+- Status: Implementada
+- Objetivo: preparar a sala para obter servidores ICE temporários sem expor credenciais Twilio no frontend.
+- Escopo: `.env.example`, `config/services.php`, `routes/api.php`, `app/Http/Controllers/Api/OnlineSessionController.php`, `resources/js/composables/useOnlineSession.js` e `tests/Feature/OnlineSessionApiTest.php`.
+- Comportamento: o backend solicita tokens TURN temporários quando as variáveis Twilio estão preenchidas; a sala usa o `ice_servers` retornado e mantém fallback local para `VITE_WEBRTC_ICE_SERVERS`.
+- Segurança: `TWILIO_API_SECRET` fica somente no backend; o frontend recebe apenas a lista temporária de servidores ICE.
+- Validação: `npm run build`, 8 testes da sala online (48 assertions), `php -l` e `git diff --check`.
+
+### 2026-09-20 - Auditoria e limite de conexão da videoconferência
+
+- Status: Implementada
+- Objetivo: impedir uso simultâneo do mesmo link por dois pacientes e revisar a segurança do fluxo completo da videoconferência.
+- Escopo: `database/migrations/2026_09_20_000004_add_patient_connection_lock_to_online_sessions_table.php`, `app/Models/OnlineSession.php`, `app/Http/Controllers/Api/OnlineSessionController.php`, `resources/js/composables/useOnlineSession.js`, `resources/js/views/OnlineSessionView.vue`, `tests/Feature/OnlineSessionApiTest.php` e `docs/audits/2026-09-20-videoconferencia.md`.
+- Comportamento: a primeira conexão do paciente ocupa a sala; outra aba recebe estado de sala em uso; sinais públicos também ficam vinculados à conexão autorizada e expiram sem heartbeat.
+- Auditoria: autorização, privacidade, WebRTC, sinalização, reconexão, controles, chat, tela cheia e prontuário foram revisados; a configuração de STUN/TURN permanece como risco de produção documentado.
+- Validação: `npm run build`, 7 testes da sala online (35 assertions), `php -l` e `git diff --check`.
+
+### 2026-09-20 - Notificações sonoras do chat da sala online
+
+- Status: Implementada
+- Objetivo: avisar novas mensagens e eventos de presença sem ocupar espaço visual no chat.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: novas mensagens e entrada ou saída do participante reproduzem um toque curto; o indicador textual “Nova mensagem” foi removido.
+- Privacidade: o som é gerado localmente pelo navegador, sem arquivo externo ou envio de conteúdo.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Autorização do paciente na sala online
+
+- Status: Implementada
+- Objetivo: impedir que o paciente entre na videochamada antes da autorização do psicólogo.
+- Escopo: `resources/js/composables/useOnlineSession.js`, `resources/js/views/OnlineSessionView.vue`, `app/Http/Controllers/Api/OnlineSessionController.php` e `tests/Feature/OnlineSessionApiTest.php`.
+- Comportamento: o paciente aguarda em uma tela dedicada sem acessar câmera, microfone ou WebRTC; o psicólogo recebe a solicitação e libera a entrada pelo botão “Aceitar paciente”; a tela “Prepare sua sala” foi removida.
+- Segurança: solicitações não ativam a sessão, o sinal de aprovação só pode ser enviado pelo psicólogo autenticado e o canal público só aceita o papel de paciente.
+- Validação: `npm run build`, `php artisan test tests/Feature/OnlineSessionApiTest.php`, `php -l app/Http/Controllers/Api/OnlineSessionController.php` e `git diff --check`.
+
+### 2026-09-20 - Correção do modo tela cheia da sala online
+
+- Status: Implementada
+- Objetivo: permitir entrar e sair da tela cheia sem depender da tecla Esc.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o painel ocupa a viewport, o vídeo se adapta ao espaço disponível e um botão explícito “Voltar ao tamanho normal” aparece no cabeçalho durante a tela cheia.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Simplificação do status visual da sala
+
+- Status: Implementada
+- Objetivo: evitar a repetição do estado de conexão na tela da chamada.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o status “Aguardando paciente” ou equivalente fica somente no indicador superior direito do painel de vídeo; o cronômetro permanece na barra inferior quando ativo.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Refatoração visual da sala online
+
+- Status: Implementada
+- Objetivo: tornar a sala de atendimento mais clara, moderna e confortável para uso prolongado.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: vídeo principal, controles e estado da sessão ficam agrupados em um painel de foco; chat e acesso ao prontuário ficam em uma lateral persistente, com melhor hierarquia visual e adaptação para telas menores.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Controles de mídia da sala online
+
+- Status: Implementada
+- Objetivo: permitir que psicólogo e paciente controlem áudio, vídeo, dispositivos e saída da sala durante o atendimento.
+- Escopo: `resources/js/composables/useOnlineSession.js`, `resources/js/views/OnlineSessionView.vue` e `resources/js/components/base/AppIcon.vue`.
+- Comportamento: microfone e câmera são alternados sem desconectar; dispositivos podem ser trocados via `replaceTrack`; o psicólogo encerra o atendimento e o paciente sai da sala com confirmação; estados desligados têm indicação visual.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Estados de estabilidade e pré-teste da sala online
+
+- Status: Implementada
+- Objetivo: diferenciar espera normal, conexão, reconexão e falha antes e durante o atendimento.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: a sala exibe teste de câmera e microfone antes da entrada, estados contextuais para paciente e psicólogo, aviso de internet instável e retry somente em falha técnica.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Destaque alternável dos vídeos da sala
+
+- Status: Implementada
+- Objetivo: priorizar a visualização do participante durante o atendimento.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o vídeo remoto aparece grande por padrão e a câmera local fica em uma janela sobreposta; “Trocar destaque” inverte os tamanhos sem reiniciar a chamada.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Indicadores compartilhados de áudio e vídeo
+
+- Status: Implementada
+- Objetivo: permitir que cada participante saiba quando o outro desligou câmera ou microfone.
+- Escopo: `resources/js/composables/useOnlineSession.js`, `resources/js/views/OnlineSessionView.vue` e `app/Http/Controllers/Api/OnlineSessionController.php`.
+- Comportamento: os estados de áudio e vídeo são enviados pelo canal da sala; os ícones `MicOff` e `VideoOff` aparecem sobre o quadro correspondente para todos os participantes.
+- Validação: `npm run build`, `php -l app/Http/Controllers/Api/OnlineSessionController.php` e `git diff --check`.
+
+### 2026-09-20 - Eventos de entrada e saída no chat da sala
+
+- Status: Implementada
+- Objetivo: manter no histórico do chat os eventos de presença do atendimento.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: a entrada ou saída do participante aparece como mensagem do sistema e ativa o indicador de nova mensagem.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Prontuário expansível durante a sala online
+
+- Status: Implementada
+- Objetivo: consultar o prontuário sem sair da chamada ou perder o foco do atendimento.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o psicólogo abre o prontuário em um painel abaixo da sala; os registros são carregados sob demanda e permanecem na mesma página.
+- Segurança: o painel só é renderizado para o psicólogo e usa o endpoint autenticado já existente, mantendo a validação de propriedade no backend.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Inicialização automática do Reverb no ambiente local
+
+- Status: Implementada
+- Objetivo: impedir que a sala online falhe porque o servidor de sinalização não foi iniciado.
+- Escopo: `composer.json`.
+- Comportamento: `composer dev` passa a iniciar o Laravel Reverb junto com servidor HTTP, fila, logs e Vite.
+- Validação: handshake WebSocket local, testes da API da sala online e validação do arquivo Composer.
+
+### 2026-09-20 - Inicialização da mídia após renderização da sala online
+
+- Status: Implementada
+- Objetivo: fazer câmera e microfone funcionarem já na primeira abertura da sala.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: os elementos de vídeo são renderizados antes da inicialização da mídia e do WebRTC, evitando depender do botão “Tentar novamente”.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Identificação da etapa de conexão da sala online
+
+- Status: Implementada
+- Objetivo: tornar explícita a etapa que falha após câmera e áudio serem liberados.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: o erro informa somente a fase técnica (`mídia`, `WebRTC`, canal ou presença), sem tokens, URLs ou dados clínicos.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Estado de espera sem alerta de erro
+
+- Status: Implementada
+- Objetivo: não tratar a ausência temporária do outro participante como falha.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: a mensagem vermelha aparece somente quando a sala está no estado `error`; enquanto aguarda o outro participante, a tela mantém apenas “Aguardando conexão...”.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Preservação do estado ativo após o handshake
+
+- Status: Implementada
+- Objetivo: evitar que a resposta tardia do envio de presença sobrescreva uma conexão já estabelecida.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: o estado permanece `active` quando o WebRTC conecta antes da resposta HTTP da presença; somente conexões ainda não ativas entram em `waiting`.
+- Validação: fluxo Laravel `presence → offer → answer → ICE` e `npm run build`.
+
+### 2026-09-20 - Rastreamento das transições WebRTC
+
+- Status: Implementada
+- Objetivo: identificar sobrescritas de estado e falhas na negociação ICE.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: o console registra origem de cada transição de status e os estados de sinalização, ICE e coleta de candidatos, sem conteúdo de mídia ou dados sensíveis.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Renderização correta do estado da sala
+
+- Status: Implementada
+- Objetivo: exibir “Conexão ativa” quando o WebRTC realmente está conectado.
+- Escopo: `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: refs de status, erro, mídia e mensagens são expostos como bindings do template, evitando comparar objetos `ref` com strings.
+- Validação: logs `ICE connected` e `status active`, `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Captura parcial de mídia na sala online
+
+- Status: Implementada
+- Objetivo: permitir entrar na sala quando o navegador encontra somente câmera ou somente microfone.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: após `NotFoundError` na captura conjunta, câmera e microfone são testados separadamente; a sala continua com a mídia disponível e exibe um aviso claro.
+- Validação: `npm run build`, `git diff --check` e diagnóstico sem registro de nomes ou IDs de dispositivos.
+
+### 2026-09-20 - Vínculo dos vídeos da sala online
+
+- Status: Implementada
+- Objetivo: exibir os streams local e remoto após a conexão WebRTC.
+- Escopo: `resources/js/views/OnlineSessionView.vue` e `resources/js/composables/useOnlineSession.js`.
+- Comportamento: os elementos `<video>` ficam ligados aos refs do composable; falhas de vínculo são registradas sem conteúdo de mídia ou dados sensíveis.
+- Validação: `npm run build`, `git diff --check` e confirmação de `connectionState: connected` nos dois participantes.
+
+### 2026-09-20 - Handshake independente da ordem de entrada
+
+- Status: Implementada
+- Objetivo: iniciar a chamada mesmo quando o paciente abre a sala antes do psicólogo.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: o paciente confirma presença ao detectar o psicólogo, o psicólogo cria a oferta somente para a presença do paciente e ofertas concorrentes são bloqueadas.
+- Validação: `npm run build`, `git diff --check` e fluxo `presence → offer → answer → connected`.
+
+### 2026-09-20 - Correção do scroll do menu lateral
+
+- Status: Implementada
+- Objetivo: remover o erro do Vue ao navegar entre as telas autenticadas.
+- Escopo: `resources/js/components/home/HomeAppSidebar.vue`.
+- Comportamento: o menu converte a referência do `RouterLink` para o elemento DOM antes de chamar `scrollIntoView()`.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Alinhamento local do Reverb na sala online
+
+- Status: Implementada
+- Objetivo: permitir que a API publique a sinalização WebRTC no Reverb local.
+- Escopo: `.env.example` e configuração local de Reverb.
+- Comportamento: backend e frontend usam `127.0.0.1` para coincidir com o endereço de escuta do servidor Reverb, evitando falha de conexão via `localhost`.
+- Validação: `php artisan config:clear` e `npm run build`.
+
+### 2026-09-20 - Reprodução explícita da prévia de vídeo
+
+- Status: Implementada
+- Objetivo: exibir a câmera autorizada mesmo quando o navegador não inicia automaticamente o elemento de vídeo.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: streams local e remoto recebem `srcObject` e uma tentativa explícita de `play()` após a conexão dos elementos.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Diagnóstico seguro da sala online
+
+- Status: Implementada
+- Objetivo: identificar em qual etapa a sala falha quando o servidor não registra uma requisição.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o console registra cada condição de mídia, WebRTC, Echo, presença e sinal recebido, incluindo o papel somente em mensagens de presença, além de etapa, tipo, nome/código do erro e status HTTP; o backend registra somente id da sala, papel da presença, tipo do sinal, estado e presença do socket. Tokens, URLs completas, dados de pacientes e demais payloads não são registrados.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Ordenação de candidatos ICE na sala online
+
+- Status: Implementada
+- Objetivo: evitar falha WebRTC quando candidatos ICE chegam antes da descrição remota.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: candidatos recebidos antes de `setRemoteDescription()` ficam enfileirados e são adicionados após a descrição remota; a fila é limpa ao reiniciar ou sair da sala.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Normalização da descrição SDP na sala online
+
+- Status: Implementada
+- Objetivo: corrigir ofertas WebRTC rejeitadas pelo navegador como SDP inválido.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: ofertas e respostas são serializadas apenas com `type` e `sdp`, com normalização de quebras de linha e descarte de descrições duplicadas.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Rastreamento das fases de inicialização da sala
+
+- Status: Implementada
+- Objetivo: localizar estados de erro sem exceção no console.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: o console registra somente as fases `start`, `media ready`, `presence sent`, `ready` e `retry`, sem dados sensíveis.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Retry confiável da sala online
+
+- Status: Implementada
+- Objetivo: evitar faixa de erro vazia e tentativa de recuperação sem efeito na videochamada.
+- Escopo: `resources/js/views/OnlineSessionView.vue` e `resources/js/composables/useOnlineSession.js`.
+- Comportamento: a sala exibe mensagem padrão quando o erro não traz texto, recarrega a sala quando a falha ocorre antes de obter a sessão, reinicia recursos WebRTC e informa quando a nova tentativa está em andamento.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Limpeza do erro após recuperação da sala
+
+- Status: Implementada
+- Objetivo: remover a mensagem de erro antiga quando a sala conclui a inicialização.
+- Escopo: `resources/js/composables/useOnlineSession.js` e `resources/js/views/OnlineSessionView.vue`.
+- Comportamento: a mensagem é limpa após o envio de presença bem-sucedido e só permanece visível durante estados reais de erro.
+- Validação: `npm run build` e `git diff --check`.
+
+### 2026-09-20 - Limpeza do erro após conexão WebRTC
+
+- Status: Implementada
+- Objetivo: remover mensagens antigas quando a chamada efetivamente conecta.
+- Escopo: `resources/js/composables/useOnlineSession.js`.
+- Comportamento: ao atingir `connectionState: connected`, a sala muda para `active` e limpa qualquer erro residual.
+- Validação: `npm run build` e `git diff --check`.
+
 ### 2026-09-20 - Diagnóstico de câmera e microfone na sala online
 
 - Status: Implementada

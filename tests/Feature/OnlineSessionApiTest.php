@@ -80,6 +80,103 @@ class OnlineSessionApiTest extends TestCase
             ->assertJsonPath('message', 'Esta sala não está disponível.');
     }
 
+    public function test_patient_entry_request_waits_for_psychologist_approval(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $sessionId = $creation->json('id');
+        $token = $creation->json('patient_token');
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", [
+            'type' => 'presence',
+            'payload' => [
+                'role' => 'patient',
+                'state' => 'requesting',
+                'connection_id' => 'patient-connection-0001',
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('online_sessions', [
+            'id' => $sessionId,
+            'status' => 'waiting',
+        ]);
+    }
+
+    public function test_only_psychologist_can_approve_patient_entry(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $sessionId = $creation->json('id');
+        $token = $creation->json('patient_token');
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", [
+            'type' => 'entry-approved',
+            'payload' => ['role' => 'patient'],
+        ])->assertForbidden();
+
+        $this->postJson("/api/online-sessions/{$sessionId}/signal", [
+            'type' => 'entry-approved',
+            'payload' => ['role' => 'psychologist'],
+        ])->assertOk();
+    }
+
+    public function test_a_second_patient_connection_is_rejected_for_the_same_link(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $token = $creation->json('patient_token');
+
+        $payload = fn (string $connectionId) => [
+            'type' => 'presence',
+            'payload' => [
+                'role' => 'patient',
+                'state' => 'requesting',
+                'connection_id' => $connectionId,
+            ],
+        ];
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", $payload('patient-connection-0001'))
+            ->assertOk();
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", $payload('patient-connection-0002'))
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Esta sala já está sendo usada por outro paciente.');
+    }
+
+    public function test_ice_server_endpoint_does_not_expose_twilio_credentials(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $sessionId = $creation->json('id');
+        $token = $creation->json('patient_token');
+
+        $this->getJson("/api/online-sessions/{$sessionId}/ice-servers")
+            ->assertOk()
+            ->assertJsonStructure(['ice_servers'])
+            ->assertJsonMissing(['account_sid', 'api_key', 'api_secret', 'auth_token']);
+
+        $this->getJson("/api/online-sessions/join/{$token}/ice-servers")
+            ->assertOk()
+            ->assertJsonStructure(['ice_servers'])
+            ->assertJsonMissing(['account_sid', 'api_key', 'api_secret', 'auth_token']);
+    }
+
     /** @return array{0: User, 1: Psychologist} */
     private function psychologist(): array
     {

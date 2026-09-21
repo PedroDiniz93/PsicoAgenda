@@ -12,10 +12,13 @@ interface NavigationItem {
 }
 
 const route = useRoute();
-const activeItemElement = ref(null);
+const activeItemElement = ref<HTMLElement | null>(null);
 
-const setActiveItemElement = (element, item) => {
-    if (isItemActive(item)) activeItemElement.value = element;
+const setActiveItemElement = (element: HTMLElement | { $el?: HTMLElement } | null, item: NavigationItem) => {
+    if (!isItemActive(item)) return;
+
+    const domElement = element && '$el' in element ? element.$el : element;
+    activeItemElement.value = domElement instanceof HTMLElement ? domElement : null;
 };
 
 const props = defineProps<{
