@@ -199,7 +199,7 @@ class GameKitVisualActivityController extends Controller
     {
         $weekStart = now()->startOfWeek(Carbon::MONDAY)->startOfDay();
         $usage = GameKitVisualActivityUsage::where('psychologist_id', $psychologistId)->whereDate('week_start', $weekStart->toDateString())->first();
-        $used = (int) ($usage?->generated_count ?? 0);
+        $used = (int) ($usage ? $usage->generated_count : 0);
 
         return [
             'used' => $used,
