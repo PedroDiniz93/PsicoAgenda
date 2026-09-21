@@ -1079,6 +1079,8 @@ const handlePatientSearchInput = () => {
 };
 
 const handlePatientSearchFocus = () => {
+    if (appointmentForm.patientId) return;
+
     patientDropdownOpen.value = true;
     patientHighlightedIndex.value = 0;
 };
