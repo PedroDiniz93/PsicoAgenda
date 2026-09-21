@@ -129,6 +129,7 @@ const editingAppointment = ref(null);
 const externalEventModalOpen = ref(false);
 const selectedExternalEvent = ref(null);
 const externalEventDeleting = ref(false);
+const hoveredCalendarSlot = ref(null);
 
 const appointmentForm = reactive({
     patientId: '',
@@ -197,6 +198,8 @@ const scheduleCategories = [
 const appointmentPatientSearch = ref('');
 const patientOptions = ref([]);
 const patientOptionsLoading = ref(false);
+const patientDropdownOpen = ref(false);
+const patientHighlightedIndex = ref(0);
 let patientSearchTimeout = null;
 
 const appointmentActionLoading = reactive({ id: null, action: '' });
@@ -571,6 +574,9 @@ const clearAppointmentErrors = () => {
 const resetAppointmentForm = () => {
     autoFillEndEnabled.value = true;
     appointmentForm.patientId = '';
+    appointmentPatientSearch.value = '';
+    patientDropdownOpen.value = false;
+    patientHighlightedIndex.value = 0;
     appointmentForm.startAt = `${scheduleDate.value}T09:00`;
     appointmentForm.endAt = '';
     appointmentForm.status = 'scheduled';
@@ -583,6 +589,20 @@ const resetAppointmentForm = () => {
     clearAppointmentErrors();
 };
 
+const formatCalendarMinutes = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}`;
+};
+
+const getCalendarHourIndex = (column, event) => {
+    if (!(column instanceof HTMLElement)) return null;
+
+    const bounds = column.getBoundingClientRect();
+    const offset = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top));
+    return Math.min(Math.floor(offset / hourLabelHeight), calendarConfig.endHour - calendarConfig.startHour - 1);
+};
+
 const ensurePatientOption = (patient) => {
     if (!patient?.id) return;
     if (!patientOptions.value.some((option) => option.id === patient.id)) {
@@ -590,17 +610,43 @@ const ensurePatientOption = (patient) => {
     }
 };
 
-const openCreateAppointment = () => {
+const openCreateAppointment = ({ date = scheduleDate.value, startTime = '09:00' } = {}) => {
     editingAppointment.value = null;
     resetAppointmentForm();
+    appointmentForm.startAt = `${date}T${startTime}`;
     appointmentModalOpen.value = true;
     fetchPatientOptions();
+};
+
+const handleCalendarColumnClick = (day, event) => {
+    const hourIndex = getCalendarHourIndex(event.currentTarget, event);
+    if (hourIndex === null) return;
+
+    const startMinutes = (calendarConfig.startHour + hourIndex) * 60;
+
+    openCreateAppointment({
+        date: day.date,
+        startTime: formatCalendarMinutes(startMinutes),
+    });
+};
+
+const handleCalendarColumnMouseMove = (day, event) => {
+    const hourIndex = getCalendarHourIndex(event.currentTarget, event);
+    if (hourIndex === null) return;
+    hoveredCalendarSlot.value = { date: day.date, hourIndex };
+};
+
+const clearCalendarColumnHover = () => {
+    hoveredCalendarSlot.value = null;
 };
 
 const openEditAppointment = (appointment) => {
     autoFillEndEnabled.value = false;
     editingAppointment.value = appointment;
     appointmentForm.patientId = String(appointment.patient_id ?? appointment.patient?.id ?? '');
+    appointmentPatientSearch.value = appointment.patient?.name ?? '';
+    patientDropdownOpen.value = false;
+    patientHighlightedIndex.value = 0;
     appointmentForm.startAt = toLocalInputValue(appointment.start_at);
     appointmentForm.endAt = toLocalInputValue(appointment.end_at);
     appointmentForm.status = appointment.status ?? 'scheduled';
@@ -1019,6 +1065,10 @@ const fetchPatientOptions = async (search = '') => {
 };
 
 const handlePatientSearchInput = () => {
+    appointmentForm.patientId = '';
+    patientDropdownOpen.value = true;
+    patientHighlightedIndex.value = 0;
+
     if (patientSearchTimeout) {
         clearTimeout(patientSearchTimeout);
     }
@@ -1026,6 +1076,67 @@ const handlePatientSearchInput = () => {
     patientSearchTimeout = setTimeout(() => {
         fetchPatientOptions(appointmentPatientSearch.value);
     }, 400);
+};
+
+const handlePatientSearchFocus = () => {
+    patientDropdownOpen.value = true;
+    patientHighlightedIndex.value = 0;
+};
+
+const handlePatientSearchBlur = () => {
+    window.setTimeout(() => {
+        patientDropdownOpen.value = false;
+    }, 150);
+};
+
+const selectAppointmentPatient = (patient) => {
+    if (!patient?.id) return;
+
+    appointmentForm.patientId = String(patient.id);
+    appointmentPatientSearch.value = patient.name ?? '';
+    patientDropdownOpen.value = false;
+    patientHighlightedIndex.value = 0;
+    appointmentErrors.patientId = '';
+};
+
+const clearAppointmentPatient = async () => {
+    appointmentForm.patientId = '';
+    appointmentPatientSearch.value = '';
+    patientDropdownOpen.value = true;
+    patientHighlightedIndex.value = 0;
+    await nextTick();
+    document.getElementById('appointment-patient')?.focus();
+};
+
+const handlePatientSearchKeydown = (event) => {
+    if (event.key === 'Escape') {
+        patientDropdownOpen.value = false;
+        return;
+    }
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        patientDropdownOpen.value = true;
+        patientHighlightedIndex.value = Math.min(
+            patientHighlightedIndex.value + 1,
+            Math.max(patientOptions.value.length - 1, 0)
+        );
+        return;
+    }
+
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        patientHighlightedIndex.value = Math.max(patientHighlightedIndex.value - 1, 0);
+        return;
+    }
+
+    if (event.key === 'Enter' && patientDropdownOpen.value) {
+        const patient = patientOptions.value[patientHighlightedIndex.value];
+        if (patient) {
+            event.preventDefault();
+            selectAppointmentPatient(patient);
+        }
+    }
 };
 
 const performAppointmentAction = async (appointment, action) => {
@@ -1330,9 +1441,13 @@ onBeforeUnmount(() => {
                                     <div
                                         v-for="day in weekDays"
                                         :key="day.date"
-                                        class="relative min-w-0 overflow-hidden border-l border-[#ece6db] transition"
+                                        class="relative min-w-0 cursor-pointer overflow-hidden border-l border-[#ece6db] transition"
                                         :class="day.isToday ? 'bg-[#eef3ee]' : 'bg-white hover:bg-[#fcfaf6]'"
                                         :style="{ height: `${calendarColumnHeight}px` }"
+                                        :title="`Clique para agendar em ${day.label}`"
+                                        @click="handleCalendarColumnClick(day, $event)"
+                                        @mousemove="handleCalendarColumnMouseMove(day, $event)"
+                                        @mouseleave="clearCalendarColumnHover"
                                     >
                                         <div class="pointer-events-none absolute inset-0">
                                             <div
@@ -1342,6 +1457,12 @@ onBeforeUnmount(() => {
                                                 :style="{ top: `${line}px`, borderColor: dividerColor }"
                                             ></div>
                                         </div>
+
+                                        <div
+                                            class="pointer-events-none absolute inset-x-1 z-[5] rounded-lg border border-[#9fbaa7]/55 bg-[#e7f1e9]/35 px-3 py-2 text-xs font-semibold text-[#557061] transition duration-150 ease-out"
+                                            :class="hoveredCalendarSlot?.date === day.date ? 'opacity-80' : 'opacity-0'"
+                                            :style="{ top: `${(hoveredCalendarSlot?.date === day.date ? hoveredCalendarSlot.hourIndex : 0) * hourLabelHeight}px`, height: `${hourLabelHeight}px` }"
+                                        ></div>
 
                                         <div class="relative h-full">
                                             <div class="pointer-events-none absolute inset-y-0 left-1 z-10 w-px bg-slate-200/70"></div>
@@ -1691,30 +1812,66 @@ onBeforeUnmount(() => {
                 <form class="space-y-5" @submit.prevent="submitAppointment">
                     <div>
                         <label class="block text-sm font-medium text-slate-700" for="appointment-patient">Paciente</label>
-                        <div class="mt-1 flex flex-col gap-3 md:flex-row">
-                            <div class="flex-1">
-                                <input
-                                    id="appointment-patient"
-                                    v-model="appointmentPatientSearch"
-                                    class="field-input"
-                                    placeholder="Buscar paciente pelo nome..."
-                                    type="search"
-                                    autofocus
-                                    @input="handlePatientSearchInput"
-                                />
-                                <p class="mt-1 text-xs text-[#58635f]">Digite para filtrar e depois selecione abaixo.</p>
-                            </div>
-                            <div class="md:w-56">
-                                <select v-model="appointmentForm.patientId" class="field-input" required>
-                                    <option value="" disabled>Selecione o paciente</option>
-                                    <option v-for="patient in patientOptions" :key="patient.id" :value="patient.id">
-                                        {{ patient.name }}
-                                    </option>
-                                </select>
+                        <div class="relative mt-1">
+                            <input
+                                id="appointment-patient"
+                                v-model="appointmentPatientSearch"
+                                class="field-input pe-10"
+                                :class="appointmentForm.patientId ? 'border-[#9fbaa7] bg-[#f5faf6]' : ''"
+                                placeholder="Buscar paciente pelo nome..."
+                                type="text"
+                                role="combobox"
+                                aria-controls="appointment-patient-options"
+                                :aria-expanded="patientDropdownOpen"
+                                aria-autocomplete="list"
+                                autofocus
+                                @focus="handlePatientSearchFocus"
+                                @blur="handlePatientSearchBlur"
+                                @input="handlePatientSearchInput"
+                                @keydown="handlePatientSearchKeydown"
+                            />
+                            <button
+                                v-if="appointmentForm.patientId"
+                                class="absolute end-2 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-[#58635f] transition hover:bg-[#e2ece4] hover:text-[#2f4436]"
+                                type="button"
+                                aria-label="Trocar paciente"
+                                title="Trocar paciente"
+                                @click="clearAppointmentPatient"
+                            >
+                                <AppIcon name="X" class="size-4" :aria-hidden="false" />
+                            </button>
+                            <div
+                                v-if="patientDropdownOpen"
+                                id="appointment-patient-options"
+                                class="absolute inset-x-0 top-full z-30 mt-2 max-h-60 overflow-y-auto rounded-xl border border-[#e2ddd3] bg-white p-1 shadow-lg"
+                                role="listbox"
+                            >
+                                <div v-if="patientOptionsLoading" class="px-3 py-3 text-sm text-[#58635f]">
+                                    Buscando pacientes...
+                                </div>
+                                <div v-else-if="patientOptions.length === 0" class="px-3 py-3 text-sm text-[#58635f]">
+                                    Nenhum paciente encontrado.
+                                </div>
+                                <button
+                                    v-for="(patient, index) in patientOptions"
+                                    :key="patient.id"
+                                    class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition"
+                                    :class="index === patientHighlightedIndex ? 'bg-[#eef4ef] text-[#365341]' : 'text-slate-700 hover:bg-[#f8f5ef]'"
+                                    type="button"
+                                    role="option"
+                                    :aria-selected="String(patient.id) === String(appointmentForm.patientId)"
+                                    @mouseenter="patientHighlightedIndex = index"
+                                    @mousedown.prevent
+                                    @click="selectAppointmentPatient(patient)"
+                                >
+                                    <span class="min-w-0 truncate font-medium">{{ patient.name }}</span>
+                                </button>
                             </div>
                         </div>
+                        <p class="mt-1 text-xs text-[#58635f]">
+                            {{ appointmentForm.patientId ? 'Paciente selecionado. Use × para trocar.' : 'Digite para buscar e selecione um resultado.' }}
+                        </p>
                         <p v-if="appointmentErrors.patientId" class="mt-1 text-xs text-red-600">{{ appointmentErrors.patientId }}</p>
-                        <p v-if="patientOptionsLoading" class="mt-1 text-xs text-[#58635f]">Carregando pacientes...</p>
                     </div>
 
                     <div class="rounded-2xl border border-[#ece6db] bg-[#f8f5ef]/80 p-4">

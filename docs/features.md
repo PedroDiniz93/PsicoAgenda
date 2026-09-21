@@ -25,6 +25,22 @@ Regras:
 
 ## Features
 
+### 2026-09-21 - Seleção de paciente em busca única
+
+- Status: Implementada
+- Objetivo: tornar a escolha do paciente na modal de agendamento mais direta e compreensível.
+- Escopo: `resources/js/views/ScheduleView.vue`.
+- Comportamento: a busca e a seleção acontecem no mesmo combobox; resultados aparecem abaixo do campo, a seleção é imediata, o paciente pode ser trocado pelo botão `×` e a navegação funciona por teclado.
+- Validação: build do frontend e `git diff --check`.
+
+### 2026-09-21 - Criação rápida de agendamento pelo calendário
+
+- Status: Implementada
+- Objetivo: abrir a modal de novo agendamento com data e horário já preenchidos ao clicar em um espaço vazio da agenda.
+- Escopo: `resources/js/views/ScheduleView.vue`.
+- Comportamento: o hover destaca a hora inteira com a ação “Agendar”; o clique na coluna do dia seleciona o início da hora em blocos de 1 hora, o término continua sendo calculado pela duração padrão da sessão e os agendamentos existentes permanecem abrindo a edição.
+- Validação: build do frontend e `git diff --check`.
+
 ### 2026-09-21 - Widget e validação de data na modal de agendamento
 
 - Status: Implementada
