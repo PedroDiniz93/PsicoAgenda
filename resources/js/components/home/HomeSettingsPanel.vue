@@ -113,27 +113,17 @@ defineEmits<{
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <div>
                             <p class="text-sm font-semibold text-slate-900">Número de envio do WhatsApp</p>
-                            <p class="mt-1 text-sm leading-6 text-slate-500">Defina qual número cadastrado na WhatsApp Cloud API será usado para enviar lembretes deste psicólogo.</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">O envio usa o remetente Twilio configurado no servidor. Informe abaixo apenas o número que será exibido nas configurações.</p>
                         </div>
 
                         <div class="mt-4 grid gap-3 md:grid-cols-2">
-                            <label class="space-y-1.5">
-                                <span class="text-sm font-medium text-slate-700">Número visível</span>
+                            <label class="space-y-1.5 md:col-span-2">
+                                <span class="text-sm font-medium text-slate-700">Número exibido</span>
                                 <input
                                     v-model="reminderSettings.whatsappSenderDisplayNumber"
                                     class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                                     placeholder="+55 11 99999-9999"
                                     type="tel"
-                                />
-                            </label>
-
-                            <label class="space-y-1.5">
-                                <span class="text-sm font-medium text-slate-700">Phone Number ID</span>
-                                <input
-                                    v-model="reminderSettings.whatsappSenderPhoneId"
-                                    class="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                                    inputmode="numeric"
-                                    placeholder="Ex.: 123456789012345"
                                 />
                             </label>
                         </div>

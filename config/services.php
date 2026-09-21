@@ -68,6 +68,10 @@ return [
         'account_sid' => env('TWILIO_ACCOUNT_SID'),
         'api_key' => env('TWILIO_API_KEY'),
         'api_secret' => env('TWILIO_API_SECRET'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+        'whatsapp_content_sid' => env('TWILIO_WHATSAPP_CONTENT_SID'),
+        'whatsapp_sandbox' => filter_var(env('TWILIO_WHATSAPP_SANDBOX', false), FILTER_VALIDATE_BOOL),
         'turn_ttl' => (int) env('TWILIO_TURN_TTL', 3600),
     ],
 

@@ -40,6 +40,38 @@ class SecurityApiTest extends TestCase
         ], $rawPayload)->assertOk()->assertJson(['success' => true]);
     }
 
+    public function test_twilio_whatsapp_webhook_rejects_invalid_signature(): void
+    {
+        config(['services.twilio.auth_token' => 'test-twilio-auth-token']);
+
+        $this->post('/api/webhook/whatsapp', [
+            'Body' => 'ok',
+            'From' => 'whatsapp:+55119999999999',
+        ], [
+            'X-Twilio-Signature' => 'invalid',
+        ])->assertUnauthorized();
+    }
+
+    public function test_twilio_whatsapp_webhook_accepts_a_valid_signed_payload(): void
+    {
+        $authToken = 'test-twilio-auth-token';
+        config(['services.twilio.auth_token' => $authToken]);
+        $payload = [
+            'Body' => 'ok',
+            'From' => 'whatsapp:+55119999999999',
+        ];
+        $signatureData = url('/api/webhook/whatsapp');
+        ksort($payload);
+        foreach ($payload as $key => $value) {
+            $signatureData .= $key.$value;
+        }
+        $signature = base64_encode(hash_hmac('sha1', $signatureData, $authToken, true));
+
+        $this->post('/api/webhook/whatsapp', $payload, [
+            'X-Twilio-Signature' => $signature,
+        ])->assertOk()->assertJson(['success' => true]);
+    }
+
     public function test_patient_record_attachment_requires_the_patient_owner(): void
     {
         Storage::fake('private');

@@ -25,6 +25,16 @@ Regras:
 
 ## Features
 
+### 2026-09-21 - Notificações de WhatsApp via Twilio
+
+- Status: Implementada
+- Objetivo: enviar lembretes de sessão pelo Twilio WhatsApp, substituindo o envio direto pela Meta Cloud API.
+- Escopo: `app/Services/WhatsAppService.php`, `app/Http/Controllers/Api/WhatsAppWebhookController.php`, `config/services.php`, `.env.example` e textos das configurações de WhatsApp.
+- Comportamento: o comando diário usa um template Twilio com variáveis de paciente, psicólogo, data e horário; respostas recebidas pelo webhook Twilio continuam sendo processadas para confirmar o agendamento.
+- Segurança: credenciais permanecem no backend; o webhook valida `X-Twilio-Signature`; logs não registram tokens, mensagens ou telefone bruto.
+- Configuração: requer `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` e `TWILIO_WHATSAPP_CONTENT_SID`; `TWILIO_WHATSAPP_SANDBOX=true` usa as duas variáveis do template pré-aprovado do Sandbox.
+- Validação: PHP lint, Pint, testes de webhook e build do frontend.
+
 ### 2026-09-21 - Seleção de paciente em busca única
 
 - Status: Implementada

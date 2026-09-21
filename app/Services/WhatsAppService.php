@@ -9,33 +9,27 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
-    public function __construct(
-        private ?string $token = null,
-        private ?string $defaultPhoneId = null,
-        private ?string $businessName = null,
-    ) {
-        $this->token = $this->token ?? config('services.whatsapp.token');
-        $this->defaultPhoneId = $this->defaultPhoneId ?? config('services.whatsapp.phone_id');
-        $this->businessName = $this->businessName ?? config('services.whatsapp.business_name', config('app.name', 'Clínica'));
-    }
-
     public function isConfigured(?Psychologist $psychologist = null): bool
     {
-        return ! empty($this->token) && ! empty($this->senderPhoneId($psychologist));
+        $twilio = config('services.twilio');
+
+        return ! empty($twilio['account_sid'])
+            && ! empty($twilio['api_key'])
+            && ! empty($twilio['api_secret'])
+            && ! empty($twilio['whatsapp_from'])
+            && ! empty($twilio['whatsapp_content_sid']);
     }
 
     public function sendSessionConfirmation(Appointment $appointment): bool
     {
         $appointment->loadMissing(['patient', 'psychologist']);
         $psychologist = $appointment->psychologist;
-        $senderPhoneId = $this->senderPhoneId($psychologist);
 
         if (! $this->isConfigured($psychologist)) {
-            Log::info('WhatsApp confirmation skipped: service not configured', [
+            Log::info('WhatsApp confirmation skipped: Twilio service not configured', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
-                'has_token' => ! empty($this->token),
-                'has_sender_phone_id' => ! empty($senderPhoneId),
+                'provider' => 'twilio',
             ]);
 
             return false;
@@ -58,22 +52,18 @@ class WhatsAppService
             Log::info('WhatsApp confirmation skipped: invalid phone format', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
-                'raw_phone' => $patient->phone,
             ]);
 
             return false;
         }
 
-        $message = $this->buildConfirmationMessage($appointment);
-
         try {
-            $this->sendText($phone, $message, $senderPhoneId);
+            $this->sendTemplate($phone, $appointment);
 
             Log::info('WhatsApp confirmation sent', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
-                'sender_phone_id' => $senderPhoneId,
-                'sender_display_number' => $psychologist?->whatsapp_sender_display_number,
+                'provider' => 'twilio',
             ]);
 
             return true;
@@ -81,63 +71,51 @@ class WhatsAppService
             Log::error('WhatsApp confirmation failed', [
                 'appointment_id' => $appointment->id,
                 'psychologist_id' => $psychologist?->id,
-                'sender_phone_id' => $senderPhoneId,
-                'error' => $exception->getMessage(),
+                'provider' => 'twilio',
+                'error_class' => $exception::class,
             ]);
 
             return false;
         }
     }
 
-    private function sendText(string $phone, string $message, string $senderPhoneId): void
+    private function sendTemplate(string $phone, Appointment $appointment): void
     {
-        $response = Http::withToken($this->token)
+        $twilio = config('services.twilio');
+        $timezone = $appointment->psychologist->timezone ?? config('app.timezone');
+        $startAt = $appointment->start_at->copy()->setTimezone($timezone);
+        $contentVariables = $twilio['whatsapp_sandbox']
+            ? [
+                '1' => $startAt->format('d/m/Y'),
+                '2' => $startAt->format('H:i'),
+            ]
+            : [
+                '1' => $appointment->patient->name,
+                '2' => $appointment->psychologist->name,
+                '3' => $startAt->format('d/m/Y'),
+                '4' => $startAt->format('H:i'),
+            ];
+
+        $response = Http::asForm()
+            ->withBasicAuth($twilio['api_key'], $twilio['api_secret'])
             ->acceptJson()
-            ->post(
-                sprintf('https://graph.facebook.com/v17.0/%s/messages', $senderPhoneId),
-                [
-                    'messaging_product' => 'whatsapp',
-                    'to' => $phone,
-                    'type' => 'text',
-                    'text' => [
-                        'preview_url' => false,
-                        'body' => $message,
-                    ],
-                ]
-            );
+            ->post('https://api.twilio.com/2010-04-01/Accounts/'.$twilio['account_sid'].'/Messages.json', [
+                'From' => $this->normalizeTwilioAddress($twilio['whatsapp_from']),
+                'To' => 'whatsapp:'.$phone,
+                'ContentSid' => $twilio['whatsapp_content_sid'],
+                'ContentVariables' => json_encode($contentVariables, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException((string) $response->body());
+            throw new \RuntimeException('Twilio WhatsApp message request failed with status '.$response->status());
         }
     }
 
-    private function buildConfirmationMessage(Appointment $appointment): string
+    private function normalizeTwilioAddress(string $value): string
     {
-        $patientName = $appointment->patient->name;
-        $psychologistName = $appointment->psychologist->name;
-        $timezone = $appointment->psychologist->timezone ?? config('app.timezone');
+        $value = trim($value);
 
-        $startAt = $appointment->start_at->copy();
-
-        $startAt->setTimezone($timezone);
-
-        $date = $startAt->translatedFormat('d/m/Y');
-        $time = $startAt->format('H:i');
-
-        return sprintf(
-            'Olá %s! Aqui é %s. Sua sessão está confirmada para %s às %s. Caso precise reagendar ou cancelar, responda esta mensagem.',
-            $patientName,
-            $psychologistName,
-            $date,
-            $time
-        );
-    }
-
-    private function senderPhoneId(?Psychologist $psychologist): ?string
-    {
-        $phoneId = trim((string) ($psychologist?->whatsapp_sender_phone_id ?: $this->defaultPhoneId));
-
-        return $phoneId === '' ? null : $phoneId;
+        return str_starts_with($value, 'whatsapp:') ? $value : 'whatsapp:'.$value;
     }
 
     private function formatPhoneNumber(?string $raw): ?string

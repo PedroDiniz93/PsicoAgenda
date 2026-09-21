@@ -41,10 +41,10 @@ const integrationItems = computed(() => [
     {
         label: 'WhatsApp',
         status: reminderSettings.whatsappEnabled
-            ? (reminderSettings.whatsappSenderPhoneId ? 'Ativo' : 'Configurar número')
+            ? (reminderSettings.whatsappSenderDisplayNumber ? 'Ativo' : 'Configurar número')
             : 'Inativo',
         class: reminderSettings.whatsappEnabled
-            ? (reminderSettings.whatsappSenderPhoneId ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')
+            ? (reminderSettings.whatsappSenderDisplayNumber ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')
             : 'bg-slate-100 text-slate-600',
     },
     {
