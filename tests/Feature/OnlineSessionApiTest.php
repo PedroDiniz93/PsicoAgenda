@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\Psychologist;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -188,6 +189,44 @@ class OnlineSessionApiTest extends TestCase
         $this->postJson("/api/online-sessions/join/{$token}/signal", $payload('patient-connection-0002'))
             ->assertStatus(409)
             ->assertJsonPath('message', 'Esta sala já está sendo usada por outro paciente.');
+    }
+
+    public function test_a_new_patient_can_reclaim_a_room_after_the_previous_connection_expires(): void
+    {
+        [$user, $psychologist] = $this->psychologist();
+        $patient = Patient::factory()->create(['psychologist_id' => $psychologist->id]);
+        $appointment = $this->appointment($psychologist, $patient);
+        Sanctum::actingAs($user);
+
+        $creation = $this->postJson("/api/appointments/{$appointment->id}/online-session")->assertCreated();
+        $sessionId = $creation->json('id');
+        $token = $creation->json('patient_token');
+
+        $request = fn (string $connectionId) => [
+            'type' => 'presence',
+            'payload' => [
+                'role' => 'patient',
+                'state' => 'requesting',
+                'connection_id' => $connectionId,
+            ],
+        ];
+
+        $this->postJson("/api/online-sessions/join/{$token}/signal", $request('patient-connection-0001'))
+            ->assertOk();
+
+        Carbon::setTestNow(now()->addSeconds(46));
+
+        try {
+            $this->postJson("/api/online-sessions/join/{$token}/signal", $request('patient-connection-0002'))
+                ->assertOk();
+
+            $this->getJson("/api/online-sessions/{$sessionId}")
+                ->assertOk()
+                ->assertJsonPath('patient_connection_active', true)
+                ->assertJsonPath('patient_waiting_for_approval', true);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_ice_server_endpoint_does_not_expose_twilio_credentials(): void

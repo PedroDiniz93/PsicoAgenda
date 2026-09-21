@@ -203,12 +203,15 @@ export function useOnlineSession({ role, token, sessionId }) {
     };
 
     const refreshApprovalRequest = async () => {
-        if (role !== 'psychologist' || !currentSession?.id || patientApprovalSent || status.value !== 'waiting' || approvalRequestInFlight) return;
+        if (role !== 'psychologist' || !currentSession?.id || patientApprovalSent || approvalRequestInFlight) return;
 
         approvalRequestInFlight = true;
         try {
             const { data } = await axios.get('/api/online-sessions/' + currentSession.id);
-            if (data.patient_waiting_for_approval) {
+            if (!data.patient_connection_active && status.value === 'active') {
+                entryRequest.value = false;
+                resetParticipantConnection('patient connection expired');
+            } else if (data.patient_waiting_for_approval) {
                 entryRequest.value = true;
                 console.info('[online-session] patient approval request confirmed by polling');
             }
@@ -229,6 +232,18 @@ export function useOnlineSession({ role, token, sessionId }) {
         approvalRequestTimer = window.setInterval(() => {
             void refreshApprovalRequest();
         }, 3000);
+    };
+
+    const resetParticipantConnection = (source) => {
+        peerConnection?.close();
+        peerConnection = null;
+        pendingIceCandidates = [];
+        makingOffer = false;
+        if (remoteVideo.value) remoteVideo.value.srcObject = null;
+        stopSessionTimer();
+        remoteMicrophoneEnabled.value = true;
+        remoteCameraEnabled.value = true;
+        if (status.value !== 'waiting') setStatus('waiting', source);
     };
 
     const acceptPatientEntry = async () => {
@@ -423,7 +438,13 @@ export function useOnlineSession({ role, token, sessionId }) {
             showParticipantNotice(payload.state === 'left'
                 ? `${participantLabel} saiu da sala.`
                 : `${participantLabel} entrou na sala.`);
-            if (payload.state === 'left') return;
+            if (payload.state === 'left') {
+                if (role === 'psychologist') {
+                    entryRequest.value = false;
+                    resetParticipantConnection('participant left');
+                }
+                return;
+            }
         }
 
         if (type === 'entry-approved' && role === 'patient' && payload.role === 'psychologist') {
@@ -599,6 +620,7 @@ export function useOnlineSession({ role, token, sessionId }) {
         stop({ announce: false });
         currentSession = session;
         patientApprovalSent = false;
+        entryRequest.value = false;
         waitingForApproval.value = false;
         entryBlocked.value = false;
         pendingIceCandidates = [];
@@ -736,11 +758,11 @@ export function useOnlineSession({ role, token, sessionId }) {
             await sendMediaState();
             if (status.value !== 'active') {
                 setStatus('waiting', 'presence response');
-                startApprovalRequestPolling();
                 console.info('[online-session] waiting for participant');
             } else {
                 console.info('[online-session] connection already active');
             }
+            startApprovalRequestPolling();
             console.info('[online-session] ready', { status: status.value });
         } catch (cause) {
             console.error('[online-session] connection setup failed', {

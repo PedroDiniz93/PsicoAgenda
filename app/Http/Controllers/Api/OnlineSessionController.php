@@ -160,6 +160,9 @@ class OnlineSessionController extends Controller
 
     private function psychologistPayload(OnlineSession $session): array
     {
+        $patientConnectionActive = (bool) ($session->patient_connection_id
+            && $session->patient_connection_at?->greaterThan(now()->subSeconds(45)));
+
         return [
             'id' => $session->id,
             'appointment_id' => $session->appointment_id,
@@ -168,9 +171,8 @@ class OnlineSessionController extends Controller
             'expires_at' => $session->expires_at,
             'started_at' => $session->started_at,
             'ended_at' => $session->ended_at,
-            'patient_waiting_for_approval' => $session->status === 'waiting'
-                && $session->patient_connection_id
-                && $session->patient_connection_at?->greaterThan(now()->subSeconds(45)),
+            'patient_connection_active' => $patientConnectionActive,
+            'patient_waiting_for_approval' => $patientConnectionActive && ! $session->patient_entry_approved_at,
             'channel' => 'online-session.'.$session->token_hash,
         ];
     }
