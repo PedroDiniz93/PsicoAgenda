@@ -14,13 +14,13 @@ const pageIntro = computed(() => (isPrivacy.value
     <main class="min-h-screen bg-[var(--spa-bg)] px-4 py-6 text-[var(--spa-ink)] sm:px-6 sm:py-10">
         <div class="mx-auto max-w-6xl">
             <header class="flex flex-col gap-5 border-b border-[var(--spa-border-soft)] pb-7 sm:flex-row sm:items-center sm:justify-between">
-                <router-link to="/login" class="inline-flex items-center gap-3 rounded-lg focus:outline-none focus:ring-4 focus:ring-[var(--spa-focus)]">
+                <a href="/login" class="inline-flex items-center gap-3 rounded-lg focus:outline-none focus:ring-4 focus:ring-[var(--spa-focus)]">
                     <img :src="'/images/psicoagenda-icon.png'" alt="" class="size-11 object-contain" />
                     <span class="font-display text-2xl font-semibold text-[var(--spa-accent)]">PsicoAgenda</span>
-                </router-link>
+                </a>
                 <nav class="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-[var(--spa-accent)]" aria-label="Links institucionais">
-                    <router-link to="/politica-de-privacidade" :class="isPrivacy ? 'underline underline-offset-4' : 'hover:underline hover:underline-offset-4'">Política de Privacidade</router-link>
-                    <router-link to="/termos-de-servico" :class="!isPrivacy ? 'underline underline-offset-4' : 'hover:underline hover:underline-offset-4'">Termos de Serviço</router-link>
+                    <a href="/politica-de-privacidade" :class="isPrivacy ? 'underline underline-offset-4' : 'hover:underline hover:underline-offset-4'">Política de Privacidade</a>
+                    <a href="/termos-de-servico" :class="!isPrivacy ? 'underline underline-offset-4' : 'hover:underline hover:underline-offset-4'">Termos de Serviço</a>
                 </nav>
             </header>
 

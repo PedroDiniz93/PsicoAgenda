@@ -15,8 +15,19 @@ const auth = useAuthStore(pinia);
 auth.initialize();
 
 router.beforeEach((to) => {
+    const normalizedPath = to.path.replace(/^\/+/, '/');
+
+    if (normalizedPath !== to.path) {
+        return {
+            path: normalizedPath,
+            query: to.query,
+            hash: to.hash,
+            replace: true,
+        };
+    }
+
     if (!to.meta?.public && !auth.isAuthenticated) {
-        return { name: 'login', query: { redirect: to.fullPath } };
+        return { name: 'login', query: { redirect: `/${to.fullPath.replace(/^\/+/, '')}` } };
     }
 
     if (auth.isAuthenticated && auth.requiresEmailVerification && to.name !== 'email-verification') {
