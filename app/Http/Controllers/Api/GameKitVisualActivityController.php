@@ -16,7 +16,9 @@ use RuntimeException;
 class GameKitVisualActivityController extends Controller
 {
     private const TYPES = ['coloring', 'cutting', 'coloring_cutting'];
+
     private const STYLES = ['simple', 'intermediate', 'detailed'];
+
     private const LIMIT = 5;
 
     public function __construct(private readonly GameKitAiService $ai) {}
@@ -159,6 +161,7 @@ class GameKitVisualActivityController extends Controller
     public function publicImage(string $token)
     {
         $activity = $this->publicActivity($token);
+
         return response()->file(Storage::disk('public')->path($activity->storage_path), [
             'Content-Type' => $activity->mime_type ?? 'image/png',
             'Cache-Control' => 'private, max-age=300',
