@@ -85,6 +85,13 @@ const onSubmit = async () => {
                         </p>
                     </header>
 
+                    <p class="text-xs leading-5 text-[var(--spa-ink-muted)]">
+                        Ao continuar, você concorda com os
+                        <router-link class="font-semibold text-[var(--spa-accent)] underline underline-offset-2" to="/termos-de-servico">Termos de Serviço</router-link>
+                        e a
+                        <router-link class="font-semibold text-[var(--spa-accent)] underline underline-offset-2" to="/politica-de-privacidade">Política de Privacidade</router-link>.
+                    </p>
+
                     <p
                         v-if="sessionMessage"
                         class="rounded-lg border border-[#ccc5be] bg-[#e8e1d9] px-4 py-3 text-sm font-medium text-[#605b55]"

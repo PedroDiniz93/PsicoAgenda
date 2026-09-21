@@ -26,6 +26,7 @@ const GameKitTicTacToePlayerView = () => import('../views/GameKitTicTacToePlayer
 const GameKitHangmanView = () => import('../views/GameKitHangmanView.vue');
 const GameKitHangmanPlayerView = () => import('../views/GameKitHangmanPlayerView.vue');
 const OnlineSessionView = () => import('../views/OnlineSessionView.vue');
+const LegalPageView = () => import('../views/LegalPageView.vue');
 
 const defaultTitle = document.title;
 
@@ -49,6 +50,18 @@ const router = createRouter({
             name: 'reset-password',
             component: ResetPasswordView,
             meta: { public: true, guest: true, title: 'Criar nova senha' },
+        },
+        {
+            path: '/politica-de-privacidade',
+            name: 'privacy-policy',
+            component: LegalPageView,
+            meta: { public: true, title: 'Política de Privacidade' },
+        },
+        {
+            path: '/termos-de-servico',
+            name: 'terms-of-service',
+            component: LegalPageView,
+            meta: { public: true, title: 'Termos de Serviço' },
         },
         {
             path: '/email-verification',
