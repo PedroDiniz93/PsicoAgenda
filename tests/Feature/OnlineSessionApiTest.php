@@ -104,6 +104,10 @@ class OnlineSessionApiTest extends TestCase
             'id' => $sessionId,
             'status' => 'waiting',
         ]);
+
+        $this->getJson("/api/online-sessions/{$sessionId}")
+            ->assertOk()
+            ->assertJsonPath('patient_waiting_for_approval', true);
     }
 
     public function test_only_psychologist_can_approve_patient_entry(): void

@@ -165,6 +165,9 @@ class OnlineSessionController extends Controller
             'expires_at' => $session->expires_at,
             'started_at' => $session->started_at,
             'ended_at' => $session->ended_at,
+            'patient_waiting_for_approval' => $session->status === 'waiting'
+                && $session->patient_connection_id
+                && $session->patient_connection_at?->greaterThan(now()->subSeconds(45)),
             'channel' => 'online-session.'.$session->token_hash,
         ];
     }

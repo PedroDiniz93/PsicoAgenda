@@ -25,6 +25,24 @@ Regras:
 
 ## Features
 
+### 2026-09-21 - Fallback de solicitação de entrada da videoconferência
+
+- Status: Implementada
+- Objetivo: evitar que o psicólogo deixe de ver a solicitação do paciente quando um evento WebSocket for perdido.
+- Escopo: `app/Http/Controllers/Api/OnlineSessionController.php`, `resources/js/composables/useOnlineSession.js` e `tests/Feature/OnlineSessionApiTest.php`.
+- Comportamento: enquanto o psicólogo aguarda na sala, o frontend confirma periodicamente no backend se existe um paciente aguardando autorização; o WebSocket continua sendo o caminho imediato.
+- Segurança: a confirmação usa a mesma sessão autenticada do psicólogo e só considera uma conexão de paciente válida nos últimos 45 segundos.
+- Validação: teste da API de estado da solicitação, build de produção e `git diff --check`.
+
+### 2026-09-20 - HTTPS e WebSocket seguro da videoconferência em produção
+
+- Status: Implementada
+- Objetivo: permitir que a sala online funcione em produção com HTTPS e sinalização Reverb via `wss://`.
+- Escopo: configuração de produção no Hetzner, Nginx, serviço systemd do Reverb e variáveis públicas do frontend; o certificado é gerenciado pelo Certbot.
+- Comportamento: `http://psicocontrolpro.com.br` redireciona para HTTPS, o Reverb permanece interno em `127.0.0.1:8080` e o Nginx encaminha `/app/` com upgrade WebSocket.
+- Segurança: chaves do Reverb foram geradas no servidor e não são expostas neste registro; credenciais privadas continuam fora do frontend.
+- Validação: Nginx configurado com sucesso, serviços Reverb/worker/PHP-FPM ativos, portas 443/8080 verificadas, HTTPS retornando 200 e build de produção concluído.
+
 ### 2026-09-20 - Estrutura Twilio para STUN/TURN da videoconferência
 
 - Status: Implementada

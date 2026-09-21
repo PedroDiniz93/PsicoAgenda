@@ -35,6 +35,9 @@ export function useOnlineSession({ role, token, sessionId }) {
     let currentSession = null;
     let notificationAudioContext = null;
     let patientPresenceTimer = null;
+    let approvalRequestTimer = null;
+    let approvalRequestInFlight = false;
+    let patientApprovalSent = false;
     const connectionId = typeof crypto?.randomUUID === 'function'
         ? crypto.randomUUID()
         : `connection-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -195,6 +198,35 @@ export function useOnlineSession({ role, token, sessionId }) {
         patientPresenceTimer = window.setInterval(() => {
             if (channel) void sendSignal('presence', presencePayload('heartbeat')).catch(() => {});
         }, 20000);
+    };
+
+    const refreshApprovalRequest = async () => {
+        if (role !== 'psychologist' || !currentSession?.id || patientApprovalSent || status.value !== 'waiting' || approvalRequestInFlight) return;
+
+        approvalRequestInFlight = true;
+        try {
+            const { data } = await axios.get('/api/online-sessions/' + currentSession.id);
+            if (data.patient_waiting_for_approval) {
+                entryRequest.value = true;
+                console.info('[online-session] patient approval request confirmed by polling');
+            }
+        } catch (cause) {
+            console.warn('[online-session] approval request polling failed', {
+                status: cause?.response?.status,
+            });
+        } finally {
+            approvalRequestInFlight = false;
+        }
+    };
+
+    const startApprovalRequestPolling = () => {
+        window.clearInterval(approvalRequestTimer);
+        if (role !== 'psychologist') return;
+
+        void refreshApprovalRequest();
+        approvalRequestTimer = window.setInterval(() => {
+            void refreshApprovalRequest();
+        }, 3000);
     };
 
     const createOffer = async () => {
@@ -519,6 +551,7 @@ export function useOnlineSession({ role, token, sessionId }) {
 
         try {
             await sendSignal('entry-approved', { role });
+            patientApprovalSent = true;
             entryRequest.value = false;
             console.info('[online-session] patient entry approved by psychologist');
         } catch (cause) {
@@ -530,6 +563,7 @@ export function useOnlineSession({ role, token, sessionId }) {
     const start = async (session) => {
         stop({ announce: false });
         currentSession = session;
+        patientApprovalSent = false;
         waitingForApproval.value = false;
         entryBlocked.value = false;
         pendingIceCandidates = [];
@@ -667,6 +701,7 @@ export function useOnlineSession({ role, token, sessionId }) {
             await sendMediaState();
             if (status.value !== 'active') {
                 setStatus('waiting', 'presence response');
+                startApprovalRequestPolling();
                 console.info('[online-session] waiting for participant');
             } else {
                 console.info('[online-session] connection already active');
@@ -704,6 +739,10 @@ export function useOnlineSession({ role, token, sessionId }) {
         }
         window.clearInterval(patientPresenceTimer);
         patientPresenceTimer = null;
+        window.clearInterval(approvalRequestTimer);
+        approvalRequestTimer = null;
+        approvalRequestInFlight = false;
+        patientApprovalSent = false;
         channel?.stopListening('.online-session.signal');
         channel = null;
         localStream?.getTracks().forEach((track) => track.stop());
